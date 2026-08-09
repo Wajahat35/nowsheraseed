@@ -1,4 +1,5 @@
 import io
+import base64
 import qrcode
 from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
@@ -76,15 +77,22 @@ class SalesInvoice(models.Model):
 
         super().save(*args, **kwargs)
 
-    def _regenerate_qr(self):
-        """Generate scannable QR code — encodes the invoice verification URL."""
+    def get_qr_data_uri(self, request=None):
+        """Returns inline base64 PNG data URI for the invoice QR code.
+        Encodes the full verification URL so mobile phones can scan & verify."""
         from apps.settings_app.models import CompanyProfile
+
         company = CompanyProfile.get_instance()
 
-        # Base URL — phone needs this to reach the ERP server
-        base_url = (company.erp_base_url or 'http://127.0.0.1:8000').rstrip('/')
+        if request:
+            base_url = f"{request.scheme}://{request.get_host()}"
+        elif company.erp_base_url and '127.0.0.1' not in company.erp_base_url and 'localhost' not in company.erp_base_url:
+            base_url = company.erp_base_url.rstrip('/')
+        elif not settings.DEBUG:
+            base_url = 'https://nowsheraseed.onrender.com'
+        else:
+            base_url = (company.erp_base_url or 'http://127.0.0.1:8000').rstrip('/')
 
-        # Primary content: the verification URL (opens browser when scanned)
         verify_url = f"{base_url}/sales/verify/{self.invoice_number}/"
 
         qr = qrcode.QRCode(
@@ -99,11 +107,43 @@ class SalesInvoice(models.Model):
         qr_img = qr.make_image(fill_color="#0f172a", back_color="white")
         buffer = io.BytesIO()
         qr_img.save(buffer, format='PNG')
-        self.qr_code.save(
-            f"qr_{self.invoice_number}.png",
-            ContentFile(buffer.getvalue()),
-            save=False
-        )
+        b64 = base64.b64encode(buffer.getvalue()).decode('ascii')
+        return f"data:image/png;base64,{b64}"
+
+    def _regenerate_qr(self):
+        """Generate scannable QR code — encodes the invoice verification URL."""
+        try:
+            from apps.settings_app.models import CompanyProfile
+            company = CompanyProfile.get_instance()
+
+            if company.erp_base_url and '127.0.0.1' not in company.erp_base_url and 'localhost' not in company.erp_base_url:
+                base_url = company.erp_base_url.rstrip('/')
+            elif not settings.DEBUG:
+                base_url = 'https://nowsheraseed.onrender.com'
+            else:
+                base_url = (company.erp_base_url or 'http://127.0.0.1:8000').rstrip('/')
+
+            verify_url = f"{base_url}/sales/verify/{self.invoice_number}/"
+
+            qr = qrcode.QRCode(
+                version=None,
+                error_correction=qrcode.constants.ERROR_CORRECT_M,
+                box_size=8,
+                border=3,
+            )
+            qr.add_data(verify_url)
+            qr.make(fit=True)
+
+            qr_img = qr.make_image(fill_color="#0f172a", back_color="white")
+            buffer = io.BytesIO()
+            qr_img.save(buffer, format='PNG')
+            self.qr_code.save(
+                f"qr_{self.invoice_number}.png",
+                ContentFile(buffer.getvalue()),
+                save=False
+            )
+        except Exception:
+            pass
 
     def __str__(self):
         return f"{self.invoice_number} - {self.customer.name} (PKR {self.grand_total})"

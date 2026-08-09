@@ -48,16 +48,14 @@
                 <div class="small">City: {{ invoice.customer.city }}</div>
             </div>
             <div class="col-6 text-end">
-                {% if invoice.qr_code %}
-                    <div style="display:inline-block; background:#0f172a; padding:8px; border-radius:10px; text-align:center;">
-                        <img src="{{ invoice.qr_code.url }}" width="110" style="display:block; border-radius:4px;" alt="Invoice QR Code">
-                        <div style="color:#10b981; font-size:9px; font-weight:700; margin-top:4px; letter-spacing:0.5px;">SCAN TO VERIFY</div>
-                    </div>
-                    <div class="small text-muted mt-1" style="font-size:10px;">
-                        Invoice # {{ invoice.invoice_number }}<br>
-                        Authentic Seed ERP Document
-                    </div>
-                {% endif %}
+                <div style="display:inline-block; background:#0f172a; padding:8px; border-radius:10px; text-align:center;">
+                    <img src="{{ invoice.get_qr_data_uri }}" width="110" style="display:block; border-radius:4px;" alt="Invoice QR Code">
+                    <div style="color:#10b981; font-size:9px; font-weight:700; margin-top:4px; letter-spacing:0.5px;">SCAN TO VERIFY</div>
+                </div>
+                <div class="small text-muted mt-1" style="font-size:10px;">
+                    Invoice # {{ invoice.invoice_number }}<br>
+                    Authentic Seed ERP Document
+                </div>
             </div>
         </div>
 

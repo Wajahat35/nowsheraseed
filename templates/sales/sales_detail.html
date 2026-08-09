@@ -51,10 +51,8 @@
             <div>City: {{ invoice.customer.city }}</div>
         </div>
         <div class="col-md-6 text-md-end">
-            {% if invoice.qr_code %}
-                <img src="{{ invoice.qr_code.url }}" width="100" class="border p-1 rounded">
-                <div class="small text-muted mt-1">Scan for QR Verification</div>
-            {% endif %}
+            <img src="{{ invoice.get_qr_data_uri }}" width="100" class="border p-1 rounded" alt="Invoice QR Code">
+            <div class="small text-muted mt-1">Scan for QR Verification</div>
         </div>
     </div>
 

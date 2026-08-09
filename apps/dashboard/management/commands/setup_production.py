@@ -1,10 +1,11 @@
 from django.core.management.base import BaseCommand
 from django.core.management import call_command
 from apps.accounts.models import User, Role
+from apps.settings_app.models import CompanyProfile
 import os
 
 class Command(BaseCommand):
-    help = "Sets up production database and ensures admin user exists"
+    help = "Sets up production database, erp_base_url, and ensures admin user exists"
 
     def handle(self, *args, **options):
         self.stdout.write("Checking database content...")
@@ -44,4 +45,9 @@ class Command(BaseCommand):
         admin_user.role = admin_role
         admin_user.save()
 
-        self.stdout.write(self.style.SUCCESS("[SUCCESS] Production admin user set to: admin / admin123"))
+        # 4. Set Company ERP base URL for QR codes to public production domain
+        company = CompanyProfile.get_instance()
+        company.erp_base_url = 'https://nowsheraseed.onrender.com'
+        company.save()
+
+        self.stdout.write(self.style.SUCCESS("[SUCCESS] Production admin user & QR Code Base URL configured: https://nowsheraseed.onrender.com"))
