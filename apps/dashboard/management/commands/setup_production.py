@@ -44,4 +44,4 @@ class Command(BaseCommand):
         admin_user.role = admin_role
         admin_user.save()
 
-        self.stdout.write(self.style.SUCCESS("✅ Production admin user set to: admin / admin123"))
+        self.stdout.write(self.style.SUCCESS("[SUCCESS] Production admin user set to: admin / admin123"))
