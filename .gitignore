@@ -43,9 +43,6 @@ media/
 # Static files collected (generated at build time)
 staticfiles/
 
-# Django data exports (contains real data — don't commit)
-data_backup.json
-
 # IDE / Editor
 .vscode/
 .idea/
@@ -60,7 +57,6 @@ Thumbs.db
 *.vbs
 cloudflared.exe
 ngrok.zip
-launch_erp.py
 launch_erp.py
 prod_server.py
 create_icon.py

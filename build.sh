@@ -13,4 +13,7 @@ python manage.py collectstatic --noinput
 echo "==> Running database migrations..."
 python manage.py migrate --noinput
 
+echo "==> Importing initial database data into PostgreSQL..."
+python manage.py loaddata data_backup.json || true
+
 echo "==> Build complete."
