@@ -140,8 +140,8 @@
             <span class="check-icon">✓</span>
             Authentic Document
         </div>
-        <h1>{{ invoice.customer.name }}</h1>
-        <p>Verified by Enterprise Seed ERP</p>
+        <h1>{{ company.name|default:"NOWSHERA SEED CORPORATION" }}</h1>
+        <p>{{ company.tagline|default:"Verified Official Seed ERP Invoice" }}</p>
     </div>
 
     <!-- BODY -->
@@ -217,7 +217,7 @@
 
     <!-- FOOTER -->
     <div class="footer">
-        <span class="brand">Enterprise Seed ERP</span> — Authenticated Document<br>
+        <span class="brand">{{ company.name|default:"NOWSHERA SEED CORPORATION" }}</span> — Authenticated Document<br>
         Invoice {{ invoice.invoice_number }} &bull; {{ invoice.date }}
     </div>
 </div>

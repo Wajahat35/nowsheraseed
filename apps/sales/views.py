@@ -151,7 +151,9 @@ class InvoiceQRVerifyView(View):
     """Public QR scan verification page — no login required."""
     def get(self, request, invoice_number):
         invoice = get_object_or_404(SalesInvoice, invoice_number=invoice_number)
-        return render(request, 'sales/invoice_qr_verify.html', {'invoice': invoice})
+        from apps.settings_app.models import CompanyProfile
+        company = CompanyProfile.get_instance()
+        return render(request, 'sales/invoice_qr_verify.html', {'invoice': invoice, 'company': company})
 
 class RecordPaymentView(LoginRequiredMixin, View):
     def post(self, request, pk):
