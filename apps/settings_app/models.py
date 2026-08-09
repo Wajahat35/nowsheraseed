@@ -1,3 +1,4 @@
+import os
 from django.db import models
 
 class CompanyProfile(models.Model):
@@ -13,10 +14,10 @@ class CompanyProfile(models.Model):
     website = models.CharField(max_length=255, default="https://agriseederp.com", blank=True, null=True)
     erp_base_url = models.CharField(
         max_length=255,
-        default="http://127.0.0.1:8000",
+        default="https://nowsheraseed.onrender.com",
         blank=True, null=True,
         verbose_name="ERP Server Base URL",
-        help_text="Used in QR codes so phones can open invoice verification pages. On local network use your PC's IP e.g. http://192.168.1.100:8000"
+        help_text="Used in QR codes so phones can open invoice verification pages."
     )
     address = models.TextField(default="Industrial Agriculture Zone, Multan Road, Lahore, Pakistan", blank=True, null=True)
     city = models.CharField(max_length=100, default="Lahore", blank=True, null=True)
@@ -34,7 +35,8 @@ class CompanyProfile(models.Model):
     def get_logo_url(self):
         if self.logo and hasattr(self.logo, 'url'):
             try:
-                return self.logo.url
+                if os.path.exists(self.logo.path):
+                    return self.logo.url
             except Exception:
                 pass
         return '/static/icon.png'
@@ -42,7 +44,8 @@ class CompanyProfile(models.Model):
     def get_invoice_logo_url(self):
         if self.invoice_logo and hasattr(self.invoice_logo, 'url'):
             try:
-                return self.invoice_logo.url
+                if os.path.exists(self.invoice_logo.path):
+                    return self.invoice_logo.url
             except Exception:
                 pass
         return self.get_logo_url()
