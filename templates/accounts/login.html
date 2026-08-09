@@ -12,6 +12,12 @@
                 <p class="text-muted small">Enterprise Agriculture Seed Management ERP</p>
             </div>
             
+            {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show text-center" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Invalid username or password. Please try again.
+                </div>
+            {% endif %}
+
             <form method="POST">
                 {% csrf_token %}
                 <div class="mb-3">
