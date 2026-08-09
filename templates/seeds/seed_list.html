@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Seed Catalog{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-seedling text-emerald me-2"></i> Agriculture Seed Catalog</h4>
+        <p class="text-muted small mb-0">Catalog of seed varieties, packing sizes, prices, and barcodes.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'seeds:seed_create' %}" class="btn btn-emerald text-white fw-semibold" style="background-color: #10b981;">
+            <i class="fas fa-plus me-1"></i> Add New Seed Item
+        </a>
+        <a href="{% url 'seeds:bulk_upload' %}" class="btn btn-outline-success fw-semibold">
+            <i class="fas fa-file-csv me-1"></i> Bulk Upload CSV
+        </a>
+        <a href="{% url 'seeds:batch_create' %}" class="btn btn-outline-emerald fw-semibold">
+            <i class="fas fa-layer-group me-1"></i> Add Seed Batch
+        </a>
+        <a href="{% url 'seeds:crop_list' %}" class="btn btn-outline-secondary">Crops</a>
+        <a href="{% url 'seeds:category_list' %}" class="btn btn-outline-secondary">Categories</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="seedsTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Seed Name</th>
+                    <th>Variety</th>
+                    <th>Crop Type</th>
+                    <th>Packing Size</th>
+                    <th>Retail Price</th>
+                    <th>Total Stock</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in seeds %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ s.code }}</td>
+                        <td class="fw-semibold">
+                            {% if s.image %}<img src="{{ s.image.url }}" width="30" height="30" class="rounded me-2">{% endif %}
+                            {{ s.name }}
+                        </td>
+                        <td>{{ s.variety }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ s.crop_type.name|default:"General" }}</span></td>
+                        <td>{{ s.packing_size }}</td>
+                        <td class="fw-bold">PKR {{ s.retail_price|intcomma }}</td>
+                        <td>
+                            <span class="badge {% if s.get_total_stock <= s.min_stock_alert %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                                {{ s.get_total_stock }} Bags
+                            </span>
+                        </td>
+                        <td><span class="badge bg-info">{{ s.status }}</span></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'seeds:barcode_print' s.pk %}" class="btn btn-outline-dark" title="Print Barcode"><i class="fas fa-barcode"></i></a>
+                                <a href="{% url 'seeds:seed_update' s.pk %}" class="btn btn-outline-secondary" title="Edit"><i class="fas fa-edit"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No seed items found in catalog.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#seedsTable');
+    });
+</script>
+{% endblock %}

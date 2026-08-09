@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Sales Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice-dollar text-emerald me-2"></i> Date-Wise Sales Audit Report</h4>
+        <p class="text-muted small mb-0">Consolidated customer sales revenue and payment status records.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf me-1"></i> Export PDF</a>
+        <a href="?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel me-1"></i> Export Excel</a>
+    </div>
+</div>
+
+<!-- Date Filter Bar -->
+<div class="card-custom p-4 mb-4">
+    <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Start Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date|default:'' }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">End Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date|default:'' }}">
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button type="submit" class="btn btn-emerald text-white fw-bold w-100" style="background-color: #10b981;"><i class="fas fa-filter me-1"></i> Filter Sales</button>
+            <a href="{% url 'reports:sales_report' %}" class="btn btn-light border">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="reportSalesTable">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Grand Total</th>
+                    <th>Paid Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ inv.invoice_number }}</td>
+                        <td>{{ inv.customer.name }}</td>
+                        <td>{{ inv.date }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ inv.get_sales_type_display }}</span></td>
+                        <td class="fw-bold font-monospace">PKR {{ inv.grand_total|intcomma }}</td>
+                        <td class="text-success font-monospace">PKR {{ inv.paid_amount|intcomma }}</td>
+                        <td><span class="badge {% if inv.payment_status == 'Paid' %}bg-success{% elif inv.payment_status == 'Partial' %}bg-warning{% else %}bg-danger{% endif %}">{{ inv.payment_status }}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No sales records match the selected date range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#reportSalesTable');
+    });
+</script>
+{% endblock %}

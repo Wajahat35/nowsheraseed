@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center min-vh-100 py-5">
+    <div class="col-md-5 col-lg-4">
+        <div class="card-custom p-4 shadow-lg border-0">
+            <div class="text-center mb-4">
+                <img src="{{ company.get_logo_url }}" style="max-height: 80px;" class="mb-2" alt="{{ company.name }}">
+                <h3 class="fw-bold mt-2 mb-0">{{ company.name|default:"AgriSeed ERP" }}</h3>
+                <p class="text-muted small">Enterprise Agriculture Seed Management ERP</p>
+            </div>
+            
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user text-muted"></i></span>
+                        <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock text-muted"></i></span>
+                        <input type="password" name="password" class="form-control" placeholder="Enter password" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-emerald w-100 py-2 fw-bold text-white" style="background-color: #10b981;">
+                    <i class="fas fa-sign-in-alt me-2"></i> Sign In to ERP
+                </button>
+            </form>
+            
+            <div class="mt-4 text-center">
+                <small class="text-muted">Need credentials? Contact your System Administrator.</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

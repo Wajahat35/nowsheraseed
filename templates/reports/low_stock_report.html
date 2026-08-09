@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Low Stock Alert Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-exclamation-triangle text-danger me-2"></i> Low Stock Threshold Report</h4>
+        <p class="text-muted small mb-0">Seed items currently below minimum stock threshold.</p>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Seed Description</th>
+                    <th>Variety</th>
+                    <th>Min Alert Threshold</th>
+                    <th>Current Stock</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in seeds %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ s.code }}</td>
+                        <td>{{ s.name }}</td>
+                        <td>{{ s.variety }}</td>
+                        <td>{{ s.min_stock_alert }} Bags</td>
+                        <td class="fw-bold text-danger">{{ s.get_total_stock }} Bags</td>
+                        <td><a href="{% url 'purchases:purchase_create' %}" class="btn btn-sm btn-primary">Create Purchase Bill</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">All seed stocks are above minimum threshold levels!</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

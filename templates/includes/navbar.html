@@ -1,0 +1,54 @@
+<nav class="navbar navbar-expand-lg top-navbar">
+    <div class="container-fluid px-0">
+        <button class="btn btn-light btn-sm me-3 border" id="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <form class="d-none d-md-flex ms-2 me-auto" action="{% url 'sales:sales_list' %}" method="GET">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input class="form-control border-start-0 ps-0" type="search" name="q" placeholder="Global ERP Search (Invoice, Customer, Barcode)..." aria-label="Search">
+            </div>
+        </form>
+        
+        <div class="d-flex align-items-center gap-3">
+            <button class="btn btn-outline-secondary btn-sm" id="theme-toggle" title="Toggle Dark/Light Mode">
+                <i class="fas fa-moon"></i>
+            </button>
+
+            <!-- Notifications Dropdown -->
+            <div class="dropdown">
+                <a class="btn btn-light btn-sm border position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-bell text-secondary"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                        <span class="visually-hidden">Alerts</span>
+                    </span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="width: 300px;">
+                    <li class="dropdown-header fw-bold border-bottom">System Alerts</li>
+                    <li><a class="dropdown-item py-2 text-wrap small" href="{% url 'reports:low_stock_report' %}"><i class="fas fa-exclamation-triangle text-amber me-2"></i> Low Stock Alert Threshold Reached</a></li>
+                    <li><a class="dropdown-item py-2 text-wrap small" href="{% url 'reports:expired_stock_report' %}"><i class="fas fa-calendar-times text-danger me-2"></i> Seed Batch Expiry Inspection Required</a></li>
+                </ul>
+            </div>
+            
+            <!-- User Profile Dropdown -->
+            <div class="dropdown">
+                <a class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown">
+                    <div class="avatar bg-emerald-subtle rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: 700;">
+                        {{ user.username|slice:":1"|upper }}
+                    </div>
+                    <div class="d-none d-lg-block text-start me-1">
+                        <div class="fw-semibold small lh-1">{{ user.get_full_name|default:user.username }}</div>
+                        <small class="text-muted" style="font-size: 0.75rem;">{{ user.role.get_name_display|default:"System User" }}</small>
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><a class="dropdown-item" href="{% url 'settings_app:company_settings' %}"><i class="fas fa-sliders-h me-2 text-muted"></i> System Settings</a></li>
+                    <li><a class="dropdown-item" href="{% url 'accounts:audit_logs' %}"><i class="fas fa-history me-2 text-muted"></i> Activity Logs</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>

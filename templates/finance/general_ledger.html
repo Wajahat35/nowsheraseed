@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Double-Entry General Ledger Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-book text-primary me-2"></i> Double-Entry General Ledger</h4>
+        <p class="text-muted small mb-0">Detailed statement of account transactions with live running balances.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'finance:voucher_create' %}" class="btn btn-emerald text-white fw-bold" style="background-color: #10b981;">
+            <i class="fas fa-plus me-1"></i> Create Journal Voucher
+        </a>
+        <a href="{% url 'finance:trial_balance' %}" class="btn btn-outline-secondary fw-semibold">
+            <i class="fas fa-balance-scale me-1"></i> Trial Balance
+        </a>
+    </div>
+</div>
+
+<!-- Account & Date Filter Card -->
+<div class="card-custom p-3 mb-4 bg-light border">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <label class="form-label fw-semibold small">Select Chart of Account (COA) *</label>
+            <select name="account" class="form-select select2" onchange="this.form.submit()">
+                <option value="">-- Choose Account to View Ledger --</option>
+                {% for acc in accounts %}
+                    <option value="{{ acc.id }}" {% if selected_account.id == acc.id %}selected{% endif %}>
+                        {{ acc.code }} - {{ acc.name }} ({{ acc.category.get_name_display }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold small">From Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold small">To Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+        <div class="col-md-1">
+            <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="fas fa-filter"></i></button>
+        </div>
+    </form>
+</div>
+
+{% if selected_account %}
+    <div class="card-custom p-4 mb-4">
+        <!-- Account Header Summary -->
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+            <div>
+                <h5 class="fw-bold mb-0 text-primary">{{ selected_account.code }} — {{ selected_account.name }}</h5>
+                <small class="text-muted">Type: <strong>{{ selected_account.category.get_name_display }}</strong></small>
+            </div>
+            <div class="text-end">
+                <small class="text-muted d-block">Current Balance</small>
+                <h4 class="fw-bold mb-0 {% if final_balance >= 0 %}text-success{% else %}text-danger{% endif %} font-monospace">
+                    PKR {{ final_balance|intcomma }}
+                </h4>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-custom table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Voucher #</th>
+                        <th>Type</th>
+                        <th>Narration / Detail</th>
+                        <th class="text-end">Debit (PKR)</th>
+                        <th class="text-end">Credit (PKR)</th>
+                        <th class="text-end">Running Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in ledger_entries %}
+                        <tr>
+                            <td class="fw-semibold">{{ entry.date }}</td>
+                            <td>
+                                <a href="{% url 'finance:voucher_detail' entry.voucher_pk %}" class="fw-bold text-decoration-none">
+                                    {{ entry.voucher_number }}
+                                </a>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ entry.voucher_type }}</span></td>
+                            <td>{{ entry.narration }}</td>
+                            <td class="text-end font-monospace {% if entry.debit > 0 %}fw-bold text-success{% else %}text-muted{% endif %}">
+                                {% if entry.debit > 0 %}PKR {{ entry.debit|intcomma }}{% else %}-{% endif %}
+                            </td>
+                            <td class="text-end font-monospace {% if entry.credit > 0 %}fw-bold text-danger{% else %}text-muted{% endif %}">
+                                {% if entry.credit > 0 %}PKR {{ entry.credit|intcomma }}{% else %}-{% endif %}
+                            </td>
+                            <td class="text-end font-monospace fw-bold {% if entry.running_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                PKR {{ entry.running_balance|intcomma }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i>No ledger transactions recorded for this account in the selected period.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if ledger_entries %}
+                <tfoot class="table-dark">
+                    <tr>
+                        <td colspan="4" class="fw-bold">TOTAL PERIOD ACTIVITY:</td>
+                        <td class="text-end font-monospace text-emerald fw-bold">PKR {{ total_debit|intcomma }}</td>
+                        <td class="text-end font-monospace text-danger fw-bold">PKR {{ total_credit|intcomma }}</td>
+                        <td class="text-end font-monospace fw-bold">PKR {{ final_balance|intcomma }}</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="card-custom p-5 text-center text-muted">
+        <i class="fas fa-book-open fs-1 mb-3 text-primary"></i>
+        <h5>Select an Account Above</h5>
+        <p class="mb-0">Choose any account from the dropdown list to view its complete double-entry general ledger statement.</p>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Profit & Loss Statement{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-chart-line text-emerald me-2"></i> Profit & Loss (Income Statement)</h4>
+        <p class="text-muted small mb-0">Financial statement showing total revenues, operating expenses, and net profit/loss.</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-outline-dark"><i class="fas fa-print me-1"></i> Print P&L Report</button>
+</div>
+
+<div class="card-custom p-4">
+    <div class="row">
+        <!-- Revenue Section -->
+        <div class="col-md-6 mb-4">
+            <h5 class="fw-bold text-success border-bottom pb-2"><i class="fas fa-arrow-down me-2"></i> Revenues & Sales Income</h5>
+            <table class="table table-hover table-sm">
+                <tbody>
+                    {% for acc in revenue_accounts %}
+                        <tr>
+                            <td>{{ acc.name }}</td>
+                            <td class="text-end fw-bold font-monospace">PKR {{ acc.get_balance|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted">No revenue items.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="border-top fw-bold fs-6">
+                    <tr>
+                        <td>Total Revenue:</td>
+                        <td class="text-end text-success font-monospace">PKR {{ total_revenue|intcomma }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Expense Section -->
+        <div class="col-md-6 mb-4">
+            <h5 class="fw-bold text-danger border-bottom pb-2"><i class="fas fa-arrow-up me-2"></i> Operating Expenses & COGS</h5>
+            <table class="table table-hover table-sm">
+                <tbody>
+                    {% for acc in expense_accounts %}
+                        <tr>
+                            <td>{{ acc.name }}</td>
+                            <td class="text-end fw-bold font-monospace">PKR {{ acc.get_balance|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted">No expense items.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="border-top fw-bold fs-6">
+                    <tr>
+                        <td>Total Expenses:</td>
+                        <td class="text-end text-danger font-monospace">PKR {{ total_expenses|intcomma }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <div class="card bg-light p-4 border mt-3 text-center">
+        <h5 class="text-muted mb-1">NET OPERATING PROFIT / (LOSS)</h5>
+        <h2 class="fw-bold mb-0 {% if net_profit >= 0 %}text-success{% else %}text-danger{% endif %} font-monospace">
+            PKR {{ net_profit|intcomma }}
+        </h2>
+    </div>
+</div>
+{% endblock %}

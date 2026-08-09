@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Sales Invoices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice-dollar text-emerald me-2"></i> Sales Invoices</h4>
+        <p class="text-muted small mb-0">Record customer sales, retail/wholesale billing, and POS receipts.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'sales:sales_create' %}" class="btn btn-emerald text-white fw-semibold" style="background-color: #10b981;">
+            <i class="fas fa-plus me-1"></i> New Sales Invoice
+        </a>
+        <a href="{% url 'sales:pos_terminal' %}" class="btn btn-primary fw-semibold">
+            <i class="fas fa-cash-register me-1"></i> Open POS Terminal
+        </a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="salesTable">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Grand Total</th>
+                    <th>Paid Amount</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ inv.invoice_number }}</td>
+                        <td class="fw-semibold">{{ inv.customer.name }}</td>
+                        <td>{{ inv.date }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ inv.get_sales_type_display }}</span></td>
+                        <td class="fw-bold text-dark">PKR {{ inv.grand_total|intcomma }}</td>
+                        <td class="text-success fw-bold">PKR {{ inv.paid_amount|intcomma }}</td>
+                        <td>{{ inv.payment_method }}</td>
+                        <td>
+                            <span class="badge {% if inv.payment_status == 'Paid' %}bg-success{% elif inv.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                {{ inv.payment_status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'sales:sales_detail' inv.pk %}" class="btn btn-outline-info" title="View Details"><i class="fas fa-eye"></i> View</a>
+                                {% if inv.payment_status != 'Paid' %}
+                                    <a href="{% url 'sales:sales_detail' inv.pk %}?pay=1" class="btn btn-emerald text-white" style="background-color: #10b981;" title="Receive Payment"><i class="fas fa-cash-register"></i> Pay</a>
+                                {% endif %}
+                                <a href="{% url 'sales:invoice_print' inv.pk %}" class="btn btn-outline-dark" title="Print Invoice" target="_blank"><i class="fas fa-print"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No sales invoices recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#salesTable');
+    });
+</script>
+{% endblock %}

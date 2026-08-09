@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Gate Pass Logistics Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-truck-loading text-secondary me-2"></i> Gate Pass Logistics Audit Report</h4>
+        <p class="text-muted small mb-0">Date-wise security gate pass movement, inward/outward cargo, and CNIC records.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&pass_type={{ pass_type|default:'' }}&export=pdf" class="btn btn-outline-danger">
+            <i class="fas fa-file-pdf me-1"></i> Export PDF Report
+        </a>
+        <a href="?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&pass_type={{ pass_type|default:'' }}&export=excel" class="btn btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i> Export Excel
+        </a>
+    </div>
+</div>
+
+<!-- Date-Wise Filter Bar -->
+<div class="card-custom p-4 mb-4">
+    <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Start Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date|default:'' }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">End Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date|default:'' }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-semibold">Gate Pass Type</label>
+            <select name="pass_type" class="form-select">
+                <option value="">-- All Types (IN & OUT) --</option>
+                <option value="IN" {% if pass_type == 'IN' %}selected{% endif %}>Gate Pass IN (Inward Cargo)</option>
+                <option value="OUT" {% if pass_type == 'OUT' %}selected{% endif %}>Gate Pass OUT (Outward Cargo)</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary fw-bold w-100"><i class="fas fa-filter me-1"></i> Filter</button>
+            <a href="{% url 'gatepass:gatepass_report' %}" class="btn btn-light border">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="gpReportTable">
+            <thead>
+                <tr>
+                    <th>Pass #</th>
+                    <th>Type</th>
+                    <th>Date & Time</th>
+                    <th>Vehicle #</th>
+                    <th>Driver Name</th>
+                    <th>CNIC</th>
+                    <th>Bags</th>
+                    <th>Weight (Kg)</th>
+                    <th>Invoice / Bill Ref</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gp in gatepasses %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ gp.pass_number }}</td>
+                        <td>
+                            <span class="badge {% if gp.pass_type == 'IN' %}bg-info{% else %}bg-primary{% endif %}">
+                                {{ gp.get_pass_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ gp.date_time|date:"Y-m-d H:i" }}</td>
+                        <td class="fw-bold">{{ gp.vehicle_number }}</td>
+                        <td>{{ gp.driver_name }}</td>
+                        <td>{{ gp.driver_cnic }}</td>
+                        <td>{{ gp.total_bags }}</td>
+                        <td>{{ gp.total_weight_kg }} Kg</td>
+                        <td>{{ gp.invoice_reference|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'gatepass:gatepass_print' gp.pk %}" target="_blank" class="btn btn-sm btn-outline-dark"><i class="fas fa-print"></i> Print</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">No gate passes match the selected date range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#gpReportTable');
+    });
+</script>
+{% endblock %}

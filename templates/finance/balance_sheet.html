@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Balance Sheet Statement{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-university text-primary me-2"></i> Balance Sheet Statement</h4>
+        <p class="text-muted small mb-0">Financial position: Assets = Liabilities + Owner Equity.</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-outline-dark"><i class="fas fa-print me-1"></i> Print Balance Sheet</button>
+</div>
+
+<div class="card-custom p-4">
+    <div class="row">
+        <!-- Assets Column -->
+        <div class="col-md-6 mb-4">
+            <h5 class="fw-bold text-emerald border-bottom pb-2">Company Assets</h5>
+            <table class="table table-hover">
+                <tbody>
+                    {% for acc in asset_accounts %}
+                        <tr>
+                            <td>{{ acc.name }}</td>
+                            <td class="text-end fw-bold font-monospace">PKR {{ acc.get_balance|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted">No asset accounts.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="border-top fw-bold fs-5">
+                    <tr>
+                        <td>TOTAL ASSETS:</td>
+                        <td class="text-end text-emerald font-monospace">PKR {{ total_assets|intcomma }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Liabilities & Equity Column -->
+        <div class="col-md-6 mb-4">
+            <h5 class="fw-bold text-danger border-bottom pb-2">Liabilities</h5>
+            <table class="table table-hover mb-4">
+                <tbody>
+                    {% for acc in liability_accounts %}
+                        <tr>
+                            <td>{{ acc.name }}</td>
+                            <td class="text-end fw-bold font-monospace">PKR {{ acc.get_balance|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted">No liability accounts.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h5 class="fw-bold text-primary border-bottom pb-2">Owner Equity</h5>
+            <table class="table table-hover">
+                <tbody>
+                    {% for acc in equity_accounts %}
+                        <tr>
+                            <td>{{ acc.name }}</td>
+                            <td class="text-end fw-bold font-monospace">PKR {{ acc.get_balance|intcomma }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2" class="text-muted">No equity accounts.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="border-top fw-bold fs-5">
+                    <tr>
+                        <td>TOTAL LIABILITIES & EQUITY:</td>
+                        <td class="text-end text-primary font-monospace">PKR {{ total_liabilities|add:total_equity|intcomma }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

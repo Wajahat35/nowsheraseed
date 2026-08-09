@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Supplier Directory{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-truck text-secondary me-2"></i> Supplier Directory</h4>
+        <p class="text-muted small mb-0">Manage seed suppliers, company profiles, and payable bills.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'suppliers:supplier_create' %}" class="btn btn-primary fw-semibold">
+            <i class="fas fa-plus me-1"></i> Add New Supplier
+        </a>
+        <a href="{% url 'suppliers:bulk_upload' %}" class="btn btn-outline-success fw-semibold">
+            <i class="fas fa-file-csv me-1"></i> Bulk Upload CSV
+        </a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="suppliersTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Supplier Name</th>
+                    <th>Company Name</th>
+                    <th>Phone</th>
+                    <th>City</th>
+                    <th>Current Payable</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in suppliers %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ s.code }}</td>
+                        <td class="fw-semibold">{{ s.name }}</td>
+                        <td>{{ s.company_name|default:"-" }}</td>
+                        <td>{{ s.phone }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ s.city }}</span></td>
+                        <td class="fw-bold text-danger">
+                            PKR {{ s.get_current_balance|intcomma }}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'suppliers:supplier_ledger' s.pk %}" class="btn btn-outline-info" title="View Ledger"><i class="fas fa-book"></i> Ledger</a>
+                                <a href="{% url 'suppliers:supplier_update' s.pk %}" class="btn btn-outline-secondary" title="Edit"><i class="fas fa-edit"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No suppliers registered yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#suppliersTable');
+    });
+</script>
+{% endblock %}

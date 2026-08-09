@@ -1,0 +1,30 @@
+# Core Django
+Django>=6.0,<7.0
+djangorestframework>=3.14.0
+
+# Production WSGI server
+gunicorn>=26.0.0
+
+# PostgreSQL adapter (production)
+psycopg2-binary>=2.9.9
+
+# Database URL parsing (reads DATABASE_URL env var)
+dj-database-url>=2.1.0
+
+# Static files serving
+whitenoise>=6.6.0
+
+# Image handling
+Pillow>=10.0.0
+
+# Excel export
+openpyxl>=3.1.0
+
+# PDF generation
+reportlab>=4.0.0
+
+# QR code generation
+qrcode>=7.4.2
+
+# Data analysis / reports
+pandas>=2.0.0

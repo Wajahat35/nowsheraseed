@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}System & Company Settings{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card-custom p-4">
+            <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                <img src="{{ company.get_logo_url }}" height="60" class="rounded border p-1 bg-white">
+                <div>
+                    <h4 class="fw-bold mb-0">Enterprise Company Settings & Branding</h4>
+                    <p class="text-muted small mb-0">Manage registered company details, logo, phone, address, and invoice headers across all printable setups.</p>
+                </div>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <strong><i class="fas fa-exclamation-circle me-1"></i> Update Failed:</strong> Please fix the errors below.
+                        <ul class="mb-0 mt-1">
+                            {% for field, errors in form.errors.items %}
+                                <li><strong>{{ field|capfirst }}:</strong> {{ errors|striptags }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Company Registered Name *</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Company Tagline</label>
+                        {{ form.tagline }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">NTN Number</label>
+                        {{ form.ntn }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Sales Tax Reg No (STRN)</label>
+                        {{ form.strn }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Default GST Rate (%)</label>
+                        {{ form.gst_rate }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Phone Number</label>
+                        {{ form.phone }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Mobile Number</label>
+                        {{ form.mobile }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Company Email</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Headquarters Address</label>
+                        {{ form.address }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">City</label>
+                        {{ form.city }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">
+                            <i class="fas fa-qrcode me-1 text-primary"></i>
+                            ERP Server URL (for QR Code scanning)
+                        </label>
+                        {{ form.erp_base_url }}
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Run <code>ipconfig</code> in CMD to find your PC's IP. Enter it here so phones on your network can scan QR codes.
+                            Example: <strong>http://192.168.1.100:8000</strong>
+                        </small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Currency Symbol</label>
+                        {{ form.currency_symbol }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Invoice Serial Prefix</label>
+                        {{ form.invoice_prefix }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Purchase Serial Prefix</label>
+                        {{ form.purchase_prefix }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Gate Pass Serial Prefix</label>
+                        {{ form.gatepass_prefix }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Invoice Footer Notes & Terms</label>
+                        {{ form.invoice_footer }}
+                    </div>
+
+                    <!-- Logo Uploads & Live Previews -->
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light">
+                            <label class="form-label fw-semibold">Main Company Logo</label>
+                            <div class="mb-2">
+                                <img src="{{ company.get_logo_url }}" height="70" class="rounded border p-1 bg-white">
+                            </div>
+                            {{ form.logo }}
+                            <small class="text-muted d-block mt-1">Displayed on sidebar navigation and dashboard.</small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 bg-light">
+                            <label class="form-label fw-semibold">Printable Invoice Logo</label>
+                            <div class="mb-2">
+                                <img src="{{ company.get_invoice_logo_url }}" height="70" class="rounded border p-1 bg-white">
+                            </div>
+                            {{ form.invoice_logo }}
+                            <small class="text-muted d-block mt-1">Displayed on tax invoices, thermal bills, & gate passes.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <button type="submit" class="btn btn-emerald text-white fw-bold px-4" style="background-color: #10b981;">
+                        <i class="fas fa-save me-1"></i> Save & Apply to All Printable Documents
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

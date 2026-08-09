@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit Seed{% else %}Add New Seed{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card-custom p-4">
+            <h4 class="fw-bold mb-3">
+                <i class="fas fa-seedling text-emerald me-2"></i>
+                {% if form.instance.pk %}Edit Seed Item: {{ form.instance.name }}{% else %}Add Seed Item to Catalog{% endif %}
+            </h4>
+            
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Seed Item Name *</label>
+                        {{ form.name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Seed Variety *</label>
+                        {{ form.variety }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Crop Type</label>
+                        {{ form.crop_type }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Seed Category</label>
+                        {{ form.category }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Brand / Company</label>
+                        {{ form.brand }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Packing Size</label>
+                        {{ form.packing_size }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Unit Weight (Kg)</label>
+                        {{ form.weight_kg }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Purchase Price (PKR)</label>
+                        {{ form.purchase_price }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Retail Price (PKR)</label>
+                        {{ form.retail_price }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Wholesale Price (PKR)</label>
+                        {{ form.wholesale_price }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">GST Rate (%)</label>
+                        {{ form.gst_rate }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Min Stock Alert Qty</label>
+                        {{ form.min_stock_alert }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Barcode String</label>
+                        {{ form.barcode }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Status</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Product Image Upload</label>
+                        {{ form.image }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'seeds:seed_list' %}" class="btn btn-light border">Cancel</a>
+                    <button type="submit" class="btn btn-emerald text-white fw-bold px-4" style="background-color: #10b981;">
+                        Save Seed Item
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

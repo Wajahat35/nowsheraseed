@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+
+{% block title %}Record Purchase Bill{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card-custom p-4">
+            <h4 class="fw-bold mb-4">
+                <i class="fas fa-shopping-bag text-primary me-2"></i> Record Supplier Purchase Bill
+            </h4>
+
+            <form id="purchaseForm" method="POST" action="{% url 'purchases:purchase_create' %}">
+                {% csrf_token %}
+                <input type="hidden" name="items_data" id="items_data_input">
+
+                <!-- ── SECTION 1: Bill Header ── -->
+                <div class="border rounded p-3 mb-4 bg-light">
+                    <h6 class="fw-bold text-primary mb-3"><i class="fas fa-file-invoice me-2"></i>Bill Information</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Supplier *</label>
+                            {{ form.supplier }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Supplier Bill / Invoice #</label>
+                            {{ form.supplier_bill_no }}
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Purchase Date *</label>
+                            {{ form.date }}
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Due Date</label>
+                            {{ form.due_date }}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Notes / Remarks</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SECTION 2: Add Items ── -->
+                <div class="card border mb-3">
+                    <div class="card-header bg-primary text-white fw-bold py-2">
+                        <i class="fas fa-plus-circle me-2"></i>Add Stock Items to Purchase Bill
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold small">Seed Item</label>
+                                <select id="item_seed_select" class="form-select">
+                                    <option value="">-- Select Seed Item --</option>
+                                    {% for s in seeds %}
+                                        <option value="{{ s.id }}" data-price="{{ s.purchase_price }}">{{ s.name }} ({{ s.variety }}) — Cost: PKR {{ s.purchase_price }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold small">Quantity (Bags)</label>
+                                <input type="number" id="item_qty" class="form-control" placeholder="e.g. 10" value="1" min="1">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold small">Unit Purchase Price</label>
+                                <input type="number" id="item_price" class="form-control" placeholder="PKR" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold small">GST %</label>
+                                <input type="number" id="item_gst" class="form-control" placeholder="0" value="0" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" id="add_item_btn" class="btn btn-primary text-white w-100 fw-bold">
+                                    <i class="fas fa-plus me-1"></i> Add to Bill
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SECTION 3: Line Items Table ── -->
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered align-middle" id="purchase_items_table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Seed Item</th>
+                                <th>Quantity (Bags)</th>
+                                <th>Unit Price (PKR)</th>
+                                <th>GST %</th>
+                                <th>Subtotal (PKR)</th>
+                                <th>Remove</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchase_items_body">
+                            <tr id="empty_cart_row">
+                                <td colspan="7" class="text-center text-muted py-3">
+                                    <i class="fas fa-inbox me-2"></i>No items added yet. Select a seed item above.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── SECTION 4: Summary + Payment ── -->
+                <div class="row g-3 mb-4">
+                    <!-- Left: Payment Details -->
+                    <div class="col-md-7">
+                        <div class="border rounded p-3 h-100" style="background: #f0f9ff;">
+                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-money-bill-wave me-2"></i>Payment Details</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Payment Method *</label>
+                                    {{ form.payment_method }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Amount Paid Now (PKR)</label>
+                                    {{ form.paid_amount }}
+                                    <small class="text-muted">Leave 0 for unpaid / credit bill</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Cheque / TRX Reference #</label>
+                                    {{ form.reference_no }}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Balance Due</label>
+                                    <input type="text" id="lbl_balance_due" class="form-control text-danger fw-bold font-monospace" value="PKR 0.00" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Grand Total Summary -->
+                    <div class="col-md-5">
+                        <div class="card p-3 border bg-light h-100">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-calculator me-2"></i>Bill Summary</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-semibold">Subtotal (excl. GST):</span>
+                                <span id="lbl_subtotal" class="fw-bold font-monospace">PKR 0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-semibold">Total GST / Tax:</span>
+                                <span id="lbl_tax" class="fw-bold font-monospace text-secondary">PKR 0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-semibold">Discount:</span>
+                                {{ form.discount_amount }}
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold fs-5 text-primary">Grand Total:</span>
+                                <span id="lbl_grand_total" class="fw-bold fs-5 text-primary font-monospace">PKR 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'purchases:purchase_list' %}" class="btn btn-light border">Cancel</a>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">
+                        <i class="fas fa-check-circle me-1"></i> Save Purchase Bill
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let purchaseItems = [];
+
+    // Auto-fill price on seed selection
+    document.getElementById('item_seed_select').addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        if (selected.value) {
+            document.getElementById('item_price').value = selected.getAttribute('data-price') || '';
+        }
+    });
+
+    // Add item to cart
+    document.getElementById('add_item_btn').addEventListener('click', function() {
+        const seedSelect = document.getElementById('item_seed_select');
+        const seedId = seedSelect.value;
+        const seedName = seedSelect.options[seedSelect.selectedIndex].text;
+        const qty = parseInt(document.getElementById('item_qty').value) || 1;
+        const price = parseFloat(document.getElementById('item_price').value) || 0;
+        const gst = parseFloat(document.getElementById('item_gst').value) || 0;
+
+        if (!seedId) {
+            alert('Please select a seed item first!');
+            return;
+        }
+        if (price <= 0) {
+            alert('Please enter a valid unit purchase price!');
+            return;
+        }
+
+        const lineSubtotal = qty * price;
+        const taxAmount = lineSubtotal * (gst / 100);
+
+        purchaseItems.push({
+            seed_id: seedId,
+            seed_name: seedName,
+            quantity: qty,
+            unit_price: price,
+            tax_rate: gst,
+            subtotal: lineSubtotal + taxAmount
+        });
+
+        // Reset input row
+        document.getElementById('item_seed_select').value = '';
+        document.getElementById('item_qty').value = 1;
+        document.getElementById('item_price').value = '';
+        document.getElementById('item_gst').value = 0;
+
+        renderPurchaseCart();
+    });
+
+    function renderPurchaseCart() {
+        const tbody = document.getElementById('purchase_items_body');
+        tbody.innerHTML = '';
+
+        if (purchaseItems.length === 0) {
+            tbody.innerHTML = '<tr id="empty_cart_row"><td colspan="7" class="text-center text-muted py-3"><i class="fas fa-inbox me-2"></i>No items added yet.</td></tr>';
+            updateTotals(0, 0);
+            return;
+        }
+
+        let subtotalBase = 0;
+        let totalGst = 0;
+
+        purchaseItems.forEach((item, index) => {
+            const baseSubtotal = item.quantity * item.unit_price;
+            const gstAmt = baseSubtotal * (item.tax_rate / 100);
+            subtotalBase += baseSubtotal;
+            totalGst += gstAmt;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td class="fw-semibold">${item.seed_name}</td>
+                <td>${item.quantity}</td>
+                <td class="font-monospace">PKR ${item.unit_price.toFixed(2)}</td>
+                <td>${item.tax_rate}%</td>
+                <td class="fw-bold font-monospace">PKR ${item.subtotal.toFixed(2)}</td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removePurchaseItem(${index})"><i class="fas fa-trash"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        updateTotals(subtotalBase, totalGst);
+        document.getElementById('items_data_input').value = JSON.stringify(purchaseItems);
+    }
+
+    function updateTotals(subtotalBase, totalGst) {
+        const addDisc = parseFloat(document.getElementById('id_discount_amount').value) || 0;
+        const grandTotal = Math.max(0, subtotalBase + totalGst - addDisc);
+        const paidAmt = parseFloat(document.getElementById('id_paid_amount').value) || 0;
+        const balanceDue = Math.max(0, grandTotal - paidAmt);
+
+        document.getElementById('lbl_subtotal').innerText = 'PKR ' + subtotalBase.toFixed(2);
+        document.getElementById('lbl_tax').innerText = 'PKR ' + totalGst.toFixed(2);
+        document.getElementById('lbl_grand_total').innerText = 'PKR ' + grandTotal.toFixed(2);
+        document.getElementById('lbl_balance_due').value = 'PKR ' + balanceDue.toFixed(2);
+        document.getElementById('items_data_input').value = JSON.stringify(purchaseItems);
+    }
+
+    function removePurchaseItem(index) {
+        purchaseItems.splice(index, 1);
+        renderPurchaseCart();
+    }
+
+    // Recalculate when discount or paid amount changes
+    document.getElementById('id_discount_amount').addEventListener('input', renderPurchaseCart);
+    document.getElementById('id_paid_amount').addEventListener('input', renderPurchaseCart);
+</script>
+{% endblock %}

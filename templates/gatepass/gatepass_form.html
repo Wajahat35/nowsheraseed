@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Issue Security Gate Pass{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card-custom p-4">
+            <h4 class="fw-bold mb-3">
+                <i class="fas fa-truck-loading text-secondary me-2"></i> Issue Security Gate Pass
+            </h4>
+            
+            <form method="POST">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <strong><i class="fas fa-exclamation-circle me-1"></i> Form Submission Error:</strong> Please fix the highlighted fields below.
+                        <ul class="mb-0 mt-1">
+                            {% for field, errors in form.errors.items %}
+                                <li><strong>{{ field|capfirst }}:</strong> {{ errors|striptags }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Gate Pass Type *</label>
+                        {{ form.pass_type }}
+                        <small class="text-muted">Select Sales Outward, Purchase Inward, or Manual.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Vehicle Number *</label>
+                        {{ form.vehicle_number }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Driver Full Name *</label>
+                        {{ form.driver_name }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Driver CNIC * (e.g. 42000-0000000-0)</label>
+                        {{ form.driver_cnic }}
+                        <small class="text-muted">Format: 13 digits with hyphens (e.g. 42000-0000000-0)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Driver Mobile * (e.g. 03000000000)</label>
+                        {{ form.driver_mobile }}
+                        <small class="text-muted">Format: 11 digits starting with 03 (e.g. 03000000000)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Transport Company</label>
+                        {{ form.transport_company }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Invoice / Bill Reference # (Sales INV / Purchase PUR)</label>
+                        {{ form.invoice_reference }}
+                        <small class="text-muted">Selecting an invoice automatically loads Total Seed Bags & Net Weight!</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Total Seed Bags (Auto-Calculated)</label>
+                        {{ form.total_bags }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Total Net Weight in Kg (Auto-Calculated)</label>
+                        {{ form.total_weight_kg }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Security Remarks & Inspection Notes</label>
+                        {{ form.remarks }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'gatepass:gatepass_list' %}" class="btn btn-light border">Cancel</a>
+                    <button type="submit" class="btn btn-secondary text-white fw-bold px-4">
+                        <i class="fas fa-print me-1"></i> Save & Issue Gate Pass
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const invSelect = document.getElementById("id_invoice_reference");
+        const bagsInput = document.getElementById("id_total_bags");
+        const weightInput = document.getElementById("id_total_weight_kg");
+        const passTypeSelect = document.getElementById("id_pass_type");
+
+        if (invSelect) {
+            invSelect.addEventListener("change", function() {
+                const refVal = this.value;
+                if (!refVal) return;
+
+                fetch("{% url 'gatepass:invoice_api' %}?ref=" + encodeURIComponent(refVal))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (bagsInput) bagsInput.value = data.bags;
+                            if (weightInput) weightInput.value = data.weight_kg;
+                            if (passTypeSelect && data.type) {
+                                passTypeSelect.value = data.type;
+                            }
+                        }
+                    })
+                    .catch(err => console.error("Error fetching invoice info:", err));
+            });
+        }
+    });
+</script>
+{% endblock %}

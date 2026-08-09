@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Customer Ledger - {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-book text-emerald me-2"></i> Customer Statement / Ledger</h4>
+        <p class="text-muted small mb-0">{{ customer.code }} - {{ customer.name }} {% if customer.company_name %}({{ customer.company_name }}){% endif %}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-dark me-2"><i class="fas fa-print me-1"></i> Print Statement</button>
+        <a href="{% url 'customers:customer_list' %}" class="btn btn-light border">Back to Directory</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <!-- Customer Header Profile -->
+    <div class="row border-bottom pb-3 mb-4">
+        <div class="col-md-6">
+            <h5 class="fw-bold">{{ customer.name }}</h5>
+            <div class="text-muted small">{{ customer.address|default:"No Address Recorded" }}, {{ customer.city }}</div>
+            <div class="text-muted small">Phone: {{ customer.phone }} | WhatsApp: {{ customer.whatsapp|default:"-" }}</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <div class="text-muted small">Credit Limit: PKR {{ customer.debit_limit|intcomma }} ({{ customer.credit_days }} Days)</div>
+            <h4 class="fw-bold mt-1 text-danger">Outstanding Balance: PKR {{ current_balance|intcomma }}</h4>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Reference #</th>
+                    <th>Description / Particulars</th>
+                    <th class="text-end">Debit (PKR)</th>
+                    <th class="text-end">Credit (PKR)</th>
+                    <th class="text-end">Balance (PKR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in ledger_entries %}
+                    <tr>
+                        <td>{{ entry.date|date:"Y-m-d" }}</td>
+                        <td class="fw-bold">
+                            {% if entry.url %}<a href="{{ entry.url }}">{{ entry.reference }}</a>{% else %}{{ entry.reference }}{% endif %}
+                        </td>
+                        <td>{{ entry.description }}</td>
+                        <td class="text-end text-danger font-monospace">{% if entry.debit > 0 %}{{ entry.debit|intcomma }}{% else %}-{% endif %}</td>
+                        <td class="text-end text-success font-monospace">{% if entry.credit > 0 %}{{ entry.credit|intcomma }}{% else %}-{% endif %}</td>
+                        <td class="text-end fw-bold font-monospace">PKR {{ entry.balance|intcomma }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No ledger transactions found for this customer.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

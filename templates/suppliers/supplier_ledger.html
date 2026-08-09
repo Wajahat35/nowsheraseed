@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Supplier Ledger - {{ supplier.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-book text-secondary me-2"></i> Supplier Ledger Statement</h4>
+        <p class="text-muted small mb-0">{{ supplier.code }} - {{ supplier.name }} {% if supplier.company_name %}({{ supplier.company_name }}){% endif %}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-dark me-2"><i class="fas fa-print me-1"></i> Print Statement</button>
+        <a href="{% url 'suppliers:supplier_list' %}" class="btn btn-light border">Back to Directory</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <!-- Supplier Header Profile -->
+    <div class="row border-bottom pb-3 mb-4">
+        <div class="col-md-6">
+            <h5 class="fw-bold">{{ supplier.name }}</h5>
+            <div class="text-muted small">{{ supplier.address|default:"No Address" }}, {{ supplier.city }}</div>
+            <div class="text-muted small">Phone: {{ supplier.phone }} | Email: {{ supplier.email|default:"-" }}</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <h4 class="fw-bold mt-1 text-danger">Total Payable Balance: PKR {{ current_balance|intcomma }}</h4>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Reference #</th>
+                    <th>Description</th>
+                    <th class="text-end">Debit Paid (PKR)</th>
+                    <th class="text-end">Credit Bill (PKR)</th>
+                    <th class="text-end">Balance (PKR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in ledger_entries %}
+                    <tr>
+                        <td>{{ entry.date|date:"Y-m-d" }}</td>
+                        <td class="fw-bold">{{ entry.reference }}</td>
+                        <td>{{ entry.description }}</td>
+                        <td class="text-end text-success font-monospace">{% if entry.debit > 0 %}{{ entry.debit|intcomma }}{% else %}-{% endif %}</td>
+                        <td class="text-end text-danger font-monospace">{% if entry.credit > 0 %}{{ entry.credit|intcomma }}{% else %}-{% endif %}</td>
+                        <td class="text-end fw-bold font-monospace">PKR {{ entry.balance|intcomma }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No ledger transactions found for this supplier.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

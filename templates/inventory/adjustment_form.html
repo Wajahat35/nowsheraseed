@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Stock Adjustment / Write-Off{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card-custom p-4">
+            <h4 class="fw-bold mb-1">
+                <i class="fas fa-sliders-h text-warning me-2"></i> Stock Adjustment / Damage Write-Off
+            </h4>
+            <p class="text-muted small mb-4">Adjust inventory quantities for damage, expiry, manual addition, or corrections.</p>
+
+            {% if form.errors %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-1"></i> Please fix the following errors:
+                <ul class="mb-0 mt-1">
+                    {% for field, errors in form.errors.items %}
+                        <li><strong>{{ field|capfirst }}:</strong> {{ errors|striptags }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <form method="POST" id="adjustmentForm">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Adjustment Type *</label>
+                        {{ form.adjustment_type }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Quantity (Bags) *</label>
+                        {{ form.quantity }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Seed Item *</label>
+                        {{ form.seed }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Seed Batch
+                            <small class="text-muted fw-normal">(filtered by selected seed)</small>
+                        </label>
+                        {{ form.batch }}
+                        <div id="batchInfo" class="mt-1"></div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Reason for Adjustment / Audit Note *</label>
+                        {{ form.reason }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'inventory:stock_list' %}" class="btn btn-light border">Cancel</a>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold px-4">
+                        <i class="fas fa-check-circle me-1"></i> Process Adjustment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const seedSelect = document.getElementById('id_seed');
+    const batchSelect = document.getElementById('id_batch');
+    const batchInfo = document.getElementById('batchInfo');
+
+    function loadBatches(seedId) {
+        if (!seedId) {
+            batchSelect.innerHTML = '<option value="">-- Select Seed First --</option>';
+            batchInfo.innerHTML = '';
+            return;
+        }
+        fetch(`/inventory/api/batches-by-seed/?seed_id=${seedId}`)
+            .then(r => r.json())
+            .then(data => {
+                batchSelect.innerHTML = '<option value="">-- Select Batch (Optional) --</option>';
+                if (data.batches.length === 0) {
+                    batchInfo.innerHTML = '<span class="badge bg-danger">No batches with stock available</span>';
+                } else {
+                    data.batches.forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b.id;
+                        opt.textContent = `Batch #${b.batch_number} (Lot: ${b.lot_number}) — ${b.current_qty} Bags available`;
+                        batchSelect.appendChild(opt);
+                    });
+                    batchInfo.innerHTML = `<span class="badge bg-success">${data.batches.length} batch(es) available</span>`;
+                }
+            })
+            .catch(err => {
+                batchInfo.innerHTML = '<span class="text-danger small">Error loading batches</span>';
+            });
+    }
+
+    // Load batches on seed change
+    seedSelect.addEventListener('change', function() {
+        loadBatches(this.value);
+    });
+
+    // Load on page init if seed already selected (edit mode)
+    if (seedSelect.value) {
+        loadBatches(seedSelect.value);
+    } else {
+        batchSelect.innerHTML = '<option value="">-- Select Seed First --</option>';
+    }
+
+    // Show available stock hint when batch selected
+    batchSelect.addEventListener('change', function() {
+        const selectedOpt = this.options[this.selectedIndex];
+        if (selectedOpt && selectedOpt.value) {
+            const match = selectedOpt.textContent.match(/(\d+) Bags available/);
+            if (match) {
+                batchInfo.innerHTML = `<span class="badge bg-info text-dark"><i class="fas fa-boxes me-1"></i>Available: ${match[1]} Bags</span>`;
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

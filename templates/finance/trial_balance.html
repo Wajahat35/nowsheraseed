@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Trial Balance Statement{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-balance-scale text-primary me-2"></i> Trial Balance Statement</h4>
+        <p class="text-muted small mb-0">Audit statement summarizing Debit and Credit balances across all active Chart of Accounts.</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-outline-dark"><i class="fas fa-print me-1"></i> Print Statement</button>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Account Code</th>
+                    <th>Account Title</th>
+                    <th>Category</th>
+                    <th class="text-end">Debit (PKR)</th>
+                    <th class="text-end">Credit (PKR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in tb_data %}
+                    <tr>
+                        <td class="fw-bold font-monospace">{{ row.code }}</td>
+                        <td class="fw-semibold">{{ row.name }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ row.category }}</span></td>
+                        <td class="text-end font-monospace text-success">{% if row.debit > 0 %}{{ row.debit|intcomma }}{% else %}-{% endif %}</td>
+                        <td class="text-end font-monospace text-danger">{% if row.credit > 0 %}{{ row.credit|intcomma }}{% else %}-{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted">No journal transactions recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark fw-bold font-monospace fs-6">
+                <tr>
+                    <td colspan="3">TOTAL TRIAL BALANCE:</td>
+                    <td class="text-end text-emerald">PKR {{ total_debit|intcomma }}</td>
+                    <td class="text-end text-emerald">PKR {{ total_credit|intcomma }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

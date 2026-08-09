@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Seed Catalog Directory Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-seedling text-emerald me-2"></i> Seed Variety & Catalog Directory Report</h4>
+        <p class="text-muted small mb-0">Master catalog report of seed varieties, crop types, packing sizes, prices, and stock availability.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf me-1"></i> Export PDF</a>
+        <a href="?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel me-1"></i> Export Excel</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="seedReportTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Seed Description</th>
+                    <th>Variety</th>
+                    <th>Crop Type</th>
+                    <th>Category</th>
+                    <th>Brand</th>
+                    <th>Packing</th>
+                    <th>Retail Price</th>
+                    <th>Stock On Hand</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in seeds %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ s.code }}</td>
+                        <td class="fw-semibold">{{ s.name }}</td>
+                        <td>{{ s.variety }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ s.crop_type.name|default:"General" }}</span></td>
+                        <td>{{ s.category.name|default:"-" }}</td>
+                        <td>{{ s.brand.name|default:"-" }}</td>
+                        <td>{{ s.packing_size }}</td>
+                        <td class="fw-bold font-monospace">PKR {{ s.retail_price|intcomma }}</td>
+                        <td class="fw-bold text-emerald">{{ s.get_total_stock }} Bags</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No seeds in catalog.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#seedReportTable');
+    });
+</script>
+{% endblock %}

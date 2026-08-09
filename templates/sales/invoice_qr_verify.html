@@ -1,0 +1,226 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Invoice {{ invoice.invoice_number }} — Verification</title>
+    <style>
+        /* Self-contained — NO external CDN needed, works offline/LAN */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 16px;
+            color: #1e293b;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 440px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            margin: 0 auto;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
+            padding: 20px;
+            color: #fff;
+        }
+        .verified-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 50px;
+            padding: 3px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .check-icon {
+            width: 14px; height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #10b981;
+            font-size: 9px;
+            font-weight: 900;
+        }
+        .header h1 { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+        .header p  { font-size: 12px; opacity: 0.85; }
+
+        /* ── Body ── */
+        .body { padding: 20px; }
+
+        .inv-number { font-size: 26px; font-weight: 800; color: #0f172a; }
+        .inv-label  { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 600; margin-bottom: 18px; margin-top: 2px; }
+
+        /* 2-col grid */
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .info-box label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: #94a3b8; font-weight: 700; margin-bottom: 3px; }
+        .info-box .val  { font-size: 14px; font-weight: 700; color: #1e293b; }
+
+        /* Status badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .badge-paid    { background: #dcfce7; color: #15803d; }
+        .badge-partial { background: #fef9c3; color: #92400e; }
+        .badge-unpaid  { background: #fee2e2; color: #b91c1c; }
+
+        hr { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
+
+        /* Items list */
+        .items-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; margin-bottom: 10px; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 6px; }
+        .item-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+        .item-qty  { font-size: 11px; color: #64748b; }
+        .item-amt  { font-size: 13px; font-weight: 700; color: #0f172a; }
+
+        /* Total box */
+        .total-box {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 14px 0;
+        }
+        .total-box .tl { color: #94a3b8; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .total-box .tr { color: #10b981; font-size: 22px; font-weight: 800; }
+
+        /* Paid / due row */
+        .money-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+        .money-row:last-child { border-bottom: none; }
+        .money-label { font-size: 13px; color: #64748b; }
+        .money-val   { font-size: 14px; font-weight: 700; }
+        .green { color: #16a34a; }
+        .red   { color: #dc2626; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            background: #f8fafc;
+            border-top: 1px solid #f1f5f9;
+            padding: 14px 20px;
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        .brand { color: #10b981; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="verified-pill">
+            <span class="check-icon">✓</span>
+            Authentic Document
+        </div>
+        <h1>{{ invoice.customer.name }}</h1>
+        <p>Verified by Enterprise Seed ERP</p>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+        <div class="inv-number">{{ invoice.invoice_number }}</div>
+        <div class="inv-label">Sales Tax Invoice</div>
+
+        <div class="grid2">
+            <div class="info-box">
+                <label>Date</label>
+                <div class="val">{{ invoice.date }}</div>
+            </div>
+            <div class="info-box">
+                <label>Status</label>
+                <div class="val">
+                    <span class="badge {% if invoice.payment_status == 'Paid' %}badge-paid{% elif invoice.payment_status == 'Partial' %}badge-partial{% else %}badge-unpaid{% endif %}">
+                        {{ invoice.payment_status }}
+                    </span>
+                </div>
+            </div>
+            <div class="info-box">
+                <label>Customer</label>
+                <div class="val">{{ invoice.customer.name }}</div>
+            </div>
+            <div class="info-box">
+                <label>Payment</label>
+                <div class="val">{{ invoice.payment_method }}</div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Line items -->
+        <div class="items-title">Items Purchased</div>
+        {% for item in invoice.items.all %}
+        <div class="item-row">
+            <div>
+                <div class="item-name">{{ item.seed.name }}</div>
+                <div class="item-qty">{{ item.quantity }} bags × PKR {{ item.unit_price|intcomma }}</div>
+            </div>
+            <div class="item-amt">PKR {{ item.subtotal|intcomma }}</div>
+        </div>
+        {% empty %}
+        <div style="color:#94a3b8; font-size:13px; text-align:center; padding:12px;">No items found.</div>
+        {% endfor %}
+
+        <!-- Grand Total -->
+        <div class="total-box">
+            <span class="tl">Grand Total</span>
+            <span class="tr">PKR {{ invoice.grand_total|intcomma }}</span>
+        </div>
+
+        <!-- Paid / Due -->
+        <div class="money-row">
+            <span class="money-label">Amount Paid</span>
+            <span class="money-val green">PKR {{ invoice.paid_amount|intcomma }}</span>
+        </div>
+        <div class="money-row">
+            <span class="money-label">Balance Due</span>
+            <span class="money-val {% if invoice.due_amount > 0 %}red{% else %}green{% endif %}">
+                PKR {{ invoice.due_amount|intcomma }}
+            </span>
+        </div>
+
+        {% if invoice.reference_no %}
+        <hr>
+        <div class="money-row">
+            <span class="money-label">Reference #</span>
+            <span class="money-val" style="color:#475569;">{{ invoice.reference_no }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <span class="brand">Enterprise Seed ERP</span> — Authenticated Document<br>
+        Invoice {{ invoice.invoice_number }} &bull; {{ invoice.date }}
+    </div>
+</div>
+
+</body>
+</html>

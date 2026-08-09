@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+.env/
+
+# Environment variables — NEVER commit secrets
+.env
+.env.local
+.env.production
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+db.sqlite3.backup
+
+# Media uploads (ephemeral on Render — not committed)
+media/
+
+# Static files collected (generated at build time)
+staticfiles/
+
+# Django data exports (contains real data — don't commit)
+data_backup.json
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Windows-specific launcher files (not needed for production)
+*.bat
+*.vbs
+cloudflared.exe
+ngrok.zip
+launch_erp.py
+launch_erp.py
+prod_server.py
+create_icon.py
+create_shortcut.vbs
+Install_Seed_ERP.bat
+Stop_Server.bat
+launch_erp.bat
+launch_erp.vbs
+run_production_server.bat
+seed.bat
+setup_windows_firewall.bat
+start_public_web_server.bat
+
+# Coverage / Testing
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# MyPy
+.mypy_cache/

@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}BI & Analytics Report Hub{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-chart-line text-emerald me-2"></i> Business Intelligence & Analytics Report Hub</h4>
+        <p class="text-muted small mb-0">Generate date-wise reports and download PDF / Excel statements across all modules.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- 1. Customer Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-emerald">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-emerald bg-opacity-10 text-emerald rounded-circle">
+                        <i class="fas fa-users fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Customer Report</h5>
+                        <small class="text-muted">Receivables & Ledgers</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Comprehensive list of customer ledgers, credit limits, contact info, and current receivable balances.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:customer_report' %}" class="btn btn-emerald text-white fw-semibold w-100" style="background-color: #10b981;">View Report</a>
+                <a href="{% url 'reports:customer_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:customer_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Supplier Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-secondary">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-secondary bg-opacity-10 text-secondary rounded-circle">
+                        <i class="fas fa-truck fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Supplier Report</h5>
+                        <small class="text-muted">Payables & Procurement</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Summary of registered suppliers, purchase history, and outstanding payable balances.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:supplier_report' %}" class="btn btn-secondary text-white fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:supplier_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:supplier_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Sales Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-primary">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-circle">
+                        <i class="fas fa-file-invoice-dollar fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Sales Audit Report</h5>
+                        <small class="text-muted">Date-Wise Sales & POS</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Filter sales invoices date-wise by start and end date with grand total and payment breakdown.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:sales_report' %}" class="btn btn-primary fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:sales_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:sales_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Seed Catalog Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-success">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-success bg-opacity-10 text-success rounded-circle">
+                        <i class="fas fa-seedling fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Seed Variety Directory</h5>
+                        <small class="text-muted">Master Crop Catalog</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Catalog directory of seed varieties, crop classifications, brand logos, and packing sizes.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:seed_report' %}" class="btn btn-success text-white fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:seed_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:seed_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Stock Audit Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-warning">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-warning bg-opacity-10 text-warning rounded-circle">
+                        <i class="fas fa-boxes fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Stock Audit Report</h5>
+                        <small class="text-muted">Inventory Valuation</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Real-time stock on hand audit, retail valuation, and low stock threshold alerts.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:stock_report' %}" class="btn btn-warning text-dark fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:stock_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:stock_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Purchase Procurement Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-info">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-info bg-opacity-10 text-info rounded-circle">
+                        <i class="fas fa-shopping-cart fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Purchase Procurement</h5>
+                        <small class="text-muted">Date-Wise Supplier Bills</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Filter procurement bills date-wise by start and end date with paid status breakdown.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:purchase_report' %}" class="btn btn-info text-white fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:purchase_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:purchase_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Gate Pass Logistics Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-dark">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-dark bg-opacity-10 text-dark rounded-circle">
+                        <i class="fas fa-truck-loading fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Gate Pass Logistics</h5>
+                        <small class="text-muted">Date-Wise IN / OUT</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Date-wise security gate pass records for inward/outward cargo, driver CNIC, and vehicle tracking.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'gatepass:gatepass_report' %}" class="btn btn-dark text-white fw-semibold w-100">View Report</a>
+                <a href="{% url 'gatepass:gatepass_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'gatepass:gatepass_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. Operational Expenses Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4" style="border-color: #f59e0b !important;">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 rounded-circle" style="background: rgba(245,158,11,0.15); color: #f59e0b;">
+                        <i class="fas fa-receipt fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Operational Expenses</h5>
+                        <small class="text-muted">Date-Wise Cost Analysis</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Date-wise operational expense report including salaries, utilities, fuel, maintenance, and all overhead costs.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'expenses:expense_list' %}" class="btn fw-semibold text-dark w-100" style="background-color: #f59e0b;">View Report</a>
+                <a href="{% url 'expenses:expense_list' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'expenses:expense_list' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

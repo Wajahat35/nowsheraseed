@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Sales Invoice{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card-custom p-4">
+            <h4 class="fw-bold mb-4">
+                <i class="fas fa-file-invoice text-emerald me-2"></i> Create Sales Invoice
+            </h4>
+            
+            <form id="salesForm" method="POST" action="{% url 'sales:sales_create' %}">
+                {% csrf_token %}
+                <input type="hidden" name="items_data" id="items_data_input">
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Customer *</label>
+                        {{ form.customer }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Sales Type</label>
+                        {{ form.sales_type }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">Invoice Date</label>
+                        {{ form.date }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Payment Method</label>
+                        {{ form.payment_method }}
+                    </div>
+                </div>
+
+                <!-- Interactive Item Selection Row -->
+                <div class="card bg-light p-3 border mb-4">
+                    <h6 class="fw-bold text-dark mb-3"><i class="fas fa-plus-circle text-emerald me-1"></i> Add Items to Invoice</h6>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Select Seed Item *</label>
+                            <select id="item_seed_select" class="form-select">
+                                <option value="">-- Select Seed Item --</option>
+                                {% for s in seeds %}
+                                    <option value="{{ s.id }}" data-name="{{ s.name }} ({{ s.variety }})" data-price="{{ s.retail_price }}" data-stock="{{ s.get_total_stock }}" data-gst="{{ s.gst_rate }}">
+                                        {{ s.name }} ({{ s.variety }}) — Stock: {{ s.get_total_stock }} Bags — PKR {{ s.retail_price }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div id="seed_stock_info" class="mt-1"></div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Quantity (Bags) *</label>
+                            <input type="number" id="item_qty" class="form-control" placeholder="Qty" value="1" min="1">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Unit Price (PKR)</label>
+                            <input type="number" id="item_price" class="form-control" placeholder="Price (PKR)" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">Discount (PKR)</label>
+                            <input type="number" id="item_discount" class="form-control" placeholder="Disc (PKR)" value="0" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold">&nbsp;</label>
+                            <button type="button" id="add_item_btn" class="btn btn-emerald text-white w-100 fw-bold" style="background-color: #10b981;">
+                                <i class="fas fa-cart-plus me-1"></i> Add Line
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoice Line Items Table -->
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered align-middle" id="invoice_items_table">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Seed Item</th>
+                                <th>Qty</th>
+                                <th>Unit Price (PKR)</th>
+                                <th>Discount</th>
+                                <th>Subtotal (PKR)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoice_items_body">
+                            <!-- Dynamic rows will be inserted here via JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Calculations Footer -->
+                <div class="row justify-content-end mb-4">
+                    <div class="col-md-5">
+                        <div class="card p-3 border bg-light">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-semibold">Subtotal:</span>
+                                <span id="lbl_subtotal" class="fw-bold">PKR 0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-semibold">Additional Discount:</span>
+                                {{ form.discount_amount }}
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold fs-5 text-emerald">Grand Total:</span>
+                                <span id="lbl_grand_total" class="fw-bold fs-5 text-emerald">PKR 0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-semibold">Paid Amount:</span>
+                                {{ form.paid_amount }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'sales:sales_list' %}" class="btn btn-light border">Cancel</a>
+                    <button type="submit" id="submit_invoice_btn" class="btn btn-emerald text-white fw-bold px-4" style="background-color: #10b981;">
+                        <i class="fas fa-check-circle me-1"></i> Generate Sales Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let cartItems = [];
+
+    document.getElementById('item_seed_select').addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        const stockInfo = document.getElementById('seed_stock_info');
+        if (selected.value) {
+            document.getElementById('item_price').value = selected.getAttribute('data-price');
+            const stock = parseInt(selected.getAttribute('data-stock')) || 0;
+            if (stock <= 0) {
+                stockInfo.innerHTML = '<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>OUT OF STOCK (0 Bags available)</span>';
+            } else {
+                stockInfo.innerHTML = `<span class="badge bg-success"><i class="fas fa-boxes me-1"></i>Available Stock: ${stock} Bags</span>`;
+            }
+        } else {
+            stockInfo.innerHTML = '';
+        }
+    });
+
+    document.getElementById('add_item_btn').addEventListener('click', function() {
+        const seedSelect = document.getElementById('item_seed_select');
+        const seedId = seedSelect.value;
+        if (!seedId) {
+            alert('Please select a seed item!');
+            return;
+        }
+
+        const selectedOpt = seedSelect.options[seedSelect.selectedIndex];
+        const seedName = selectedOpt.getAttribute('data-name') || selectedOpt.text;
+        const availableStock = parseInt(selectedOpt.getAttribute('data-stock')) || 0;
+        const qty = parseInt(document.getElementById('item_qty').value) || 1;
+        const price = parseFloat(document.getElementById('item_price').value) || 0;
+        const discount = parseFloat(document.getElementById('item_discount').value) || 0;
+
+        // Calculate total quantity of this seed already in cart
+        const existingQtyInCart = cartItems
+            .filter(item => item.seed_id === seedId)
+            .reduce((sum, item) => sum + item.quantity, 0);
+
+        const totalRequested = existingQtyInCart + qty;
+
+        if (totalRequested > availableStock) {
+            alert(`STOCK ALERT: Cannot add ${qty} bags for "${seedName}".\nOnly ${availableStock} bags available in stock! (Already in cart: ${existingQtyInCart} bags).`);
+            return;
+        }
+
+        const lineSubtotal = (price - discount) * qty;
+        cartItems.push({
+            seed_id: seedId,
+            seed_name: seedName,
+            quantity: qty,
+            unit_price: price,
+            discount: discount,
+            tax_rate: 0,
+            subtotal: lineSubtotal
+        });
+
+        renderCart();
+    });
+
+    function renderCart() {
+        const tbody = document.getElementById('invoice_items_body');
+        tbody.innerHTML = '';
+        let subtotal = 0;
+
+        cartItems.forEach((item, index) => {
+            subtotal += item.subtotal;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.seed_name}</td>
+                <td>${item.quantity}</td>
+                <td>PKR ${item.unit_price.toFixed(2)}</td>
+                <td>PKR ${item.discount.toFixed(2)}</td>
+                <td class="fw-bold">PKR ${item.subtotal.toFixed(2)}</td>
+                <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${index})"><i class="fas fa-trash"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const addDisc = parseFloat(document.getElementById('id_discount_amount').value) || 0;
+        const grandTotal = Math.max(0, subtotal - addDisc);
+
+        document.getElementById('lbl_subtotal').innerText = 'PKR ' + subtotal.toFixed(2);
+        document.getElementById('lbl_grand_total').innerText = 'PKR ' + grandTotal.toFixed(2);
+        document.getElementById('items_data_input').value = JSON.stringify(cartItems);
+    }
+
+    function removeItem(index) {
+        cartItems.splice(index, 1);
+        renderCart();
+    }
+</script>
+{% endblock %}

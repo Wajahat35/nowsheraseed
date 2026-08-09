@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Expired Seed Batches Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-calendar-times text-danger me-2"></i> Expired Seed Batches Report</h4>
+        <p class="text-muted small mb-0">Expired seed lots requiring quality inspection or write-off adjustment.</p>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover">
+            <thead>
+                <tr>
+                    <th>Batch #</th>
+                    <th>Lot #</th>
+                    <th>Seed Description</th>
+                    <th>Expiry Date</th>
+                    <th>Current Stock</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in batches %}
+                    <tr>
+                        <td class="fw-bold text-danger">#{{ b.batch_number }}</td>
+                        <td>{{ b.lot_number }}</td>
+                        <td>{{ b.seed.name }}</td>
+                        <td class="fw-bold text-danger">{{ b.expiry_date }}</td>
+                        <td>{{ b.current_qty }} Bags</td>
+                        <td><a href="{% url 'inventory:adjustment_create' %}" class="btn btn-sm btn-warning text-dark">Write Off Stock</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No expired seed batches found in active inventory.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

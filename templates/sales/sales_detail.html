@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Invoice Details - {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice text-emerald me-2"></i> Sales Invoice {{ invoice.invoice_number }}</h4>
+        <p class="text-muted small mb-0">Customer: {{ invoice.customer.name }} | Date: {{ invoice.date }}</p>
+    </div>
+    <div>
+        {% if invoice.payment_status != 'Paid' %}
+            <button type="button" class="btn btn-emerald text-white fw-bold me-2" style="background-color: #10b981;" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                <i class="fas fa-cash-register me-1"></i> Receive Payment
+            </button>
+        {% endif %}
+        <a href="{% url 'sales:invoice_print' invoice.pk %}" target="_blank" class="btn btn-dark me-2">
+            <i class="fas fa-print me-1"></i> Print Invoice
+        </a>
+        <a href="{% url 'sales:sales_list' %}" class="btn btn-light border">Back to Invoices</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="row border-bottom pb-4 mb-4">
+        <div class="col-md-6">
+            <img src="{{ company.get_invoice_logo_url }}" style="max-height: 60px;" class="mb-2" alt="{{ company.name }}">
+            <h4 class="fw-bold text-emerald m-0">{{ company.name|default:"Enterprise Seed ERP" }}</h4>
+            <div class="text-muted small">{{ company.address|default:"Lahore, Pakistan" }}</div>
+            <div class="text-muted small">NTN: {{ company.ntn|default:"35202-XXXXXXXX" }} | STRN: {{ company.strn|default:"12-34-5678" }}</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <h3 class="fw-bold">{{ invoice.invoice_number }}</h3>
+            <div>Date: {{ invoice.date }}</div>
+            <div>Payment Status: 
+                <span class="badge fs-6 {% if invoice.payment_status == 'Paid' %}bg-success{% elif invoice.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                    {{ invoice.get_payment_status_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Details -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h6 class="fw-bold text-uppercase text-muted">Billed To Customer:</h6>
+            <h5 class="fw-bold mb-1">{{ invoice.customer.name }}</h5>
+            <div>{{ invoice.customer.company_name|default:"" }}</div>
+            <div>Phone: {{ invoice.customer.phone }}</div>
+            <div>City: {{ invoice.customer.city }}</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            {% if invoice.qr_code %}
+                <img src="{{ invoice.qr_code.url }}" width="100" class="border p-1 rounded">
+                <div class="small text-muted mt-1">Scan for QR Verification</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Seed Description</th>
+                    <th>Variety</th>
+                    <th>Qty (Bags)</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Discount</th>
+                    <th class="text-end">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td class="fw-bold">{{ item.seed.name }}</td>
+                        <td>{{ item.seed.variety }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td class="text-end">PKR {{ item.unit_price|intcomma }}</td>
+                        <td class="text-end">PKR {{ item.discount|intcomma }}</td>
+                        <td class="text-end fw-bold">PKR {{ item.subtotal|intcomma }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary -->
+    <div class="row justify-content-end">
+        <div class="col-md-5">
+            <table class="table table-borderless">
+                <tr>
+                    <td class="fw-semibold">Subtotal:</td>
+                    <td class="text-end font-monospace">PKR {{ invoice.subtotal|intcomma }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold">Discount:</td>
+                    <td class="text-end font-monospace text-danger">PKR {{ invoice.discount_amount|intcomma }}</td>
+                </tr>
+                <tr class="border-top">
+                    <td class="fw-bold fs-5 text-emerald">Grand Total:</td>
+                    <td class="text-end fw-bold fs-5 text-emerald font-monospace">PKR {{ invoice.grand_total|intcomma }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold">Paid Amount:</td>
+                    <td class="text-end font-monospace text-success fw-bold">PKR {{ invoice.paid_amount|intcomma }}</td>
+                </tr>
+                <tr class="border-top table-light">
+                    <td class="fw-bold text-danger">Remaining Due Balance:</td>
+                    <td class="text-end font-monospace text-danger fw-bold fs-5">
+                        PKR {{ invoice.due_amount|intcomma }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Record Payment Received -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-emerald text-white" style="background-color: #10b981;">
+                <h5 class="modal-title fw-bold" id="paymentModalLabel">
+                    <i class="fas fa-hand-holding-usd me-2"></i> Receive Payment for Invoice {{ invoice.invoice_number }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="POST" action="{% url 'sales:record_payment' invoice.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info py-2">
+                        <small>Customer: <strong>{{ invoice.customer.name }}</strong></small><br>
+                        <small>Total Invoice: <strong>PKR {{ invoice.grand_total|intcomma }}</strong> | Already Paid: <strong>PKR {{ invoice.paid_amount|intcomma }}</strong></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Amount (PKR) *</label>
+                        <input type="number" step="0.01" name="amount" value="{{ invoice.due_amount }}" class="form-control font-monospace fs-5 fw-bold" placeholder="Enter amount received" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Method *</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="Cash">Cash in Hand</option>
+                            <option value="Bank">Bank Deposit / Transfer</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Online Transfer">Online Transfer</option>
+                            <option value="JazzCash">JazzCash</option>
+                            <option value="EasyPaisa">EasyPaisa</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Cheque / Transaction Ref #</label>
+                        <input type="text" name="reference_no" class="form-control" placeholder="e.g. Cheque # 987654 / TRX-12345">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notes / Remarks</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Payment receipt notes..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-emerald text-white fw-bold px-4" style="background-color: #10b981;">
+                        Submit & Record Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('pay') === '1' || urlParams.get('pay') === 'true') {
+            const modalEl = document.getElementById('paymentModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        }
+    });
+</script>
+{% endblock %}

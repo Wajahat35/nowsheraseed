@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Purchase Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-shopping-cart text-primary me-2"></i> Date-Wise Purchase Procurement Report</h4>
+        <p class="text-muted small mb-0">Consolidated procurement report and supplier bills with date range filters.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf me-1"></i> Export PDF</a>
+        <a href="?start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel me-1"></i> Export Excel</a>
+    </div>
+</div>
+
+<!-- Date Filter Bar -->
+<div class="card-custom p-4 mb-4">
+    <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Start Date</label>
+            <input type="date" name="start_date" class="form-control" value="{{ start_date|default:'' }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">End Date</label>
+            <input type="date" name="end_date" class="form-control" value="{{ end_date|default:'' }}">
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary fw-bold w-100"><i class="fas fa-filter me-1"></i> Filter Purchases</button>
+            <a href="{% url 'reports:purchase_report' %}" class="btn btn-light border">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="reportPurchasesTable">
+            <thead>
+                <tr>
+                    <th>Bill #</th>
+                    <th>Supplier</th>
+                    <th>Date</th>
+                    <th>Grand Total</th>
+                    <th>Paid Amount</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ inv.invoice_number }}</td>
+                        <td>{{ inv.supplier.name }}</td>
+                        <td>{{ inv.date }}</td>
+                        <td class="fw-bold font-monospace">PKR {{ inv.grand_total|intcomma }}</td>
+                        <td class="text-success font-monospace">PKR {{ inv.paid_amount|intcomma }}</td>
+                        <td><span class="badge bg-success">{{ inv.payment_status }}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No purchase bills match the selected date range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#reportPurchasesTable');
+    });
+</script>
+{% endblock %}

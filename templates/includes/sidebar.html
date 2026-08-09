@@ -1,0 +1,164 @@
+<div id="sidebar-wrapper">
+    <!-- Brand / Logo -->
+    <div class="sidebar-heading">
+        <img src="{{ company.get_logo_url }}" width="34" height="34" class="rounded border p-1 bg-white flex-shrink-0" onerror="this.style.display='none'">
+        <div class="sidebar-brand-text">
+            <div class="sidebar-brand-name text-truncate" style="max-width:160px;">{{ company.name|default:"AgriSeed ERP" }}</div>
+            <div class="sidebar-brand-sub">Seed Management ERP</div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+
+        <!-- Dashboard -->
+        {% if user.is_admin or perms_map.dashboard %}
+        <a href="{% url 'dashboard:home' %}" title="Executive Dashboard"
+           class="sidebar-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-chart-pie sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Executive Dashboard</span>
+        </a>
+        {% endif %}
+
+        <!-- Core Commerce Section Header -->
+        {% if user.is_admin or perms_map.sales or perms_map.purchases or perms_map.gatepass %}
+        <div class="sidebar-section-label">Core Commerce</div>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.sales %}
+        <a href="{% url 'sales:sales_list' %}" title="Sales Invoices"
+           class="sidebar-item {% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name != 'pos_terminal' %}active{% endif %}">
+            <i class="fas fa-file-invoice-dollar sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Sales Invoices</span>
+        </a>
+        <a href="{% url 'sales:pos_terminal' %}" title="POS Terminal"
+           class="sidebar-item {% if request.resolver_match.url_name == 'pos_terminal' %}active{% endif %}">
+            <i class="fas fa-cash-register sidebar-item-icon"></i>
+            <span class="sidebar-item-label">POS Quick Terminal</span>
+        </a>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.purchases %}
+        <a href="{% url 'purchases:purchase_list' %}" title="Purchase Bills"
+           class="sidebar-item {% if request.resolver_match.app_name == 'purchases' %}active{% endif %}">
+            <i class="fas fa-shopping-cart sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Purchase Bills</span>
+        </a>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.gatepass %}
+        <a href="{% url 'gatepass:gatepass_list' %}" title="Gate Pass"
+           class="sidebar-item {% if request.resolver_match.app_name == 'gatepass' and request.resolver_match.url_name == 'gatepass_list' %}active{% endif %}">
+            <i class="fas fa-truck-loading sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Gate Pass Logistics</span>
+        </a>
+        {% endif %}
+
+        <!-- Catalog & Stock Section Header -->
+        {% if user.is_admin or perms_map.seeds or perms_map.inventory %}
+        <div class="sidebar-section-label">Catalog &amp; Stock</div>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.seeds %}
+        <a href="{% url 'seeds:seed_list' %}" title="Seed Catalog"
+           class="sidebar-item {% if request.resolver_match.app_name == 'seeds' %}active{% endif %}">
+            <i class="fas fa-seedling sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Seed Catalog &amp; Batches</span>
+        </a>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.inventory %}
+        <a href="{% url 'inventory:stock_list' %}" title="Inventory"
+           class="sidebar-item {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}">
+            <i class="fas fa-boxes sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Inventory Stock Control</span>
+        </a>
+        {% endif %}
+
+        <!-- Entities Section Header -->
+        {% if user.is_admin or perms_map.sales or perms_map.purchases %}
+        <div class="sidebar-section-label">Entities</div>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.sales %}
+        <a href="{% url 'customers:customer_list' %}" title="Customers"
+           class="sidebar-item {% if request.resolver_match.app_name == 'customers' %}active{% endif %}">
+            <i class="fas fa-users sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Customer Ledger</span>
+        </a>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.purchases %}
+        <a href="{% url 'suppliers:supplier_list' %}" title="Suppliers"
+           class="sidebar-item {% if request.resolver_match.app_name == 'suppliers' %}active{% endif %}">
+            <i class="fas fa-truck sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Supplier Directory</span>
+        </a>
+        {% endif %}
+
+        <!-- Financials Section Header -->
+        {% if user.is_admin or perms_map.finance or perms_map.expenses %}
+        <div class="sidebar-section-label">Financials &amp; Ledger</div>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.finance %}
+        <a href="{% url 'finance:general_ledger' %}" title="General Ledger"
+           class="sidebar-item {% if request.resolver_match.url_name == 'general_ledger' %}active{% endif %}">
+            <i class="fas fa-book sidebar-item-icon"></i>
+            <span class="sidebar-item-label">General Ledger</span>
+        </a>
+        <a href="{% url 'finance:voucher_list' %}" title="Journal Vouchers"
+           class="sidebar-item {% if request.resolver_match.url_name == 'voucher_list' %}active{% endif %}">
+            <i class="fas fa-pen-alt sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Journal Vouchers</span>
+        </a>
+        <a href="{% url 'finance:coa_list' %}" title="Chart of Accounts"
+           class="sidebar-item {% if request.resolver_match.url_name == 'coa_list' %}active{% endif %}">
+            <i class="fas fa-sitemap sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Chart of Accounts</span>
+        </a>
+        {% endif %}
+
+        {% if user.is_admin or perms_map.expenses %}
+        <a href="{% url 'expenses:expense_list' %}" title="Operational Expenses"
+           class="sidebar-item {% if request.resolver_match.app_name == 'expenses' %}active{% endif %}">
+            <i class="fas fa-receipt sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Operational Expenses</span>
+        </a>
+        {% endif %}
+
+        <!-- BI Reports -->
+        {% if user.is_admin or perms_map.reports %}
+        <div class="sidebar-section-label">BI Reports &amp; Analytics</div>
+        <a href="{% url 'reports:reports_dashboard' %}" title="BI Report Hub"
+           class="sidebar-item {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+            <i class="fas fa-chart-line sidebar-item-icon"></i>
+            <span class="sidebar-item-label">BI Report Hub</span>
+        </a>
+        {% endif %}
+
+        <!-- Administration — only for admin users -->
+        {% if user.is_admin %}
+        <div class="sidebar-section-label">Administration</div>
+        <a href="{% url 'accounts:user_list' %}" title="User Management"
+           class="sidebar-item {% if request.resolver_match.app_name == 'accounts' %}active{% endif %}">
+            <i class="fas fa-user-shield sidebar-item-icon"></i>
+            <span class="sidebar-item-label">User Management &amp; Roles</span>
+        </a>
+        <a href="{% url 'settings_app:company_settings' %}" title="System Settings"
+           class="sidebar-item {% if request.resolver_match.app_name == 'settings_app' %}active{% endif %}">
+            <i class="fas fa-cogs sidebar-item-icon"></i>
+            <span class="sidebar-item-label">System Settings</span>
+        </a>
+        {% endif %}
+
+    </nav>
+
+    <!-- Desktop Collapse Toggle -->
+    <button class="sidebar-toggle-btn" id="sidebar-collapse-btn" title="Collapse Sidebar">
+        <i class="fas fa-chevron-left" id="sidebar-toggle-icon"></i>
+    </button>
+</div>
+
+<!-- Mobile overlay -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>

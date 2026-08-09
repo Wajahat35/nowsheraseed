@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Expense Categories{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-5">
+        <div class="card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-tags text-warning me-2"></i> Add Expense Category</h5>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Category Name *</label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g. Electricity, Salary, Fuel" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea name="description" class="form-control" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-warning text-dark fw-bold w-100">Save Category</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="col-md-7">
+        <div class="card-custom p-4">
+            <h5 class="fw-bold mb-3">Expense Categories Directory</h5>
+            <table class="table table-custom table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Category Name</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in categories %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td class="fw-bold text-primary">{{ c.name }}</td>
+                            <td>{{ c.description|default:"-" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted">No expense categories defined.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

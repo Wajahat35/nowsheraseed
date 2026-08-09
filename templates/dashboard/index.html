@@ -1,0 +1,578 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Executive BI Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── HEADER & REAL-TIME REFRESH INDICATOR ── -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-tachometer-alt text-emerald me-2"></i>Executive BI Dashboard</h4>
+        <p class="text-muted small mb-0">Real-time enterprise analytics, seed stock control, and financial operations.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2 fw-semibold" id="live_status_badge">
+            <i class="fas fa-circle text-success me-1 fa-beat-fade" style="font-size:8px;"></i>
+            Live Auto-Updating (<span id="refresh_timer_lbl">15</span>s)
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-emerald" onclick="fetchLiveDashboardData(true)" title="Force Refresh Now">
+            <i class="fas fa-sync-alt" id="refresh_spinner"></i>
+        </button>
+    </div>
+</div>
+
+<!-- ── ROW 1: Daily, Monthly, Quarterly & Yearly Sales Breakdown Cards ── -->
+<div class="row g-3 mb-3">
+    <!-- Today / Daily -->
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted fw-bold">TODAY (DAILY)</small>
+                    <span class="badge bg-emerald-subtle text-emerald small">Daily</span>
+                </div>
+                <h4 class="fw-bold mb-0 mt-1 text-emerald" id="kpi_today_sales">PKR {{ today_sales|intcomma }}</h4>
+                <small class="text-muted d-block">Purchases: <span id="kpi_today_purchases" class="fw-bold text-dark">PKR {{ today_purchases|intcomma }}</span></small>
+            </div>
+            <div class="kpi-icon bg-emerald-subtle"><i class="fas fa-calendar-day text-emerald"></i></div>
+        </div>
+    </div>
+    <!-- Monthly -->
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted fw-bold">THIS MONTH</small>
+                    <span class="badge bg-blue-subtle text-primary small">Monthly</span>
+                </div>
+                <h4 class="fw-bold mb-0 mt-1 text-primary" id="kpi_month_sales">PKR {{ month_sales|intcomma }}</h4>
+                <small class="text-muted d-block">Purchases: <span id="kpi_month_purchases" class="fw-bold text-dark">PKR {{ month_purchases|intcomma }}</span></small>
+            </div>
+            <div class="kpi-icon bg-blue-subtle"><i class="fas fa-calendar-alt text-primary"></i></div>
+        </div>
+    </div>
+    <!-- Quarterly -->
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted fw-bold">THIS QUARTER (Q{{ current_quarter }})</small>
+                    <span class="badge bg-amber-subtle text-warning small">Quarterly</span>
+                </div>
+                <h4 class="fw-bold mb-0 mt-1 text-warning" id="kpi_quarter_sales">PKR {{ quarter_sales|intcomma }}</h4>
+                <small class="text-muted d-block">Purchases: <span id="kpi_quarter_purchases" class="fw-bold text-dark">PKR {{ quarter_purchases|intcomma }}</span></small>
+            </div>
+            <div class="kpi-icon bg-amber-subtle"><i class="fas fa-chart-pie text-warning"></i></div>
+        </div>
+    </div>
+    <!-- Yearly -->
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted fw-bold">THIS YEAR (FY {{ current_year }})</small>
+                    <span class="badge bg-purple-subtle text-purple small" style="background:#f3e8ff; color:#9333ea;">Yearly</span>
+                </div>
+                <h4 class="fw-bold mb-0 mt-1" style="color:#9333ea;" id="kpi_year_sales">PKR {{ year_sales|intcomma }}</h4>
+                <small class="text-muted d-block">Purchases: <span id="kpi_year_purchases" class="fw-bold text-dark">PKR {{ year_purchases|intcomma }}</span></small>
+            </div>
+            <div class="kpi-icon" style="background:#f3e8ff;"><i class="fas fa-award" style="color:#9333ea;"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ROW 2: Primary Financial & AR/AP Cards ── -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <small class="text-muted fw-semibold">TOTAL SALES REVENUE</small>
+                <h4 class="fw-bold mb-0 mt-1 text-emerald" id="kpi_total_sales_revenue">PKR {{ total_sales_revenue|intcomma }}</h4>
+                <small class="text-muted"><i class="fas fa-file-invoice me-1"></i>All-Time Cumulative</small>
+            </div>
+            <div class="kpi-icon bg-emerald-subtle"><i class="fas fa-cash-register text-emerald"></i></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <small class="text-muted fw-semibold">TOTAL PURCHASE COST</small>
+                <h4 class="fw-bold mb-0 mt-1 text-primary" id="kpi_total_purchase_cost">PKR {{ total_purchase_cost|intcomma }}</h4>
+                <small class="text-muted"><i class="fas fa-shopping-bag me-1"></i>All-Time Cumulative</small>
+            </div>
+            <div class="kpi-icon bg-blue-subtle"><i class="fas fa-shopping-bag text-primary"></i></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <small class="text-muted fw-semibold">PENDING RECEIVABLES</small>
+                <h4 class="fw-bold mb-0 mt-1 text-amber" id="kpi_pending_receivables">PKR {{ pending_receivables|intcomma }}</h4>
+                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i><span id="kpi_unpaid_sales_count">{{ unpaid_sales_count }}</span> Unpaid Sales</small>
+            </div>
+            <div class="kpi-icon bg-amber-subtle"><i class="fas fa-hand-holding-usd text-warning"></i></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card-custom kpi-card">
+            <div>
+                <small class="text-muted fw-semibold">PENDING PAYABLES</small>
+                <h4 class="fw-bold mb-0 mt-1 text-rose" id="kpi_pending_payables">PKR {{ pending_payables|intcomma }}</h4>
+                <small class="text-danger"><i class="fas fa-exclamation-circle me-1"></i><span id="kpi_unpaid_purchase_count">{{ unpaid_purchase_count }}</span> Unpaid Bills</small>
+            </div>
+            <div class="kpi-icon bg-rose-subtle"><i class="fas fa-file-invoice-dollar text-danger"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ROW 3: Secondary Inventory & Profit Bar ── -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <small class="text-muted">Total Seed Stock</small>
+                <h5 class="fw-bold mb-0" id="kpi_total_seed_stock">{{ total_seed_stock|intcomma }} Bags</h5>
+                <div id="kpi_stock_status_lbl">
+                    {% if low_stock_count > 0 %}
+                        <small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>{{ low_stock_count }} Low Stock</small>
+                    {% else %}
+                        <small class="text-success"><i class="fas fa-check-circle me-1"></i>Stock Healthy</small>
+                    {% endif %}
+                </div>
+            </div>
+            <i class="fas fa-boxes fs-3 text-primary"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <small class="text-muted">Gross Profit Estimate</small>
+                <h5 class="fw-bold mb-0 {% if gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}" id="kpi_gross_profit">
+                    PKR {{ gross_profit|floatformat:0|intcomma }}
+                </h5>
+                <small class="text-muted">Sales - Purchases - Expenses</small>
+            </div>
+            <i class="fas fa-chart-line fs-3 text-emerald"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <small class="text-muted">Total Customers</small>
+                <h5 class="fw-bold mb-0" id="kpi_total_customers">{{ total_customers }}</h5>
+                <small class="text-muted"><i class="fas fa-users me-1"></i>Active Accounts</small>
+            </div>
+            <i class="fas fa-user-tie fs-3 text-emerald"></i>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <small class="text-muted">Operational Expenses</small>
+                <h5 class="fw-bold mb-0 text-warning" id="kpi_total_expenses">PKR {{ total_expenses|intcomma }}</h5>
+                <small class="text-muted">{{ total_suppliers }} Active Suppliers</small>
+            </div>
+            <i class="fas fa-receipt fs-3 text-warning"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ── ROW 4: Interactive Chart with Period Filters + Top Seeds ── -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card-custom p-4 h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <h5 class="fw-bold mb-0"><i class="fas fa-chart-area text-primary me-2"></i>Sales & Purchase Trend Analysis</h5>
+                <div class="btn-group btn-group-sm" role="group" id="chart_period_btn_group">
+                    <button type="button" class="btn btn-outline-primary" data-period="daily">Daily</button>
+                    <button type="button" class="btn btn-primary active" data-period="monthly">Monthly</button>
+                    <button type="button" class="btn btn-outline-primary" data-period="quarterly">Quarterly</button>
+                    <button type="button" class="btn btn-outline-primary" data-period="yearly">Yearly</button>
+                </div>
+            </div>
+            <canvas id="salesPurchaseChart" height="120"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card-custom p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fas fa-star text-warning me-2"></i>Top Selling Seeds</h5>
+            <div class="list-group list-group-flush" id="top_seeds_list">
+                {% for seed in top_seeds %}
+                    <div class="list-group-item bg-transparent border-0 px-0 d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">{{ seed.seed__name }}</div>
+                            <small class="text-muted">Total Sold</small>
+                        </div>
+                        <span class="badge bg-emerald-subtle px-3 py-2 rounded-pill fw-bold">{{ seed.total_qty }} Bags</span>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small py-3 text-center"><i class="fas fa-seedling me-2"></i>No sales data yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ROW 5: Recent Transactions & Gate Passes ── -->
+<div class="row g-3 mb-3">
+    <!-- Recent Sales Invoices -->
+    <div class="col-lg-6">
+        <div class="card-custom p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fas fa-file-invoice text-emerald me-2"></i>Recent Sales Invoices</h5>
+                <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-outline-success">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent_invoices_tbody">
+                        {% for inv in recent_invoices %}
+                            <tr>
+                                <td><a href="{% url 'sales:sales_detail' inv.id %}" class="fw-bold text-decoration-none">{{ inv.invoice_number }}</a></td>
+                                <td>{{ inv.customer.name }}</td>
+                                <td class="fw-bold">PKR {{ inv.grand_total|intcomma }}</td>
+                                <td>
+                                    <span class="badge {% if inv.payment_status == 'Paid' %}bg-success{% elif inv.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ inv.payment_status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No sales invoices yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Purchase Bills -->
+    <div class="col-lg-6">
+        <div class="card-custom p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fas fa-shopping-cart text-primary me-2"></i>Recent Purchase Bills</h5>
+                <a href="{% url 'purchases:purchase_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Bill #</th>
+                            <th>Supplier</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent_purchases_tbody">
+                        {% for pur in recent_purchases %}
+                            <tr>
+                                <td><a href="{% url 'purchases:purchase_detail' pur.id %}" class="fw-bold text-decoration-none">{{ pur.invoice_number }}</a></td>
+                                <td>{{ pur.supplier.name }}</td>
+                                <td class="fw-bold">PKR {{ pur.grand_total|intcomma }}</td>
+                                <td>
+                                    <span class="badge {% if pur.payment_status == 'Paid' %}bg-success{% elif pur.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ pur.payment_status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">No purchase bills yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ROW 6: Gate Passes & Stock Alerts ── -->
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card-custom p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fas fa-truck-moving text-secondary me-2"></i>Recent Gate Passes</h5>
+                <a href="{% url 'gatepass:gatepass_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-custom table-hover mb-0">
+                    <thead>
+                        <tr><th>Pass #</th><th>Type</th><th>Vehicle</th><th>Driver</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for gp in recent_gatepasses %}
+                            <tr>
+                                <td><a href="{% url 'gatepass:gatepass_detail' gp.pk %}" class="fw-bold text-decoration-none">{{ gp.pass_number }}</a></td>
+                                <td><span class="badge bg-light text-dark border">{{ gp.get_pass_type_display }}</span></td>
+                                <td>{{ gp.vehicle_number }}</td>
+                                <td>{{ gp.driver_name }}</td>
+                                <td><span class="badge bg-info text-white">{{ gp.status }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No gate passes issued yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card-custom p-4 h-100">
+            <h5 class="fw-bold mb-3"><i class="fas fa-shield-alt text-danger me-2"></i>Stock Health Alerts</h5>
+            <div class="d-flex justify-content-between align-items-center p-3 rounded mb-2 {% if low_stock_count > 0 %}bg-danger bg-opacity-10 border border-danger{% else %}bg-success bg-opacity-10 border border-success{% endif %}">
+                <div>
+                    <div class="fw-bold {% if low_stock_count > 0 %}text-danger{% else %}text-success{% endif %}">Low Stock Seeds</div>
+                    <small class="text-muted">Below minimum alert level</small>
+                </div>
+                <span class="badge {% if low_stock_count > 0 %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3" id="alert_low_stock_badge">{{ low_stock_count }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-3 rounded mb-2 {% if expired_stock_count > 0 %}bg-warning bg-opacity-10 border border-warning{% else %}bg-success bg-opacity-10 border border-success{% endif %}">
+                <div>
+                    <div class="fw-bold {% if expired_stock_count > 0 %}text-warning{% else %}text-success{% endif %}">Expired Seed Batches</div>
+                    <small class="text-muted">Batches with stock still in store</small>
+                </div>
+                <span class="badge {% if expired_stock_count > 0 %}bg-warning text-dark{% else %}bg-success{% endif %} fs-6 px-3" id="alert_expired_stock_badge">{{ expired_stock_count }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center p-3 rounded bg-info bg-opacity-10 border border-info">
+                <div>
+                    <div class="fw-bold text-info">Pending Receivables</div>
+                    <small class="text-muted"><span id="alert_unpaid_sales_count">{{ unpaid_sales_count }}</span> invoices outstanding</small>
+                </div>
+                <span class="badge bg-info fs-6 px-3" id="alert_receivables_badge">PKR {{ pending_receivables|intcomma }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Chart Store
+let myChart = null;
+let currentPeriod = 'monthly';
+let liveMetricsData = null;
+
+// Initial Datasets from Django Context
+const chartDataStore = {
+    daily: {
+        labels: {{ daily_labels_json|safe }},
+        sales: {{ daily_sales_json|safe }},
+        purchases: {{ daily_purchases_json|safe }}
+    },
+    monthly: {
+        labels: {{ month_labels_json|safe }},
+        sales: {{ monthly_sales_json|safe }},
+        purchases: {{ monthly_purchases_json|safe }}
+    },
+    quarterly: {
+        labels: {{ quarter_labels_json|safe }},
+        sales: {{ quarterly_sales_json|safe }},
+        purchases: {{ quarterly_purchases_json|safe }}
+    },
+    yearly: {
+        labels: {{ yearly_labels_json|safe }},
+        sales: {{ yearly_sales_json|safe }},
+        purchases: {{ yearly_purchases_json|safe }}
+    }
+};
+
+function formatPKR(amount) {
+    return 'PKR ' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function initChart() {
+    const ctx = document.getElementById('salesPurchaseChart').getContext('2d');
+    const dataObj = chartDataStore[currentPeriod];
+
+    myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dataObj.labels,
+            datasets: [{
+                label: 'Sales Revenue (PKR)',
+                data: dataObj.sales,
+                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                borderColor: '#10b981',
+                borderWidth: 1,
+                borderRadius: 4,
+                order: 2
+            }, {
+                label: 'Purchases Cost (PKR)',
+                data: dataObj.purchases,
+                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                borderColor: '#3b82f6',
+                borderWidth: 1,
+                borderRadius: 4,
+                order: 2
+            }, {
+                label: 'Net Revenue Trend',
+                data: dataObj.sales.map((s, i) => s - dataObj.purchases[i]),
+                type: 'line',
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                fill: false,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#f59e0b',
+                order: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': ' + formatPKR(ctx.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(val) {
+                            if (val >= 1000000) return 'PKR ' + (val/1000000).toFixed(1) + 'M';
+                            if (val >= 1000) return 'PKR ' + (val/1000).toFixed(0) + 'K';
+                            return 'PKR ' + val;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateChartPeriod(period) {
+    currentPeriod = period;
+    if (!myChart) return;
+    const dataObj = chartDataStore[period];
+    myChart.data.labels = dataObj.labels;
+    myChart.data.datasets[0].data = dataObj.sales;
+    myChart.data.datasets[1].data = dataObj.purchases;
+    myChart.data.datasets[2].data = dataObj.sales.map((s, i) => s - dataObj.purchases[i]);
+    myChart.update();
+}
+
+// Attach period button event listeners
+document.querySelectorAll('#chart_period_btn_group button').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('#chart_period_btn_group button').forEach(b => {
+            b.classList.remove('btn-primary', 'active');
+            b.classList.add('btn-outline-primary');
+        });
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-primary', 'active');
+        updateChartPeriod(this.dataset.period);
+    });
+});
+
+// Live Polling & Auto-Refresh Logic
+let countdownSeconds = 15;
+function updateTimerUI() {
+    document.getElementById('refresh_timer_lbl').innerText = countdownSeconds;
+}
+
+setInterval(() => {
+    countdownSeconds--;
+    if (countdownSeconds <= 0) {
+        fetchLiveDashboardData(false);
+        countdownSeconds = 15;
+    }
+    updateTimerUI();
+}, 1000);
+
+function fetchLiveDashboardData(isManual = false) {
+    const spinner = document.getElementById('refresh_spinner');
+    if (spinner) spinner.classList.add('fa-spin');
+
+    fetch('/dashboard/api/data/')
+        .then(res => res.json())
+        .then(data => {
+            if (spinner) spinner.classList.remove('fa-spin');
+            if (!data.success || !data.metrics) return;
+
+            const m = data.metrics;
+            liveMetricsData = m;
+
+            // 1. Update Periodic Sales & Purchases
+            document.getElementById('kpi_today_sales').innerText = formatPKR(m.today_sales);
+            document.getElementById('kpi_today_purchases').innerText = formatPKR(m.today_purchases);
+            document.getElementById('kpi_month_sales').innerText = formatPKR(m.month_sales);
+            document.getElementById('kpi_month_purchases').innerText = formatPKR(m.month_purchases);
+            document.getElementById('kpi_quarter_sales').innerText = formatPKR(m.quarter_sales);
+            document.getElementById('kpi_quarter_purchases').innerText = formatPKR(m.quarter_purchases);
+            document.getElementById('kpi_year_sales').innerText = formatPKR(m.year_sales);
+            document.getElementById('kpi_year_purchases').innerText = formatPKR(m.year_purchases);
+
+            // 2. Update Primary Financial Cards
+            document.getElementById('kpi_total_sales_revenue').innerText = formatPKR(m.total_sales_revenue);
+            document.getElementById('kpi_total_purchase_cost').innerText = formatPKR(m.total_purchase_cost);
+            document.getElementById('kpi_pending_receivables').innerText = formatPKR(m.pending_receivables);
+            document.getElementById('kpi_pending_payables').innerText = formatPKR(m.pending_payables);
+            document.getElementById('kpi_unpaid_sales_count').innerText = m.unpaid_sales_count;
+            document.getElementById('kpi_unpaid_purchase_count').innerText = m.unpaid_purchase_count;
+
+            // 3. Update Secondary Stock & Profit Cards
+            document.getElementById('kpi_total_seed_stock').innerText = Number(m.total_seed_stock).toLocaleString() + ' Bags';
+            document.getElementById('kpi_gross_profit').innerText = formatPKR(m.gross_profit);
+            document.getElementById('kpi_total_customers').innerText = m.total_customers;
+            document.getElementById('kpi_total_expenses').innerText = formatPKR(m.total_expenses);
+
+            // Health alert badges
+            document.getElementById('alert_low_stock_badge').innerText = m.low_stock_count;
+            document.getElementById('alert_expired_stock_badge').innerText = m.expired_stock_count;
+            document.getElementById('alert_unpaid_sales_count').innerText = m.unpaid_sales_count;
+            document.getElementById('alert_receivables_badge').innerText = formatPKR(m.pending_receivables);
+
+            // 4. Update Chart Data Store
+            chartDataStore.daily = { labels: m.daily_labels, sales: m.daily_sales, purchases: m.daily_purchases };
+            chartDataStore.monthly = { labels: m.month_labels, sales: m.monthly_sales, purchases: m.monthly_purchases };
+            chartDataStore.quarterly = { labels: m.quarter_labels, sales: m.quarterly_sales, purchases: m.quarterly_purchases };
+            chartDataStore.yearly = { labels: m.yearly_labels, sales: m.yearly_sales, purchases: m.yearly_purchases };
+            updateChartPeriod(currentPeriod);
+
+            // 5. Update Recent Sales Table
+            if (m.recent_invoices && m.recent_invoices.length > 0) {
+                const salesTbody = document.getElementById('recent_invoices_tbody');
+                if (salesTbody) {
+                    salesTbody.innerHTML = m.recent_invoices.map(inv => `
+                        <tr>
+                            <td><a href="/sales/${inv.id}/" class="fw-bold text-decoration-none">${inv.invoice_number}</a></td>
+                            <td>${inv.customer__name}</td>
+                            <td class="fw-bold">${formatPKR(inv.grand_total)}</td>
+                            <td>
+                                <span class="badge ${inv.payment_status === 'Paid' ? 'bg-success' : inv.payment_status === 'Partial' ? 'bg-warning text-dark' : 'bg-danger'}">
+                                    ${inv.payment_status}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            // Reset timer
+            countdownSeconds = 15;
+            updateTimerUI();
+        })
+        .catch(err => {
+            if (spinner) spinner.classList.remove('fa-spin');
+        });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    initChart();
+});
+</script>
+{% endblock %}

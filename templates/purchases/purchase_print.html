@@ -1,0 +1,140 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Bill {{ invoice.invoice_number }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; }
+        .page { width: 100%; max-width: 800px; margin: 0 auto; padding: 24px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 16px; }
+        .company-name { font-size: 18px; font-weight: bold; color: #2563eb; }
+        .invoice-title { font-size: 22px; font-weight: bold; text-align: right; }
+        .bill-type { background: #2563eb; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 11px; display: inline-block; margin-bottom: 6px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .info-box h6 { font-size: 10px; text-transform: uppercase; color: #888; margin-bottom: 4px; letter-spacing: 0.5px; }
+        .info-box p { margin: 2px 0; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+        thead { background: #1e40af; color: #fff; }
+        th, td { padding: 6px 10px; border: 1px solid #ddd; }
+        th { font-weight: 600; text-align: left; }
+        .text-right { text-align: right; }
+        .totals-table { width: 280px; margin-left: auto; }
+        .totals-table td { border: none; padding: 4px 8px; }
+        .grand-total td { font-weight: bold; font-size: 14px; color: #2563eb; border-top: 2px solid #2563eb; }
+        .balance-due td { font-weight: bold; font-size: 13px; color: #dc2626; }
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .status-paid { background: #dcfce7; color: #166534; }
+        .status-partial { background: #fef9c3; color: #854d0e; }
+        .status-unpaid { background: #fee2e2; color: #991b1b; }
+        .footer { border-top: 1px solid #ddd; margin-top: 24px; padding-top: 12px; font-size: 10px; color: #666; text-align: center; }
+        .no-print { display: none; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <!-- Print Button (hidden on print) -->
+    <div style="text-align:right; margin-bottom:12px;" class="no-print">
+        <button onclick="window.print()" style="background:#2563eb; color:#fff; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-size:13px;">🖨 Print Bill</button>
+        <a href="{% url 'purchases:purchase_detail' invoice.pk %}" style="margin-left:8px; background:#e5e7eb; color:#222; border:none; padding:8px 20px; border-radius:6px; cursor:pointer; font-size:13px; text-decoration:none;">← Back</a>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div>
+            {% if company.get_invoice_logo_url %}
+                <img src="{{ company.get_invoice_logo_url }}" style="max-height:50px; margin-bottom:6px;" alt="Logo">
+            {% endif %}
+            <div class="company-name">{{ company.name|default:"Enterprise Seed ERP" }}</div>
+            <div style="color:#555; font-size:11px;">{{ company.address|default:"Lahore, Pakistan" }}</div>
+            <div style="color:#555; font-size:11px;">NTN: {{ company.ntn|default:"N/A" }} | STRN: {{ company.strn|default:"N/A" }}</div>
+            <div style="color:#555; font-size:11px;">{{ company.phone|default:"" }} | {{ company.email|default:"" }}</div>
+        </div>
+        <div style="text-align:right;">
+            <div class="bill-type">PURCHASE BILL</div>
+            <div class="invoice-title">{{ invoice.invoice_number }}</div>
+            <div style="font-size:11px; color:#555;">Date: {{ invoice.date }}</div>
+            {% if invoice.due_date %}<div style="font-size:11px; color:#555;">Due: {{ invoice.due_date }}</div>{% endif %}
+            <div style="margin-top:6px;">
+                <span class="status-badge {% if invoice.payment_status == 'Paid' %}status-paid{% elif invoice.payment_status == 'Partial' %}status-partial{% else %}status-unpaid{% endif %}">
+                    {{ invoice.payment_status }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supplier Info -->
+    <div class="info-grid">
+        <div class="info-box">
+            <h6>Purchased From (Supplier)</h6>
+            <p><strong>{{ invoice.supplier.name }}</strong></p>
+            <p>{{ invoice.supplier.company_name|default:"" }}</p>
+            <p>{{ invoice.supplier.phone|default:"" }}</p>
+            <p>{{ invoice.supplier.city|default:"" }}</p>
+        </div>
+        <div class="info-box" style="text-align:right;">
+            <h6>Bill Details</h6>
+            <p>System Bill #: <strong>{{ invoice.invoice_number }}</strong></p>
+            <p>Supplier Bill Ref: <strong>{{ invoice.supplier_bill_no|default:"N/A" }}</strong></p>
+            <p>Payment Method: {{ invoice.payment_method }}</p>
+            {% if invoice.reference_no %}<p>Ref #: {{ invoice.reference_no }}</p>{% endif %}
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Seed Description</th>
+                <th>Variety / Batch</th>
+                <th>Qty (Bags)</th>
+                <th class="text-right">Unit Price (PKR)</th>
+                <th class="text-right">GST %</th>
+                <th class="text-right">Subtotal (PKR)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ item.seed.name }}</strong></td>
+                <td>{{ item.seed.variety }}{% if item.batch %} / {{ item.batch }}{% endif %}</td>
+                <td>{{ item.quantity }}</td>
+                <td class="text-right">{{ item.unit_price|intcomma }}</td>
+                <td class="text-right">{{ item.tax_rate }}%</td>
+                <td class="text-right"><strong>{{ item.subtotal|intcomma }}</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals -->
+    <table class="totals-table">
+        <tr><td>Subtotal:</td><td class="text-right">PKR {{ invoice.subtotal|intcomma }}</td></tr>
+        <tr><td>GST / Tax:</td><td class="text-right">PKR {{ invoice.tax_amount|intcomma }}</td></tr>
+        <tr><td>Discount:</td><td class="text-right">- PKR {{ invoice.discount_amount|intcomma }}</td></tr>
+        <tr class="grand-total"><td>Grand Total:</td><td class="text-right">PKR {{ invoice.grand_total|intcomma }}</td></tr>
+        <tr><td>Paid Amount:</td><td class="text-right" style="color:#166534; font-weight:bold;">PKR {{ invoice.paid_amount|intcomma }}</td></tr>
+        <tr class="balance-due"><td>Balance Due:</td><td class="text-right">PKR {{ invoice.due_amount|intcomma }}</td></tr>
+    </table>
+
+    {% if invoice.notes %}
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px; margin-top:12px; font-size:11px;">
+        <strong>Notes:</strong> {{ invoice.notes }}
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        {{ company.name|default:"Enterprise Seed ERP" }} &mdash; {{ company.address|default:"Lahore, Pakistan" }}<br>
+        {{ company.invoice_footer|default:"Thank you for your business!" }}
+    </div>
+</div>
+</body>
+</html>

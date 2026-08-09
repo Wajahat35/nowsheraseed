@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Movement Audit Log{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-history text-secondary me-2"></i> Stock Movement Audit Log</h4>
+        <p class="text-muted small mb-0">Detailed chronological audit trail of all inventory additions, sales, write-offs, and returns.</p>
+    </div>
+    <a href="{% url 'inventory:stock_list' %}" class="btn btn-light border">Back to Stock Control</a>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="movementsTable">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Movement Type</th>
+                    <th>Seed Description</th>
+                    <th>Batch #</th>
+                    <th>Qty Change</th>
+                    <th>Ref #</th>
+                    <th>Operator</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in movements %}
+                    <tr>
+                        <td>{{ m.created_at|date:"Y-m-d H:i:s" }}</td>
+                        <td>
+                            <span class="badge {% if m.movement_type == 'STOCK_IN' %}bg-success{% elif m.movement_type == 'STOCK_OUT' %}bg-primary{% else %}bg-warning text-dark{% endif %}">
+                                {{ m.get_movement_type_display }}
+                            </span>
+                        </td>
+                        <td class="fw-semibold">{{ m.seed.name }}</td>
+                        <td>{{ m.batch.batch_number|default:"-" }}</td>
+                        <td class="fw-bold {% if m.quantity > 0 %}text-success{% else %}text-danger{% endif %} font-monospace">
+                            {% if m.quantity > 0 %}+{% endif %}{{ m.quantity }} Bags
+                        </td>
+                        <td>{{ m.reference_no|default:"-" }}</td>
+                        <td>{{ m.user.username|default:"System" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No stock movements recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#movementsTable', { order: [[0, 'desc']] });
+    });
+</script>
+{% endblock %}

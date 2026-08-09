@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Purchase Bills & Invoices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-shopping-cart text-primary me-2"></i> Purchase Bills & Invoices</h4>
+        <p class="text-muted small mb-0">Record seed stock purchases from suppliers and manage payable bills.</p>
+    </div>
+    <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary fw-semibold">
+        <i class="fas fa-plus me-1"></i> New Purchase Bill
+    </a>
+</div>
+
+<div class="card-custom p-4">
+    <!-- Filter Bar -->
+    <form method="GET" class="row g-2 mb-3">
+        <div class="col-md-5">
+            <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Search by Bill #, Supplier Name...">
+        </div>
+        <div class="col-md-3">
+            <select name="pstatus" class="form-select">
+                <option value="">All Statuses</option>
+                <option value="Unpaid" {% if request.GET.pstatus == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+                <option value="Partial" {% if request.GET.pstatus == 'Partial' %}selected{% endif %}>Partially Paid</option>
+                <option value="Paid" {% if request.GET.pstatus == 'Paid' %}selected{% endif %}>Paid</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-secondary w-100"><i class="fas fa-filter me-1"></i> Filter</button>
+        </div>
+        <div class="col-md-2">
+            <a href="{% url 'purchases:purchase_list' %}" class="btn btn-light border w-100">Clear</a>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="purchasesTable">
+            <thead>
+                <tr>
+                    <th>Bill #</th>
+                    <th>Supplier</th>
+                    <th>Supplier Bill #</th>
+                    <th>Date</th>
+                    <th>Grand Total</th>
+                    <th>Paid</th>
+                    <th>Balance Due</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ inv.invoice_number }}</td>
+                        <td class="fw-semibold">{{ inv.supplier.name }}</td>
+                        <td>{{ inv.supplier_bill_no|default:"-" }}</td>
+                        <td>{{ inv.date }}</td>
+                        <td class="fw-bold">PKR {{ inv.grand_total|intcomma }}</td>
+                        <td class="text-success fw-bold">PKR {{ inv.paid_amount|intcomma }}</td>
+                        <td class="{% if inv.due_amount > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+                            PKR {{ inv.due_amount|intcomma }}
+                        </td>
+                        <td>{{ inv.payment_method }}</td>
+                        <td>
+                            <span class="badge {% if inv.payment_status == 'Paid' %}bg-success{% elif inv.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                {{ inv.payment_status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'purchases:purchase_detail' inv.pk %}" class="btn btn-outline-info" title="View Details"><i class="fas fa-eye"></i> View</a>
+                                {% if inv.payment_status != 'Paid' %}
+                                    <a href="{% url 'purchases:purchase_detail' inv.pk %}?pay=1" class="btn btn-warning" title="Record Payment"><i class="fas fa-money-bill-wave"></i> Pay</a>
+                                {% endif %}
+                                <a href="{% url 'purchases:purchase_print' inv.pk %}" class="btn btn-outline-dark" title="Print Bill" target="_blank"><i class="fas fa-print"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">No purchase bills recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#purchasesTable');
+    });
+</script>
+{% endblock %}

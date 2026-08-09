@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Voucher {{ voucher.voucher_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice text-emerald me-2"></i> Journal Voucher {{ voucher.voucher_number }}</h4>
+        <p class="text-muted small mb-0">Type: {{ voucher.get_voucher_type_display }} | Date: {{ voucher.date }}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-dark me-2"><i class="fas fa-print me-1"></i> Print Voucher</button>
+        <a href="{% url 'finance:voucher_list' %}" class="btn btn-light border">Back to Vouchers</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="row border-bottom pb-3 mb-4">
+        <div class="col-md-6">
+            <h4 class="fw-bold text-emerald">{{ company.name|default:"Enterprise Seed ERP" }}</h4>
+            <div class="text-muted small">Financial Voucher Document</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <h3 class="fw-bold">{{ voucher.voucher_number }}</h3>
+            <div>Ref #: {{ voucher.reference_no|default:"N/A" }}</div>
+        </div>
+    </div>
+
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Account Title</th>
+                    <th class="text-end">Debit (PKR)</th>
+                    <th class="text-end">Credit (PKR)</th>
+                    <th>Narration</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in voucher.items.all %}
+                    <tr>
+                        <td class="fw-semibold">{{ item.account.code }} - {{ item.account.name }}</td>
+                        <td class="text-end text-success font-monospace">{% if item.debit > 0 %}PKR {{ item.debit|intcomma }}{% else %}-{% endif %}</td>
+                        <td class="text-end text-danger font-monospace">{% if item.credit > 0 %}PKR {{ item.credit|intcomma }}{% else %}-{% endif %}</td>
+                        <td>{{ item.narration|default:"-" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-bold font-monospace">
+                <tr>
+                    <td>TOTAL:</td>
+                    <td class="text-end text-success">PKR {{ voucher.total_debit|intcomma }}</td>
+                    <td class="text-end text-danger">PKR {{ voucher.total_credit|intcomma }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

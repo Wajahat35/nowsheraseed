@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Inventory Stock Control{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-boxes text-emerald me-2"></i> Inventory Stock Control</h4>
+        <p class="text-muted small mb-0">Real-time stock availability, batch quantities, and low stock thresholds.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'inventory:adjustment_create' %}" class="btn btn-warning text-dark fw-semibold">
+            <i class="fas fa-sliders-h me-1"></i> Stock Adjustment / Damage Write-Off
+        </a>
+        <a href="{% url 'inventory:movement_list' %}" class="btn btn-outline-secondary">Stock Movement Log</a>
+        <a href="{% url 'inventory:valuation' %}" class="btn btn-outline-primary">Inventory Valuation (WAC)</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="stockTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Seed Name</th>
+                    <th>Variety</th>
+                    <th>Packing</th>
+                    <th>Min Alert Qty</th>
+                    <th>Available Stock</th>
+                    <th>Retail Price</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in seeds %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ s.code }}</td>
+                        <td class="fw-semibold">{{ s.name }}</td>
+                        <td>{{ s.variety }}</td>
+                        <td>{{ s.packing_size }}</td>
+                        <td>{{ s.min_stock_alert }} Bags</td>
+                        <td class="fw-bold fs-6">
+                            <span class="badge {% if s.get_total_stock <= s.min_stock_alert %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
+                                {{ s.get_total_stock }} Bags
+                            </span>
+                        </td>
+                        <td>PKR {{ s.retail_price|intcomma }}</td>
+                        <td>
+                            {% if s.get_total_stock <= 0 %}
+                                <span class="badge bg-danger">OUT OF STOCK</span>
+                            {% elif s.get_total_stock <= s.min_stock_alert %}
+                                <span class="badge bg-warning text-dark">LOW STOCK</span>
+                            {% else %}
+                                <span class="badge bg-success">IN STOCK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">No stock catalog items available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#stockTable');
+    });
+</script>
+{% endblock %}

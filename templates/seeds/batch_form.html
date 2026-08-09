@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Seed Batch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card-custom p-4">
+            <h4 class="fw-bold mb-3">
+                <i class="fas fa-layer-group text-primary me-2"></i> Register New Seed Batch / Lot
+            </h4>
+            
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Batch Number *</label>
+                        {{ form.batch_number }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Lot Number *</label>
+                        {{ form.lot_number }}
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Seed Item *</label>
+                        {{ form.seed }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Manufacturing Date</label>
+                        {{ form.manufacturing_date }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Expiry Date *</label>
+                        {{ form.expiry_date }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Initial Quantity (Bags/Packs)</label>
+                        {{ form.initial_qty }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Current Quantity</label>
+                        {{ form.current_qty }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Purchase Price (PKR)</label>
+                        {{ form.purchase_price }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Sale Price (PKR)</label>
+                        {{ form.sale_price }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a href="{% url 'seeds:batch_list' %}" class="btn btn-light border">Cancel</a>
+                    <button type="submit" class="btn btn-emerald text-white fw-bold px-4" style="background-color: #10b981;">
+                        Save Batch
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

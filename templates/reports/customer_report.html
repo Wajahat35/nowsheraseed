@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Customer Report & Ledger Summary{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-users text-emerald me-2"></i> Customer Receivables & Audit Report</h4>
+        <p class="text-muted small mb-0">Consolidated customer summary, credit limits, and outstanding receivable balances.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf me-1"></i> Export PDF</a>
+        <a href="?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel me-1"></i> Export Excel</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="customerReportTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Customer Name</th>
+                    <th>Company Name</th>
+                    <th>Phone / WhatsApp</th>
+                    <th>City</th>
+                    <th>Credit Limit</th>
+                    <th>Current Balance (Receivable)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in customers %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ c.code }}</td>
+                        <td class="fw-semibold">{{ c.name }}</td>
+                        <td>{{ c.company_name|default:"-" }}</td>
+                        <td>{{ c.phone }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ c.city }}</span></td>
+                        <td>PKR {{ c.debit_limit|intcomma }}</td>
+                        <td class="fw-bold {% if c.get_current_balance > 0 %}text-danger{% else %}text-emerald{% endif %} font-monospace">
+                            PKR {{ c.get_current_balance|intcomma }}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No customers registered.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#customerReportTable');
+    });
+</script>
+{% endblock %}

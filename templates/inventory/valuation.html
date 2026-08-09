@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Inventory Valuation (WAC){% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-calculator text-primary me-2"></i> Inventory Valuation (Weighted Average Cost)</h4>
+        <p class="text-muted small mb-0">Total cost and retail valuation of current seed stock on hand.</p>
+    </div>
+    <a href="{% url 'inventory:stock_list' %}" class="btn btn-light border">Back to Stock Control</a>
+</div>
+
+<div class="card-custom p-4 mb-4">
+    <div class="row text-center">
+        <div class="col-md-6 border-end">
+            <small class="text-muted fw-semibold">TOTAL STOCK QUANTITY ON HAND</small>
+            <h2 class="fw-bold text-dark mt-1">{{ total_items|intcomma }} Bags</h2>
+        </div>
+        <div class="col-md-6">
+            <small class="text-muted fw-semibold">TOTAL INVENTORY ASSET VALUATION (AT COST)</small>
+            <h2 class="fw-bold text-emerald mt-1">PKR {{ total_valuation|intcomma }}</h2>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover" id="valTable">
+            <thead>
+                <tr>
+                    <th>Seed Code</th>
+                    <th>Seed Description</th>
+                    <th>Total Qty</th>
+                    <th>WAC Cost Price (PKR)</th>
+                    <th>Retail Price (PKR)</th>
+                    <th>Total Cost Value (PKR)</th>
+                    <th>Total Retail Value (PKR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in valuation_data %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ item.seed.code }}</td>
+                        <td class="fw-semibold">{{ item.seed.name }} ({{ item.seed.variety }})</td>
+                        <td>{{ item.total_qty }} Bags</td>
+                        <td>PKR {{ item.wac|floatformat:2|intcomma }}</td>
+                        <td>PKR {{ item.retail_price|intcomma }}</td>
+                        <td class="fw-bold text-emerald">PKR {{ item.total_cost_value|floatformat:2|intcomma }}</td>
+                        <td class="fw-bold">PKR {{ item.total_retail_value|floatformat:2|intcomma }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#valTable');
+    });
+</script>
+{% endblock %}
