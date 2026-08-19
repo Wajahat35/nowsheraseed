@@ -33,9 +33,11 @@
                     <th>Voucher #</th>
                     <th>Type</th>
                     <th>Date</th>
-                    <th>Reference #</th>
+                    <th>Ref #</th>
                     <th>Description</th>
-                    <th class="text-end">Total Amount (PKR)</th>
+                    <th class="text-end">Debit (PKR)</th>
+                    <th class="text-end">Credit (PKR)</th>
+                    <th class="text-end">Balance Diff (PKR)</th>
                     <th>Created By</th>
                     <th class="text-center">Action</th>
                 </tr>
@@ -47,15 +49,22 @@
                             <a href="{% url 'finance:voucher_detail' v.pk %}" class="fw-bold text-primary text-decoration-none">
                                 {{ v.voucher_number }}
                             </a>
-                            {% if v.total_debit != v.total_credit %}
-                                <span class="badge bg-warning text-dark ms-1" title="Unbalanced Voucher: Debit (PKR {{ v.total_debit }}) != Credit (PKR {{ v.total_credit }})">Unbalanced</span>
-                            {% endif %}
                         </td>
                         <td><span class="badge bg-dark">{{ v.get_voucher_type_display }}</span></td>
                         <td>{{ v.date }}</td>
                         <td>{{ v.reference_no|default:"-" }}</td>
-                        <td>{{ v.description|truncatewords:8 }}</td>
-                        <td class="text-end fw-bold text-emerald font-monospace">PKR {{ v.total_debit|intcomma }}</td>
+                        <td>{{ v.description|truncatewords:6|default:"-" }}</td>
+                        <td class="text-end fw-bold text-success font-monospace">PKR {{ v.total_debit|intcomma }}</td>
+                        <td class="text-end fw-bold text-danger font-monospace">PKR {{ v.total_credit|intcomma }}</td>
+                        <td class="text-end font-monospace fw-bold">
+                            {% if not v.is_balanced %}
+                                <span class="badge bg-warning text-dark px-2 py-1" title="Unbalanced Difference: Debit (PKR {{ v.total_debit }}) - Credit (PKR {{ v.total_credit }})">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> PKR {{ v.balance_difference|intcomma }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">0.00</span>
+                            {% endif %}
+                        </td>
                         <td>{{ v.created_by.username|default:"System" }}</td>
                         <td class="text-center">
                             <a href="{% url 'finance:voucher_detail' v.pk %}" class="btn btn-sm btn-outline-info me-1" title="View Voucher"><i class="fas fa-eye"></i></a>
@@ -69,7 +78,7 @@
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i>No financial vouchers created yet. Click <strong>Create Journal Voucher</strong> above.</td></tr>
+                    <tr><td colspan="10" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i>No financial vouchers created yet. Click <strong>Create Journal Voucher</strong> above.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

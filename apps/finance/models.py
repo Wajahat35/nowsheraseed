@@ -66,6 +66,14 @@ class JournalVoucher(models.Model):
             self.voucher_number = f"VCH-{(last_id + 1):04d}"
         super().save(*args, **kwargs)
 
+    @property
+    def is_balanced(self):
+        return self.total_debit == self.total_credit
+
+    @property
+    def balance_difference(self):
+        return abs(self.total_debit - self.total_credit)
+
     def __str__(self):
         return f"{self.voucher_number} ({self.voucher_type}) - PKR {self.total_debit}"
 

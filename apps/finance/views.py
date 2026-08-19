@@ -110,10 +110,11 @@ class VoucherCreateView(LoginRequiredMixin, View):
                     voucher.total_credit = total_cr
                     voucher.save()
 
+                    diff = abs(total_dr - total_cr)
                     status_str = "UNBALANCED" if total_dr != total_cr else "BALANCED"
-                    log_activity(request.user, 'CREATE', 'Finance', f"Created {status_str} Journal Voucher {voucher.voucher_number} (Dr: PKR {total_dr}, Cr: PKR {total_cr})", request)
+                    log_activity(request.user, 'CREATE', 'Finance', f"Created {status_str} Journal Voucher {voucher.voucher_number} (Dr: PKR {total_dr}, Cr: PKR {total_cr}, Diff: PKR {diff})", request)
                     if total_dr != total_cr:
-                        messages.warning(request, f"Journal Voucher {voucher.voucher_number} posted as UNBALANCED (Debit: PKR {total_dr} | Credit: PKR {total_cr}).")
+                        messages.warning(request, f"Journal Voucher {voucher.voucher_number} posted as UNBALANCED (Debit: PKR {total_dr} | Credit: PKR {total_cr} | Diff: PKR {diff}).")
                     else:
                         messages.success(request, f"Journal Voucher {voucher.voucher_number} posted successfully!")
                     return redirect('finance:voucher_detail', pk=voucher.pk)
@@ -191,10 +192,11 @@ class VoucherUpdateView(LoginRequiredMixin, View):
                     vch.total_credit = total_cr
                     vch.save()
 
+                    diff = abs(total_dr - total_cr)
                     status_str = "UNBALANCED" if total_dr != total_cr else "BALANCED"
-                    log_activity(request.user, 'UPDATE', 'Finance', f"Updated {status_str} Journal Voucher {vch.voucher_number} (Dr: PKR {total_dr}, Cr: PKR {total_cr})", request)
+                    log_activity(request.user, 'UPDATE', 'Finance', f"Updated {status_str} Journal Voucher {vch.voucher_number} (Dr: PKR {total_dr}, Cr: PKR {total_cr}, Diff: PKR {diff})", request)
                     if total_dr != total_cr:
-                        messages.warning(request, f"Journal Voucher {vch.voucher_number} updated as UNBALANCED (Debit: PKR {total_dr} | Credit: PKR {total_cr}).")
+                        messages.warning(request, f"Journal Voucher {vch.voucher_number} updated as UNBALANCED (Debit: PKR {total_dr} | Credit: PKR {total_cr} | Diff: PKR {diff}).")
                     else:
                         messages.success(request, f"Journal Voucher {vch.voucher_number} updated successfully!")
                     return redirect('finance:voucher_detail', pk=vch.pk)
@@ -232,10 +234,10 @@ class ExportVoucherListExcelView(LoginRequiredMixin, View):
         if search:
             qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
 
-        headers = ['Voucher #', 'Type', 'Date', 'Reference #', 'Description', 'Total Debit (PKR)', 'Total Credit (PKR)', 'Status', 'Created By']
+        headers = ['Voucher #', 'Type', 'Date', 'Reference #', 'Description', 'Total Debit (PKR)', 'Total Credit (PKR)', 'Balance Diff (PKR)', 'Status', 'Created By']
         rows = []
         for v in qs:
-            status = "BALANCED" if v.total_debit == v.total_credit else "UNBALANCED"
+            status = "BALANCED" if v.is_balanced else "UNBALANCED"
             rows.append([
                 v.voucher_number,
                 v.get_voucher_type_display(),
@@ -244,6 +246,7 @@ class ExportVoucherListExcelView(LoginRequiredMixin, View):
                 v.description or '',
                 float(v.total_debit),
                 float(v.total_credit),
+                float(v.balance_difference),
                 status,
                 v.created_by.username if v.created_by else 'System'
             ])
@@ -261,10 +264,10 @@ class ExportVoucherListPDFView(LoginRequiredMixin, View):
         if search:
             qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
 
-        headers = ['Voucher #', 'Type', 'Date', 'Ref #', 'Debit (PKR)', 'Credit (PKR)', 'Status']
+        headers = ['Voucher #', 'Type', 'Date', 'Ref #', 'Debit (PKR)', 'Credit (PKR)', 'Diff (PKR)', 'Status']
         rows = []
         for v in qs:
-            status = "Balanced" if v.total_debit == v.total_credit else "Unbalanced"
+            status = "Balanced" if v.is_balanced else "Unbalanced"
             rows.append([
                 v.voucher_number,
                 v.voucher_type,
@@ -272,6 +275,7 @@ class ExportVoucherListPDFView(LoginRequiredMixin, View):
                 v.reference_no or '-',
                 f"{v.total_debit:,.2f}",
                 f"{v.total_credit:,.2f}",
+                f"{v.balance_difference:,.2f}",
                 status
             ])
         log_activity(request.user, 'EXPORT', 'Finance', 'Exported Journal Vouchers list to PDF', request)
@@ -292,6 +296,8 @@ class ExportVoucherDetailExcelView(LoginRequiredMixin, View):
                 item.narration or ''
             ])
         rows.append(['TOTALS', '', float(voucher.total_debit), float(voucher.total_credit), ''])
+        if not voucher.is_balanced:
+            rows.append(['BALANCE DIFFERENCE', '', float(voucher.balance_difference), '', 'UNBALANCED VOUCHER'])
         filename = f"Voucher_{voucher.voucher_number}.xlsx"
         sheet_title = f"{voucher.voucher_number}"
         log_activity(request.user, 'EXPORT', 'Finance', f"Exported Journal Voucher {voucher.voucher_number} to Excel", request)
@@ -316,7 +322,14 @@ class ExportVoucherDetailPDFView(LoginRequiredMixin, View):
             f"{voucher.total_credit:,.2f}",
             ''
         ])
-        status_str = "Balanced" if voucher.total_debit == voucher.total_credit else "UNBALANCED"
+        if not voucher.is_balanced:
+            rows.append([
+                'BALANCE DIFFERENCE',
+                f"Diff: {voucher.balance_difference:,.2f}",
+                '',
+                'UNBALANCED VOUCHER'
+            ])
+        status_str = "Balanced" if voucher.is_balanced else f"UNBALANCED (Diff: PKR {voucher.balance_difference:,.2f})"
         title = f"Journal Voucher {voucher.voucher_number} ({voucher.get_voucher_type_display()}) [{status_str}]"
         filename = f"Voucher_{voucher.voucher_number}.pdf"
         log_activity(request.user, 'EXPORT', 'Finance', f"Exported Journal Voucher {voucher.voucher_number} to PDF", request)
