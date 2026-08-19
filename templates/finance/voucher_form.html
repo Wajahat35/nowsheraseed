@@ -99,7 +99,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Double-entry accounting rule: Total Debit MUST equal Total Credit before posting.</small>
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Note: Vouchers can be posted balanced or unbalanced as needed.</small>
                     <div class="d-flex gap-2">
                         <a href="{% url 'finance:voucher_list' %}" class="btn btn-light border">Cancel</a>
                         <button type="submit" id="submit_vch_btn" class="btn btn-emerald text-white fw-bold px-4" style="background-color: #10b981;" disabled>
@@ -288,11 +288,17 @@
         const statusLbl = document.getElementById('lbl_balance_status');
         const diff = Math.abs(totDr - totCr);
 
-        if (vchItems.length > 0 && (totDr > 0 || totCr > 0) && diff < 0.01) {
-            statusLbl.innerHTML = '<span class="badge bg-success fs-6 px-3 py-2"><i class="fas fa-check-circle me-1"></i> BALANCED (PKR ' + totDr.toFixed(2) + ')</span>';
+        const validItems = vchItems.filter(item => item.account_id && ((parseFloat(item.debit) || 0) > 0 || (parseFloat(item.credit) || 0) > 0));
+
+        if (validItems.length > 0) {
             submitBtn.disabled = false;
+            if (diff < 0.01 && (totDr > 0 || totCr > 0)) {
+                statusLbl.innerHTML = '<span class="badge bg-success fs-6 px-3 py-2"><i class="fas fa-check-circle me-1"></i> BALANCED (PKR ' + totDr.toFixed(2) + ')</span>';
+            } else {
+                statusLbl.innerHTML = '<span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="fas fa-info-circle me-1"></i> UNBALANCED / SINGLE-ENTRY (Allowed - Diff: PKR ' + diff.toFixed(2) + ')</span>';
+            }
         } else {
-            statusLbl.innerHTML = '<span class="badge bg-danger fs-6 px-3 py-2"><i class="fas fa-exclamation-triangle me-1"></i> UNBALANCED (Diff: PKR ' + diff.toFixed(2) + ')</span>';
+            statusLbl.innerHTML = '<span class="badge bg-secondary fs-6 px-3 py-2">Add at least 1 line item to post</span>';
             submitBtn.disabled = true;
         }
 

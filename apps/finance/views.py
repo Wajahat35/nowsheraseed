@@ -10,6 +10,8 @@ from django.db import transaction, models
 from .models import ChartOfAccount, JournalVoucher, JournalItem, AccountCategory
 from .forms import ChartOfAccountForm, JournalVoucherForm
 from apps.accounts.views import log_activity, AdminRequiredMixin
+from apps.reports.excel_generator import render_to_excel
+from apps.reports.pdf_generator import render_to_pdf
 
 
 class COAListView(LoginRequiredMixin, ListView):
@@ -49,7 +51,7 @@ class VoucherListView(LoginRequiredMixin, ListView):
         if vtype:
             qs = qs.filter(voucher_type=vtype)
         if search:
-            qs = qs.filter(voucher_number__icontains=search) | qs.filter(reference_no__icontains=search) | qs.filter(description__icontains=search)
+            qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
         return qs.order_by('-id')
 
 
@@ -72,9 +74,10 @@ class VoucherCreateView(LoginRequiredMixin, View):
 
         if form.is_valid() and items_data:
             try:
-                items_list = json.loads(items_data)
+                raw_items = json.loads(items_data)
+                items_list = [i for i in raw_items if i.get('account_id')]
                 if not items_list:
-                    messages.error(request, "Voucher must contain at least one line item.")
+                    messages.error(request, "Voucher must contain at least one line item with an account selected.")
                     return redirect('finance:voucher_create')
 
                 with transaction.atomic():
@@ -107,8 +110,12 @@ class VoucherCreateView(LoginRequiredMixin, View):
                     voucher.total_credit = total_cr
                     voucher.save()
 
-                    log_activity(request.user, 'CREATE', 'Finance', f"Created Journal Voucher {voucher.voucher_number} (PKR {total_dr})", request)
-                    messages.success(request, f"Journal Voucher {voucher.voucher_number} created successfully!")
+                    status_str = "UNBALANCED" if total_dr != total_cr else "BALANCED"
+                    log_activity(request.user, 'CREATE', 'Finance', f"Created {status_str} Journal Voucher {voucher.voucher_number} (Dr: PKR {total_dr}, Cr: PKR {total_cr})", request)
+                    if total_dr != total_cr:
+                        messages.warning(request, f"Journal Voucher {voucher.voucher_number} posted as UNBALANCED (Debit: PKR {total_dr} | Credit: PKR {total_cr}).")
+                    else:
+                        messages.success(request, f"Journal Voucher {voucher.voucher_number} posted successfully!")
                     return redirect('finance:voucher_detail', pk=voucher.pk)
 
             except Exception as e:
@@ -149,9 +156,10 @@ class VoucherUpdateView(LoginRequiredMixin, View):
 
         if form.is_valid() and items_data:
             try:
-                items_list = json.loads(items_data)
+                raw_items = json.loads(items_data)
+                items_list = [i for i in raw_items if i.get('account_id')]
                 if not items_list:
-                    messages.error(request, "Voucher must contain at least one line item.")
+                    messages.error(request, "Voucher must contain at least one line item with an account selected.")
                     return redirect('finance:voucher_edit', pk=pk)
 
                 with transaction.atomic():
@@ -183,8 +191,12 @@ class VoucherUpdateView(LoginRequiredMixin, View):
                     vch.total_credit = total_cr
                     vch.save()
 
-                    log_activity(request.user, 'UPDATE', 'Finance', f"Updated Journal Voucher {vch.voucher_number} (PKR {total_dr})", request)
-                    messages.success(request, f"Journal Voucher {vch.voucher_number} updated successfully!")
+                    status_str = "UNBALANCED" if total_dr != total_cr else "BALANCED"
+                    log_activity(request.user, 'UPDATE', 'Finance', f"Updated {status_str} Journal Voucher {vch.voucher_number} (Dr: PKR {total_dr}, Cr: PKR {total_cr})", request)
+                    if total_dr != total_cr:
+                        messages.warning(request, f"Journal Voucher {vch.voucher_number} updated as UNBALANCED (Debit: PKR {total_dr} | Credit: PKR {total_cr}).")
+                    else:
+                        messages.success(request, f"Journal Voucher {vch.voucher_number} updated successfully!")
                     return redirect('finance:voucher_detail', pk=vch.pk)
 
             except Exception as e:
@@ -208,6 +220,107 @@ class VoucherDetailView(LoginRequiredMixin, DetailView):
     model = JournalVoucher
     template_name = 'finance/voucher_detail.html'
     context_object_name = 'voucher'
+
+
+class ExportVoucherListExcelView(LoginRequiredMixin, View):
+    def get(self, request):
+        qs = JournalVoucher.objects.all().order_by('-id')
+        vtype = request.GET.get('vtype')
+        search = request.GET.get('search')
+        if vtype:
+            qs = qs.filter(voucher_type=vtype)
+        if search:
+            qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
+
+        headers = ['Voucher #', 'Type', 'Date', 'Reference #', 'Description', 'Total Debit (PKR)', 'Total Credit (PKR)', 'Status', 'Created By']
+        rows = []
+        for v in qs:
+            status = "BALANCED" if v.total_debit == v.total_credit else "UNBALANCED"
+            rows.append([
+                v.voucher_number,
+                v.get_voucher_type_display(),
+                str(v.date),
+                v.reference_no or '',
+                v.description or '',
+                float(v.total_debit),
+                float(v.total_credit),
+                status,
+                v.created_by.username if v.created_by else 'System'
+            ])
+        log_activity(request.user, 'EXPORT', 'Finance', 'Exported Journal Vouchers list to Excel', request)
+        return render_to_excel('journal_vouchers_list.xlsx', 'Journal Vouchers', headers, rows)
+
+
+class ExportVoucherListPDFView(LoginRequiredMixin, View):
+    def get(self, request):
+        qs = JournalVoucher.objects.all().order_by('-id')
+        vtype = request.GET.get('vtype')
+        search = request.GET.get('search')
+        if vtype:
+            qs = qs.filter(voucher_type=vtype)
+        if search:
+            qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
+
+        headers = ['Voucher #', 'Type', 'Date', 'Ref #', 'Debit (PKR)', 'Credit (PKR)', 'Status']
+        rows = []
+        for v in qs:
+            status = "Balanced" if v.total_debit == v.total_credit else "Unbalanced"
+            rows.append([
+                v.voucher_number,
+                v.voucher_type,
+                str(v.date),
+                v.reference_no or '-',
+                f"{v.total_debit:,.2f}",
+                f"{v.total_credit:,.2f}",
+                status
+            ])
+        log_activity(request.user, 'EXPORT', 'Finance', 'Exported Journal Vouchers list to PDF', request)
+        return render_to_pdf('journal_vouchers_list.pdf', 'Journal Vouchers Report', headers, rows)
+
+
+class ExportVoucherDetailExcelView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        voucher = get_object_or_404(JournalVoucher, pk=pk)
+        headers = ['Account Code', 'Account Name', 'Debit (PKR)', 'Credit (PKR)', 'Line Narration']
+        rows = []
+        for item in voucher.items.all():
+            rows.append([
+                item.account.code,
+                item.account.name,
+                float(item.debit),
+                float(item.credit),
+                item.narration or ''
+            ])
+        rows.append(['TOTALS', '', float(voucher.total_debit), float(voucher.total_credit), ''])
+        filename = f"Voucher_{voucher.voucher_number}.xlsx"
+        sheet_title = f"{voucher.voucher_number}"
+        log_activity(request.user, 'EXPORT', 'Finance', f"Exported Journal Voucher {voucher.voucher_number} to Excel", request)
+        return render_to_excel(filename, sheet_title, headers, rows)
+
+
+class ExportVoucherDetailPDFView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        voucher = get_object_or_404(JournalVoucher, pk=pk)
+        headers = ['Account Code & Name', 'Debit (PKR)', 'Credit (PKR)', 'Narration']
+        rows = []
+        for item in voucher.items.all():
+            rows.append([
+                f"{item.account.code} - {item.account.name}",
+                f"{item.debit:,.2f}" if item.debit > 0 else "-",
+                f"{item.credit:,.2f}" if item.credit > 0 else "-",
+                item.narration or '-'
+            ])
+        rows.append([
+            'TOTALS',
+            f"{voucher.total_debit:,.2f}",
+            f"{voucher.total_credit:,.2f}",
+            ''
+        ])
+        status_str = "Balanced" if voucher.total_debit == voucher.total_credit else "UNBALANCED"
+        title = f"Journal Voucher {voucher.voucher_number} ({voucher.get_voucher_type_display()}) [{status_str}]"
+        filename = f"Voucher_{voucher.voucher_number}.pdf"
+        log_activity(request.user, 'EXPORT', 'Finance', f"Exported Journal Voucher {voucher.voucher_number} to PDF", request)
+        return render_to_pdf(filename, title, headers, rows)
 
 
 class GeneralLedgerView(LoginRequiredMixin, View):

@@ -7,9 +7,15 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice text-emerald me-2"></i> Double-Entry Journal Vouchers</h4>
-        <p class="text-muted small mb-0">Record and manage General Journal Vouchers (JV), Cash/Bank Payments, and Receipts.</p>
+        <p class="text-muted small mb-0">Record and manage General Journal Vouchers (JV), Cash/Bank Payments, and Receipts. Single-entry & unbalanced vouchers permitted.</p>
     </div>
     <div class="d-flex gap-2">
+        <a href="{% url 'finance:voucher_list_excel' %}" class="btn btn-outline-success fw-semibold">
+            <i class="fas fa-file-excel me-1"></i> Export Excel
+        </a>
+        <a href="{% url 'finance:voucher_list_pdf' %}" class="btn btn-outline-danger fw-semibold">
+            <i class="fas fa-file-pdf me-1"></i> Export PDF
+        </a>
         <a href="{% url 'finance:general_ledger' %}" class="btn btn-outline-primary fw-semibold">
             <i class="fas fa-book me-1"></i> General Ledger
         </a>
@@ -41,6 +47,9 @@
                             <a href="{% url 'finance:voucher_detail' v.pk %}" class="fw-bold text-primary text-decoration-none">
                                 {{ v.voucher_number }}
                             </a>
+                            {% if v.total_debit != v.total_credit %}
+                                <span class="badge bg-warning text-dark ms-1" title="Unbalanced Voucher: Debit (PKR {{ v.total_debit }}) != Credit (PKR {{ v.total_credit }})">Unbalanced</span>
+                            {% endif %}
                         </td>
                         <td><span class="badge bg-dark">{{ v.get_voucher_type_display }}</span></td>
                         <td>{{ v.date }}</td>
@@ -50,7 +59,9 @@
                         <td>{{ v.created_by.username|default:"System" }}</td>
                         <td class="text-center">
                             <a href="{% url 'finance:voucher_detail' v.pk %}" class="btn btn-sm btn-outline-info me-1" title="View Voucher"><i class="fas fa-eye"></i></a>
-                            <a href="{% url 'finance:voucher_edit' v.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Voucher Amounts & Lines"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'finance:voucher_detail_excel' v.pk %}" class="btn btn-sm btn-outline-success me-1" title="Download Excel"><i class="fas fa-file-excel"></i></a>
+                            <a href="{% url 'finance:voucher_detail_pdf' v.pk %}" class="btn btn-sm btn-outline-danger me-1" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
+                            <a href="{% url 'finance:voucher_edit' v.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Voucher"><i class="fas fa-edit"></i></a>
                             <form method="POST" action="{% url 'finance:voucher_delete' v.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete Voucher {{ v.voucher_number }}?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Voucher"><i class="fas fa-trash"></i></button>
