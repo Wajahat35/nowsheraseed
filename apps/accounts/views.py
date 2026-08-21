@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy
@@ -55,14 +55,22 @@ class SelectModuleView(LoginRequiredMixin, View):
         return render(request, self.template_name)
 
 
-class UserLogoutView(LogoutView):
-    next_page = 'accounts:login'
-
-    def dispatch(self, request, *args, **kwargs):
+class UserLogoutView(View):
+    """Handles both GET and POST requests for logging out without HTTP 405 error."""
+    def get(self, request):
         if request.user.is_authenticated:
             log_activity(request.user, 'LOGOUT', 'Accounts', f"User {request.user.username} logged out.", request)
-            messages.info(request, "You have been logged out.")
-        return super().dispatch(request, *args, **kwargs)
+            logout(request)
+            messages.info(request, "You have been logged out successfully.")
+        return redirect('login')
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            log_activity(request.user, 'LOGOUT', 'Accounts', f"User {request.user.username} logged out.", request)
+            logout(request)
+            messages.info(request, "You have been logged out successfully.")
+        return redirect('login')
+
 
 class AdminRequiredMixin(UserPassesTestMixin):
     def test_func(self):
