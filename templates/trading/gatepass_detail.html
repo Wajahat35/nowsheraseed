@@ -1,0 +1,48 @@
+{% extends 'trading/base_trading.html' %}
+
+{% block title %}Gate Pass: {{ gatepass.pass_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-truck text-warning me-2"></i> Gate Pass {{ gatepass.pass_number }}</h4>
+        <p class="text-muted small mb-0">Type: {{ gatepass.get_pass_type_display }} | Date: {{ gatepass.date }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'trading:gatepass_edit' gatepass.pk %}" class="btn btn-outline-primary fw-semibold"><i class="fas fa-edit me-1"></i> Edit Pass</a>
+        <button onclick="window.print()" class="btn btn-dark"><i class="fas fa-print me-1"></i> Print</button>
+        <a href="{% url 'trading:gatepass_list' %}" class="btn btn-light border">Back to Gate Passes</a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+    <div class="row border-bottom pb-3 mb-4">
+        <div class="col-md-6">
+            <h4 class="fw-bold text-dark">{{ company.name|default:"NOWSHERA SEED CORPORATION" }}</h4>
+            <div class="text-muted small">Seeds Trading Dispatch Gate Pass</div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <h3 class="fw-bold">{{ gatepass.pass_number }}</h3>
+            <div class="mb-1"><span class="badge bg-warning text-dark fs-6 px-3 py-1">{{ gatepass.get_pass_type_display|upper }}</span></div>
+            <div>Date: {{ gatepass.date }}</div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6"><strong>Vehicle / Truck No:</strong> <div class="fw-bold fs-5 font-monospace text-primary">{{ gatepass.vehicle_no }}</div></div>
+        <div class="col-md-6 text-md-end"><strong>Driver Name:</strong> <div>{{ gatepass.driver_name|default:"N/A" }}</div></div>
+        <div class="col-md-6"><strong>Party Name (Customer/Supplier):</strong> <div class="fw-bold text-dark">{{ gatepass.party_name }}</div></div>
+        <div class="col-md-6 text-md-end"><strong>Seed Variety / Item:</strong> <div class="fw-bold">{{ gatepass.seed_item }}</div></div>
+        <div class="col-md-3"><strong>Bags Quantity:</strong> <div class="fs-5 font-monospace fw-bold">{{ gatepass.bags_qty }} Bags</div></div>
+        <div class="col-md-3"><strong>Gross Weight:</strong> <div class="font-monospace">{{ gatepass.gross_weight }} KG</div></div>
+        <div class="col-md-3"><strong>Tare Weight:</strong> <div class="font-monospace">{{ gatepass.tare_weight }} KG</div></div>
+        <div class="col-md-3"><strong>Net Weight:</strong> <div class="fs-5 font-monospace fw-bold text-success">{{ gatepass.net_weight }} KG</div></div>
+    </div>
+
+    {% if gatepass.remarks %}
+        <div class="p-3 bg-light border rounded">
+            <strong>Remarks / Instructions:</strong> {{ gatepass.remarks }}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

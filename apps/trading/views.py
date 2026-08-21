@@ -9,8 +9,16 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import models
 
-from .models import TradingAccount, Deposit, Withdrawal, Trade
-from .forms import TradingAccountForm, DepositForm, WithdrawalForm, TradeForm
+from .models import (
+    TradingAccount, Deposit, Withdrawal, Trade,
+    TradingSalesInvoice, TradingSalesItem,
+    TradingPurchaseInvoice, TradingPurchaseItem,
+    TradingGatePass
+)
+from .forms import (
+    TradingAccountForm, DepositForm, WithdrawalForm, TradeForm,
+    TradingSalesInvoiceForm, TradingPurchaseInvoiceForm, TradingGatePassForm
+)
 from .services import calculate_trading_stats
 from apps.accounts.views import log_activity
 from apps.reports.excel_generator import render_to_excel
@@ -38,9 +46,10 @@ class TradingDashboardView(LoginRequiredMixin, TradingAccessRequiredMixin, View)
     def get(self, request):
         stats = calculate_trading_stats()
         accounts = TradingAccount.objects.filter(is_active=True)[:6]
-        recent_trades = Trade.objects.select_related('account').all()[:8]
-        recent_deposits = Deposit.objects.select_related('account').all()[:5]
-        recent_withdrawals = Withdrawal.objects.select_related('account').all()[:5]
+        recent_trades = Trade.objects.select_related('account').all()[:6]
+        recent_sales = TradingSalesInvoice.objects.all()[:5]
+        recent_purchases = TradingPurchaseInvoice.objects.all()[:5]
+        recent_gatepasses = TradingGatePass.objects.all()[:5]
 
         # Monthly performance chart data
         trades = Trade.objects.filter(status='Closed').order_by('trade_date')
@@ -56,8 +65,9 @@ class TradingDashboardView(LoginRequiredMixin, TradingAccessRequiredMixin, View)
             'stats': stats,
             'accounts': accounts,
             'recent_trades': recent_trades,
-            'recent_deposits': recent_deposits,
-            'recent_withdrawals': recent_withdrawals,
+            'recent_sales': recent_sales,
+            'recent_purchases': recent_purchases,
+            'recent_gatepasses': recent_gatepasses,
             'chart_labels_json': json.dumps(chart_labels),
             'chart_data_json': json.dumps(chart_data),
         }
@@ -344,6 +354,201 @@ class TradeDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView
     model = Trade
     template_name = 'trading/trade_detail.html'
     context_object_name = 'trade'
+
+
+# ---------------------------------------------------------------------------
+# SEEDS TRADING SALES INVOICES VIEWS
+# ---------------------------------------------------------------------------
+class TradingSalesListView(LoginRequiredMixin, TradingAccessRequiredMixin, ListView):
+    model = TradingSalesInvoice
+    template_name = 'trading/sales_list.html'
+    context_object_name = 'invoices'
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = TradingSalesInvoice.objects.all()
+        q = self.request.GET.get('q')
+        status = self.request.GET.get('status')
+        if q:
+            qs = qs.filter(models.Q(invoice_number__icontains=q) | models.Q(customer_name__icontains=q) | models.Q(phone__icontains=q))
+        if status:
+            qs = qs.filter(payment_status=status)
+        return qs.order_by('-date', '-id')
+
+
+class TradingSalesCreateView(LoginRequiredMixin, TradingAccessRequiredMixin, CreateView):
+    model = TradingSalesInvoice
+    form_class = TradingSalesInvoiceForm
+    template_name = 'trading/sales_form.html'
+    success_url = reverse_lazy('trading:sales_list')
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        response = super().form_valid(form)
+        log_activity(self.request.user, 'CREATE', 'Trading', f"Created Seed Trading Sales Invoice {self.object.invoice_number} (Customer: {self.object.customer_name})", self.request)
+        messages.success(self.request, f"Sales Invoice {self.object.invoice_number} created successfully!")
+        return response
+
+
+class TradingSalesUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, UpdateView):
+    model = TradingSalesInvoice
+    form_class = TradingSalesInvoiceForm
+    template_name = 'trading/sales_form.html'
+    success_url = reverse_lazy('trading:sales_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_activity(self.request.user, 'UPDATE', 'Trading', f"Updated Seed Trading Sales Invoice {self.object.invoice_number}", self.request)
+        messages.success(self.request, f"Sales Invoice {self.object.invoice_number} updated successfully!")
+        return response
+
+
+class TradingSalesDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+    model = TradingSalesInvoice
+    template_name = 'trading/sales_confirm_delete.html'
+    success_url = reverse_lazy('trading:sales_list')
+
+    def delete(self, request, *args, **kwargs):
+        obj = self.get_object()
+        log_activity(request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Sales Invoice {obj.invoice_number}", request)
+        messages.success(request, f"Sales Invoice {obj.invoice_number} deleted.")
+        return super().delete(request, *args, **kwargs)
+
+
+class TradingSalesDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView):
+    model = TradingSalesInvoice
+    template_name = 'trading/sales_detail.html'
+    context_object_name = 'invoice'
+
+
+# ---------------------------------------------------------------------------
+# SEEDS TRADING PURCHASE INVOICES VIEWS
+# ---------------------------------------------------------------------------
+class TradingPurchaseListView(LoginRequiredMixin, TradingAccessRequiredMixin, ListView):
+    model = TradingPurchaseInvoice
+    template_name = 'trading/purchase_list.html'
+    context_object_name = 'invoices'
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = TradingPurchaseInvoice.objects.all()
+        q = self.request.GET.get('q')
+        status = self.request.GET.get('status')
+        if q:
+            qs = qs.filter(models.Q(invoice_number__icontains=q) | models.Q(supplier_name__icontains=q) | models.Q(phone__icontains=q))
+        if status:
+            qs = qs.filter(payment_status=status)
+        return qs.order_by('-date', '-id')
+
+
+class TradingPurchaseCreateView(LoginRequiredMixin, TradingAccessRequiredMixin, CreateView):
+    model = TradingPurchaseInvoice
+    form_class = TradingPurchaseInvoiceForm
+    template_name = 'trading/purchase_form.html'
+    success_url = reverse_lazy('trading:purchase_list')
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        response = super().form_valid(form)
+        log_activity(self.request.user, 'CREATE', 'Trading', f"Created Seed Trading Purchase Invoice {self.object.invoice_number} (Supplier: {self.object.supplier_name})", self.request)
+        messages.success(self.request, f"Purchase Invoice {self.object.invoice_number} created successfully!")
+        return response
+
+
+class TradingPurchaseUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, UpdateView):
+    model = TradingPurchaseInvoice
+    form_class = TradingPurchaseInvoiceForm
+    template_name = 'trading/purchase_form.html'
+    success_url = reverse_lazy('trading:purchase_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_activity(self.request.user, 'UPDATE', 'Trading', f"Updated Seed Trading Purchase Invoice {self.object.invoice_number}", self.request)
+        messages.success(self.request, f"Purchase Invoice {self.object.invoice_number} updated successfully!")
+        return response
+
+
+class TradingPurchaseDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+    model = TradingPurchaseInvoice
+    template_name = 'trading/purchase_confirm_delete.html'
+    success_url = reverse_lazy('trading:purchase_list')
+
+    def delete(self, request, *args, **kwargs):
+        obj = self.get_object()
+        log_activity(request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Purchase Invoice {obj.invoice_number}", request)
+        messages.success(request, f"Purchase Invoice {obj.invoice_number} deleted.")
+        return super().delete(request, *args, **kwargs)
+
+
+class TradingPurchaseDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView):
+    model = TradingPurchaseInvoice
+    template_name = 'trading/purchase_detail.html'
+    context_object_name = 'invoice'
+
+
+# ---------------------------------------------------------------------------
+# SEEDS TRADING GATE PASS VIEWS
+# ---------------------------------------------------------------------------
+class TradingGatePassListView(LoginRequiredMixin, TradingAccessRequiredMixin, ListView):
+    model = TradingGatePass
+    template_name = 'trading/gatepass_list.html'
+    context_object_name = 'passes'
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = TradingGatePass.objects.all()
+        q = self.request.GET.get('q')
+        pass_type = self.request.GET.get('pass_type')
+        if q:
+            qs = qs.filter(models.Q(pass_number__icontains=q) | models.Q(vehicle_no__icontains=q) | models.Q(party_name__icontains=q) | models.Q(seed_item__icontains=q))
+        if pass_type:
+            qs = qs.filter(pass_type=pass_type)
+        return qs.order_by('-date', '-id')
+
+
+class TradingGatePassCreateView(LoginRequiredMixin, TradingAccessRequiredMixin, CreateView):
+    model = TradingGatePass
+    form_class = TradingGatePassForm
+    template_name = 'trading/gatepass_form.html'
+    success_url = reverse_lazy('trading:gatepass_list')
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        response = super().form_valid(form)
+        log_activity(self.request.user, 'CREATE', 'Trading', f"Created Seed Trading Gate Pass {self.object.pass_number} ({self.object.pass_type})", self.request)
+        messages.success(self.request, f"Gate Pass {self.object.pass_number} created successfully!")
+        return response
+
+
+class TradingGatePassUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, UpdateView):
+    model = TradingGatePass
+    form_class = TradingGatePassForm
+    template_name = 'trading/gatepass_form.html'
+    success_url = reverse_lazy('trading:gatepass_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        log_activity(self.request.user, 'UPDATE', 'Trading', f"Updated Seed Trading Gate Pass {self.object.pass_number}", self.request)
+        messages.success(self.request, f"Gate Pass {self.object.pass_number} updated successfully!")
+        return response
+
+
+class TradingGatePassDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+    model = TradingGatePass
+    template_name = 'trading/gatepass_confirm_delete.html'
+    success_url = reverse_lazy('trading:gatepass_list')
+
+    def delete(self, request, *args, **kwargs):
+        obj = self.get_object()
+        log_activity(request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Gate Pass {obj.pass_number}", request)
+        messages.success(request, f"Gate Pass {obj.pass_number} deleted.")
+        return super().delete(request, *args, **kwargs)
+
+
+class TradingGatePassDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView):
+    model = TradingGatePass
+    template_name = 'trading/gatepass_detail.html'
+    context_object_name = 'gatepass'
 
 
 # ---------------------------------------------------------------------------

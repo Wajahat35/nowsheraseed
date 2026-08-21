@@ -1,199 +1,127 @@
 {% extends 'trading/base_trading.html' %}
 {% load humanize %}
 
-{% block title %}Trading Dashboard{% endblock %}
+{% block title %}Seeds Trading Dashboard{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h3 class="fw-bold text-dark mb-1"><i class="fas fa-chart-pie text-primary me-2"></i> Trading Dashboard</h3>
-        <p class="text-muted small mb-0">Overview of trading accounts, open/closed trades, financial deposits, and performance metrics.</p>
+        <h3 class="fw-bold text-dark mb-1"><i class="fas fa-chart-pie text-primary me-2"></i> Seeds Trading Dashboard</h3>
+        <p class="text-muted small mb-0">Overview of seed trading sales, purchases, balance amounts, gate passes, and trading accounts.</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="{% url 'trading:trade_create' %}" class="btn btn-primary fw-bold">
-            <i class="fas fa-plus me-1"></i> Add Trade
+        <a href="{% url 'trading:sales_create' %}" class="btn btn-emerald text-white fw-bold" style="background-color: #10b981;">
+            <i class="fas fa-plus me-1"></i> New Sales Invoice
         </a>
-        <a href="{% url 'trading:account_create' %}" class="btn btn-outline-primary fw-semibold">
-            <i class="fas fa-wallet me-1"></i> Add Account
+        <a href="{% url 'trading:purchase_create' %}" class="btn btn-primary fw-bold">
+            <i class="fas fa-cart-plus me-1"></i> New Purchase Invoice
         </a>
-        <a href="{% url 'trading:deposit_create' %}" class="btn btn-outline-success fw-semibold">
-            <i class="fas fa-arrow-down me-1"></i> Deposit
+        <a href="{% url 'trading:gatepass_create' %}" class="btn btn-warning text-dark fw-bold">
+            <i class="fas fa-truck me-1"></i> Issue Gate Pass
         </a>
     </div>
 </div>
 
-<!-- Key Performance Cards Row 1: Financial & Account Totals -->
+<!-- Key Operational Cards: Seed Trading Sales, Purchases & Balance Amounts -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-primary">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="text-muted small fw-bold text-uppercase">Total Balance</div>
-                    <div class="fs-4 fw-bold text-dark font-monospace">${{ stats.total_balance|intcomma }}</div>
-                    <small class="text-muted">{{ stats.total_accounts }} Accounts ({{ stats.total_accounts }} Active)</small>
-                </div>
-                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle fs-3">
-                    <i class="fas fa-wallet"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="text-muted small fw-bold text-uppercase">Current Equity</div>
-                    <div class="fs-4 fw-bold text-info font-monospace">${{ stats.total_equity|intcomma }}</div>
-                    <small class="text-muted">Balance + Open Trades</small>
-                </div>
-                <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle fs-3">
-                    <i class="fas fa-coins"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Seed Trading Sales & Balance Receivable -->
     <div class="col-md-3">
         <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-success">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="text-muted small fw-bold text-uppercase">Total Deposits</div>
-                    <div class="fs-4 fw-bold text-success font-monospace">${{ stats.total_deposits|intcomma }}</div>
-                    <small class="text-muted">Funding Capital</small>
-                </div>
-                <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle fs-3">
-                    <i class="fas fa-arrow-down"></i>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small fw-bold text-uppercase">Seed Sales Total</span>
+                <i class="fas fa-file-invoice-dollar text-success fs-4"></i>
+            </div>
+            <div class="fs-4 fw-bold text-dark font-monospace">PKR {{ stats.sales_total|intcomma }}</div>
+            <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top small">
+                <span class="text-muted">Paid: <strong class="text-success">PKR {{ stats.sales_paid|intcomma }}</strong></span>
+                <span class="text-muted">Balance: <strong class="text-danger">PKR {{ stats.sales_balance|intcomma }}</strong></span>
             </div>
         </div>
     </div>
 
+    <!-- Seed Trading Purchases & Balance Payable -->
     <div class="col-md-3">
-        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-danger">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="text-muted small fw-bold text-uppercase">Total Withdrawals</div>
-                    <div class="fs-4 fw-bold text-danger font-monospace">${{ stats.total_withdrawals|intcomma }}</div>
-                    <small class="text-muted">Payouts</small>
-                </div>
-                <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle fs-3">
-                    <i class="fas fa-arrow-up"></i>
-                </div>
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-primary">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small fw-bold text-uppercase">Seed Purchases Total</span>
+                <i class="fas fa-shopping-cart text-primary fs-4"></i>
             </div>
+            <div class="fs-4 fw-bold text-dark font-monospace">PKR {{ stats.purchases_total|intcomma }}</div>
+            <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top small">
+                <span class="text-muted">Paid: <strong class="text-success">PKR {{ stats.purchases_paid|intcomma }}</strong></span>
+                <span class="text-muted">Balance: <strong class="text-warning text-dark">PKR {{ stats.purchases_balance|intcomma }}</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gate Passes -->
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small fw-bold text-uppercase">Seed Gate Passes</span>
+                <i class="fas fa-truck text-warning fs-4"></i>
+            </div>
+            <div class="fs-4 fw-bold text-dark font-monospace">{{ stats.gate_passes_count }}</div>
+            <div class="small text-muted mt-2 pt-2 border-top">Inward & Outward Dispatch Passes</div>
+        </div>
+    </div>
+
+    <!-- Financial Account Balance -->
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-muted small fw-bold text-uppercase">Financial Capital</span>
+                <i class="fas fa-wallet text-info fs-4"></i>
+            </div>
+            <div class="fs-4 fw-bold text-info font-monospace">${{ stats.total_balance|intcomma }}</div>
+            <div class="small text-muted mt-2 pt-2 border-top">Realized P&L: <strong>${{ stats.net_profit_loss|intcomma }}</strong></div>
         </div>
     </div>
 </div>
 
-<!-- Key Performance Cards Row 2: Trading Performance & Win Rates -->
+<!-- Tables Row 1: Recent Seed Trading Sales & Purchases -->
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
-            <div class="text-muted small fw-bold text-uppercase mb-1">Net Realized P&L</div>
-            <div class="fs-4 fw-bold font-monospace {% if stats.net_profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
-                {% if stats.net_profit_loss >= 0 %}+{% endif %}${{ stats.net_profit_loss|intcomma }}
-            </div>
-            <div class="d-flex justify-content-between small text-muted mt-2">
-                <span>Profit: <strong class="text-success">${{ stats.total_profit|intcomma }}</strong></span>
-                <span>Loss: <strong class="text-danger">${{ stats.total_loss|intcomma }}</strong></span>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
-            <div class="text-muted small fw-bold text-uppercase mb-1">Win Rate %</div>
-            <div class="fs-4 fw-bold text-emerald font-monospace" style="color: #10b981;">
-                {{ stats.win_rate }}%
-            </div>
-            <div class="progress mt-2" style="height: 6px;">
-                <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.win_rate }}%"></div>
-                <div class="progress-bar bg-danger" role="progressbar" style="width: {{ stats.loss_rate }}%"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
-            <div class="text-muted small fw-bold text-uppercase mb-1">Trades Executed</div>
-            <div class="fs-4 fw-bold text-dark font-monospace">{{ stats.total_trades }}</div>
-            <div class="d-flex justify-content-between small text-muted mt-2">
-                <span>Wins: <strong class="text-success">{{ stats.winning_trades_count }}</strong></span>
-                <span>Losses: <strong class="text-danger">{{ stats.losing_trades_count }}</strong></span>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
-            <div class="text-muted small fw-bold text-uppercase mb-1">Best vs Worst Trade</div>
-            <div class="d-flex justify-content-between align-items-center mt-1">
-                <div>
-                    <small class="text-muted d-block">Best Win</small>
-                    <span class="fw-bold text-success font-monospace">+${{ stats.best_trade|intcomma }}</span>
-                </div>
-                <div class="text-end">
-                    <small class="text-muted d-block">Worst Loss</small>
-                    <span class="fw-bold text-danger font-monospace">${{ stats.worst_trade|intcomma }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Charts Row -->
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
-            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-chart-line text-primary me-2"></i> Monthly Trading Performance (Net P&L)</h5>
-            <div style="height: 280px;">
-                <canvas id="monthlyPlChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
-            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-chart-pie text-info me-2"></i> Win vs Loss Breakdown</h5>
-            <div style="height: 250px;" class="d-flex align-items-center justify-content-center">
-                <canvas id="winLossChart"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Accounts Quick Grid & Recent Trades -->
-<div class="row g-3 mb-4">
-    <!-- Active Accounts List -->
-    <div class="col-lg-5">
+    <!-- Recent Seed Sales Invoices -->
+    <div class="col-lg-6">
         <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-wallet text-primary me-2"></i> Active Trading Accounts</h5>
-                <a href="{% url 'trading:account_list' %}" class="btn btn-sm btn-outline-primary fw-semibold">View All</a>
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-file-invoice-dollar text-success me-2"></i> Recent Seed Sales Invoices</h5>
+                <a href="{% url 'trading:sales_list' %}" class="btn btn-sm btn-outline-success fw-semibold">View All Sales</a>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Account</th>
-                            <th>Platform</th>
-                            <th class="text-end">Balance</th>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th class="text-end">Total Amount</th>
+                            <th class="text-end">Balance Amount</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for acc in accounts %}
+                        {% for s in recent_sales %}
                             <tr>
-                                <td>
-                                    <a href="{% url 'trading:account_detail' acc.pk %}" class="fw-bold text-decoration-none text-dark">
-                                        {{ acc.name }}
-                                    </a>
-                                    <div class="small text-muted">{{ acc.broker_name }} (#{{ acc.account_number }})</div>
+                                <td><a href="{% url 'trading:sales_detail' s.pk %}" class="fw-bold text-decoration-none text-primary">{{ s.invoice_number }}</a></td>
+                                <td>{{ s.customer_name }}</td>
+                                <td>{{ s.date }}</td>
+                                <td class="text-end font-monospace fw-bold">PKR {{ s.total_amount|intcomma }}</td>
+                                <td class="text-end font-monospace fw-bold {% if s.balance_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+                                    PKR {{ s.balance_amount|intcomma }}
                                 </td>
-                                <td><span class="badge bg-secondary">{{ acc.platform }}</span></td>
-                                <td class="text-end fw-bold font-monospace text-emerald">${{ acc.current_balance|intcomma }}</td>
+                                <td>
+                                    {% if s.payment_status == 'Paid' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% elif s.payment_status == 'Partial' %}
+                                        <span class="badge bg-warning text-dark">Partial</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Unpaid</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% empty %}
-                            <tr><td colspan="3" class="text-center text-muted py-3">No trading accounts added yet.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-3">No sales invoices logged yet.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -201,12 +129,107 @@
         </div>
     </div>
 
-    <!-- Recent Trades -->
-    <div class="col-lg-7">
+    <!-- Recent Seed Purchase Invoices -->
+    <div class="col-lg-6">
         <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-exchange-alt text-success me-2"></i> Recent Trades</h5>
-                <a href="{% url 'trading:trade_list' %}" class="btn btn-sm btn-outline-success fw-semibold">View All Trades</a>
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-shopping-cart text-primary me-2"></i> Recent Seed Purchase Invoices</h5>
+                <a href="{% url 'trading:purchase_list' %}" class="btn btn-sm btn-outline-primary fw-semibold">View All Purchases</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Supplier</th>
+                            <th>Date</th>
+                            <th class="text-end">Total Amount</th>
+                            <th class="text-end">Balance Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in recent_purchases %}
+                            <tr>
+                                <td><a href="{% url 'trading:purchase_detail' p.pk %}" class="fw-bold text-decoration-none text-primary">{{ p.invoice_number }}</a></td>
+                                <td>{{ p.supplier_name }}</td>
+                                <td>{{ p.date }}</td>
+                                <td class="text-end font-monospace fw-bold">PKR {{ p.total_amount|intcomma }}</td>
+                                <td class="text-end font-monospace fw-bold {% if p.balance_amount > 0 %}text-warning text-dark{% else %}text-success{% endif %}">
+                                    PKR {{ p.balance_amount|intcomma }}
+                                </td>
+                                <td>
+                                    {% if p.payment_status == 'Paid' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% elif p.payment_status == 'Partial' %}
+                                        <span class="badge bg-warning text-dark">Partial</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Unpaid</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-3">No purchase invoices logged yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tables Row 2: Gate Passes & Financial Trades -->
+<div class="row g-3 mb-4">
+    <!-- Recent Gate Passes -->
+    <div class="col-lg-6">
+        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-truck text-warning me-2"></i> Recent Gate Passes</h5>
+                <a href="{% url 'trading:gatepass_list' %}" class="btn btn-sm btn-outline-warning text-dark fw-semibold">View All Passes</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Pass #</th>
+                            <th>Type</th>
+                            <th>Vehicle #</th>
+                            <th>Party / Customer</th>
+                            <th>Bags</th>
+                            <th>Net Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in recent_gatepasses %}
+                            <tr>
+                                <td><a href="{% url 'trading:gatepass_detail' g.pk %}" class="fw-bold text-decoration-none text-primary">{{ g.pass_number }}</a></td>
+                                <td>
+                                    {% if g.pass_type == 'Inward' %}
+                                        <span class="badge bg-success">Inward</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">Outward</span>
+                                    {% endif %}
+                                </td>
+                                <td class="font-monospace fw-bold">{{ g.vehicle_no }}</td>
+                                <td>{{ g.party_name }}</td>
+                                <td>{{ g.bags_qty }}</td>
+                                <td class="font-monospace">{{ g.net_weight }} KG</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-3">No gate passes issued yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade Execution Log -->
+    <div class="col-lg-6">
+        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-chart-line text-info me-2"></i> Financial Trade Log</h5>
+                <a href="{% url 'trading:trade_list' %}" class="btn btn-sm btn-outline-info fw-semibold">View Trade Log</a>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -236,16 +259,10 @@
                                 <td class="text-end font-monospace fw-bold {% if t.net_profit > 0 %}text-success{% elif t.net_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
                                     {% if t.net_profit > 0 %}+{% endif %}${{ t.net_profit|intcomma }}
                                 </td>
-                                <td>
-                                    {% if t.status == 'Open' %}
-                                        <span class="badge bg-warning text-dark">Open</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Closed</span>
-                                    {% endif %}
-                                </td>
+                                <td><span class="badge bg-secondary">{{ t.status }}</span></td>
                             </tr>
                         {% empty %}
-                            <tr><td colspan="6" class="text-center text-muted py-3">No trade logs recorded yet.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-3">No trades logged.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -253,57 +270,4 @@
         </div>
     </div>
 </div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const monthlyLabels = JSON.parse('{{ chart_labels_json|escapejs }}');
-    const monthlyData = JSON.parse('{{ chart_data_json|escapejs }}');
-
-    // Monthly Bar Chart
-    const ctxMonthly = document.getElementById('monthlyPlChart').getContext('2d');
-    new Chart(ctxMonthly, {
-        type: 'bar',
-        data: {
-            labels: monthlyLabels.length > 0 ? monthlyLabels : ['No Data'],
-            datasets: [{
-                label: 'Monthly Net P&L ($)',
-                data: monthlyData.length > 0 ? monthlyData : [0],
-                backgroundColor: monthlyData.map(val => val >= 0 ? '#10b981' : '#ef4444'),
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
-    });
-
-    // Win vs Loss Doughnut Chart
-    const ctxPie = document.getElementById('winLossChart').getContext('2d');
-    new Chart(ctxPie, {
-        type: 'doughnut',
-        data: {
-            labels: ['Winning Trades', 'Losing Trades', 'Break-even'],
-            datasets: [{
-                data: [{{ stats.winning_trades_count }}, {{ stats.losing_trades_count }}, {{ stats.break_even_trades_count }}],
-                backgroundColor: ['#10b981', '#ef4444', '#94a3b8']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
-        }
-    });
-});
-</script>
 {% endblock %}

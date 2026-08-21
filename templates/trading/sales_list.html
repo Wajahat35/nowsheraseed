@@ -1,0 +1,77 @@
+{% extends 'trading/base_trading.html' %}
+{% load humanize %}
+
+{% block title %}Seed Trading Sales Invoices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice-dollar text-success me-2"></i> Seed Trading Sales Invoices</h4>
+        <p class="text-muted small mb-0">Record seed trading sales, customer payments, and track remaining balance amounts.</p>
+    </div>
+    <a href="{% url 'trading:sales_create' %}" class="btn btn-emerald text-white fw-bold" style="background-color: #10b981;">
+        <i class="fas fa-plus me-1"></i> Create Sales Invoice
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date</th>
+                    <th>Customer / Buyer Party</th>
+                    <th>Phone</th>
+                    <th class="text-end">Total Amount (PKR)</th>
+                    <th class="text-end">Paid Amount (PKR)</th>
+                    <th class="text-end">Balance Amount (PKR)</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in invoices %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'trading:sales_detail' s.pk %}" class="fw-bold text-decoration-none text-primary">
+                                {{ s.invoice_number }}
+                            </a>
+                        </td>
+                        <td>{{ s.date }}</td>
+                        <td class="fw-semibold">{{ s.customer_name }}</td>
+                        <td>{{ s.phone|default:"-" }}</td>
+                        <td class="text-end font-monospace fw-bold">PKR {{ s.total_amount|intcomma }}</td>
+                        <td class="text-end font-monospace text-success fw-bold">PKR {{ s.paid_amount|intcomma }}</td>
+                        <td class="text-end font-monospace fw-bold">
+                            {% if s.balance_amount > 0 %}
+                                <span class="badge bg-warning text-dark px-2 py-1 fs-6">
+                                    PKR {{ s.balance_amount|intcomma }}
+                                </span>
+                            {% else %}
+                                <span class="text-success small fw-bold">0.00 (Cleared)</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if s.payment_status == 'Paid' %}
+                                <span class="badge bg-success">Paid</span>
+                            {% elif s.payment_status == 'Partial' %}
+                                <span class="badge bg-warning text-dark">Partially Paid</span>
+                            {% else %}
+                                <span class="badge bg-danger">Unpaid</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'trading:sales_detail' s.pk %}" class="btn btn-sm btn-outline-info me-1" title="View Invoice"><i class="fas fa-eye"></i></a>
+                            <a href="{% url 'trading:sales_edit' s.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Invoice"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'trading:sales_delete' s.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Invoice"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i> No sales invoices recorded yet. Click <strong>Create Sales Invoice</strong> above.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

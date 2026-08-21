@@ -1,5 +1,10 @@
 from django.contrib import admin
-from .models import TradingAccount, Deposit, Withdrawal, Trade
+from .models import (
+    TradingAccount, Deposit, Withdrawal, Trade,
+    TradingSalesInvoice, TradingSalesItem,
+    TradingPurchaseInvoice, TradingPurchaseItem,
+    TradingGatePass
+)
 
 @admin.register(TradingAccount)
 class TradingAccountAdmin(admin.ModelAdmin):
@@ -24,3 +29,31 @@ class TradeAdmin(admin.ModelAdmin):
     list_display = ('symbol', 'account', 'market_type', 'direction', 'lot_size', 'entry_price', 'exit_price', 'profit_loss', 'status', 'trade_date')
     list_filter = ('market_type', 'direction', 'status', 'trade_date')
     search_fields = ('symbol', 'strategy', 'account__name')
+
+class TradingSalesItemInline(admin.TabularInline):
+    model = TradingSalesItem
+    extra = 1
+
+@admin.register(TradingSalesInvoice)
+class TradingSalesInvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'customer_name', 'date', 'total_amount', 'paid_amount', 'balance_amount', 'payment_status')
+    list_filter = ('payment_status', 'date')
+    search_fields = ('invoice_number', 'customer_name', 'phone')
+    inlines = [TradingSalesItemInline]
+
+class TradingPurchaseItemInline(admin.TabularInline):
+    model = TradingPurchaseItem
+    extra = 1
+
+@admin.register(TradingPurchaseInvoice)
+class TradingPurchaseInvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'supplier_name', 'date', 'total_amount', 'paid_amount', 'balance_amount', 'payment_status')
+    list_filter = ('payment_status', 'date')
+    search_fields = ('invoice_number', 'supplier_name', 'phone')
+    inlines = [TradingPurchaseItemInline]
+
+@admin.register(TradingGatePass)
+class TradingGatePassAdmin(admin.ModelAdmin):
+    list_display = ('pass_number', 'pass_type', 'date', 'vehicle_no', 'party_name', 'seed_item', 'bags_qty', 'net_weight', 'status')
+    list_filter = ('pass_type', 'status', 'date')
+    search_fields = ('pass_number', 'vehicle_no', 'party_name', 'seed_item')

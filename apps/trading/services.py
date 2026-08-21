@@ -1,11 +1,12 @@
 from decimal import Decimal
 from django.db.models import Sum, Count, Q
-from .models import TradingAccount, Deposit, Withdrawal, Trade
+from .models import TradingAccount, Deposit, Withdrawal, Trade, TradingSalesInvoice, TradingPurchaseInvoice, TradingGatePass
 
 def calculate_trading_stats(account_id=None, date_from=None, date_to=None, market_type=None, symbol=None, direction=None, status=None):
     """
-    Consolidated Trading Performance Calculation Engine.
-    Calculates exact totals, Win Rate %, Loss Rate %, Net P&L, Deposits & Withdrawals.
+    Consolidated Trading Performance & Seeds Trading Calculation Engine.
+    Calculates exact totals, Win Rate %, Loss Rate %, Net P&L, Deposits & Withdrawals,
+    as well as Seed Trading Sales Total, Sales Balance, Purchase Total, Purchase Balance, and Gate Passes.
     """
     accounts_qs = TradingAccount.objects.filter(is_active=True)
     if account_id:
@@ -79,6 +80,28 @@ def calculate_trading_stats(account_id=None, date_from=None, date_to=None, marke
     win_rate = (winning_count / closed_trades_count * 100) if closed_trades_count > 0 else 0.0
     loss_rate = (losing_count / closed_trades_count * 100) if closed_trades_count > 0 else 0.0
 
+    # Seed Trading Operational Aggregations
+    sales_qs = TradingSalesInvoice.objects.all()
+    purchases_qs = TradingPurchaseInvoice.objects.all()
+    gate_passes_qs = TradingGatePass.objects.all()
+
+    if date_from:
+        sales_qs = sales_qs.filter(date__gte=date_from)
+        purchases_qs = purchases_qs.filter(date__gte=date_from)
+        gate_passes_qs = gate_passes_qs.filter(date__gte=date_from)
+    if date_to:
+        sales_qs = sales_qs.filter(date__lte=date_to)
+        purchases_qs = purchases_qs.filter(date__lte=date_to)
+        gate_passes_qs = gate_passes_qs.filter(date__lte=date_to)
+
+    sales_total = sales_qs.aggregate(t=Sum('total_amount'))['t'] or Decimal('0.00')
+    sales_paid = sales_qs.aggregate(t=Sum('paid_amount'))['t'] or Decimal('0.00')
+    sales_balance = sales_qs.aggregate(t=Sum('balance_amount'))['t'] or Decimal('0.00')
+
+    purchases_total = purchases_qs.aggregate(t=Sum('total_amount'))['t'] or Decimal('0.00')
+    purchases_paid = purchases_qs.aggregate(t=Sum('paid_amount'))['t'] or Decimal('0.00')
+    purchases_balance = purchases_qs.aggregate(t=Sum('balance_amount'))['t'] or Decimal('0.00')
+
     return {
         'total_accounts': total_accounts,
         'total_balance': total_balance,
@@ -98,4 +121,13 @@ def calculate_trading_stats(account_id=None, date_from=None, date_to=None, marke
         'loss_rate': round(loss_rate, 2),
         'best_trade': best_trade_val,
         'worst_trade': worst_trade_val,
+        
+        # Seeds Trading Operational Stats
+        'sales_total': sales_total,
+        'sales_paid': sales_paid,
+        'sales_balance': sales_balance,
+        'purchases_total': purchases_total,
+        'purchases_paid': purchases_paid,
+        'purchases_balance': purchases_balance,
+        'gate_passes_count': gate_passes_qs.count(),
     }

@@ -1,5 +1,5 @@
 from django import forms
-from .models import TradingAccount, Deposit, Withdrawal, Trade
+from .models import TradingAccount, Deposit, Withdrawal, Trade, TradingSalesInvoice, TradingPurchaseInvoice, TradingGatePass
 
 class TradingAccountForm(forms.ModelForm):
     class Meta:
@@ -78,4 +78,59 @@ class TradeForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-select'}),
             'strategy': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Trend Following, Scalping'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+
+# ---------------------------------------------------------------------------
+# SEEDS TRADING OPERATIONAL FORMS
+# ---------------------------------------------------------------------------
+class TradingSalesInvoiceForm(forms.ModelForm):
+    class Meta:
+        model = TradingSalesInvoice
+        fields = ('date', 'customer_name', 'phone', 'total_amount', 'paid_amount', 'remarks')
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Tariq Seed Traders'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '0300-1234567'}),
+            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'paid_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+
+class TradingPurchaseInvoiceForm(forms.ModelForm):
+    class Meta:
+        model = TradingPurchaseInvoice
+        fields = ('date', 'supplier_name', 'phone', 'total_amount', 'paid_amount', 'remarks')
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'supplier_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Punjab Seed Growers'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '0300-9876543'}),
+            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'paid_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+
+class TradingGatePassForm(forms.ModelForm):
+    class Meta:
+        model = TradingGatePass
+        fields = (
+            'pass_type', 'date', 'vehicle_no', 'driver_name', 'party_name',
+            'seed_item', 'bags_qty', 'gross_weight', 'tare_weight', 'net_weight',
+            'status', 'remarks'
+        )
+        widgets = {
+            'pass_type': forms.Select(attrs={'class': 'form-select'}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'vehicle_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. LES-4890'}),
+            'driver_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Driver Name'}),
+            'party_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer / Supplier Name'}),
+            'seed_item': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Wheat Seed Faisalabad 2008'}),
+            'bags_qty': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '100'}),
+            'gross_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '5000.00'}),
+            'tare_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '1500.00'}),
+            'net_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '3500.00'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }

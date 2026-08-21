@@ -7,6 +7,27 @@ urlpatterns = [
     # Dashboard
     path('', views.TradingDashboardView.as_view(), name='dashboard'),
 
+    # Seed Trading Sales Invoices
+    path('sales/', views.TradingSalesListView.as_view(), name='sales_list'),
+    path('sales/add/', views.TradingSalesCreateView.as_view(), name='sales_create'),
+    path('sales/<int:pk>/', views.TradingSalesDetailView.as_view(), name='sales_detail'),
+    path('sales/<int:pk>/edit/', views.TradingSalesUpdateView.as_view(), name='sales_edit'),
+    path('sales/<int:pk>/delete/', views.TradingSalesDeleteView.as_view(), name='sales_delete'),
+
+    # Seed Trading Purchase Invoices
+    path('purchases/', views.TradingPurchaseListView.as_view(), name='purchase_list'),
+    path('purchases/add/', views.TradingPurchaseCreateView.as_view(), name='purchase_create'),
+    path('purchases/<int:pk>/', views.TradingPurchaseDetailView.as_view(), name='purchase_detail'),
+    path('purchases/<int:pk>/edit/', views.TradingPurchaseUpdateView.as_view(), name='purchase_edit'),
+    path('purchases/<int:pk>/delete/', views.TradingPurchaseDeleteView.as_view(), name='purchase_delete'),
+
+    # Seed Trading Gate Passes
+    path('gatepass/', views.TradingGatePassListView.as_view(), name='gatepass_list'),
+    path('gatepass/add/', views.TradingGatePassCreateView.as_view(), name='gatepass_create'),
+    path('gatepass/<int:pk>/', views.TradingGatePassDetailView.as_view(), name='gatepass_detail'),
+    path('gatepass/<int:pk>/edit/', views.TradingGatePassUpdateView.as_view(), name='gatepass_edit'),
+    path('gatepass/<int:pk>/delete/', views.TradingGatePassDeleteView.as_view(), name='gatepass_delete'),
+
     # Accounts
     path('accounts/', views.TradingAccountListView.as_view(), name='account_list'),
     path('accounts/add/', views.TradingAccountCreateView.as_view(), name='account_create'),
