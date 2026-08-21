@@ -86,7 +86,10 @@ class PurchaseItem(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        self.subtotal = (self.quantity * self.unit_price) * (1 + (self.tax_rate / 100))
+        tax = Decimal(str(self.tax_rate or 0))
+        qty = Decimal(str(self.quantity or 0))
+        price = Decimal(str(self.unit_price or 0))
+        self.subtotal = (qty * price) * (Decimal('1.00') + (tax / Decimal('100.00')))
         is_new = self.pk is None
         super().save(*args, **kwargs)
         

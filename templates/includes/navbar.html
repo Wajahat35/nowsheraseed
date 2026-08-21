@@ -12,6 +12,10 @@
         </form>
         
         <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-emerald btn-sm text-white fw-bold me-1" style="background-color: #10b981;" data-bs-toggle="modal" data-bs-target="#voiceAssistantModal" title="Open AI Voice Assistant">
+                <i class="fas fa-microphone me-1"></i> Voice Assistant
+            </button>
+
             {% if user.has_trading_access %}
                 <a href="{% url 'trading:dashboard' %}" class="btn btn-primary btn-sm fw-bold me-1" title="Switch to Trading Management System">
                     <i class="fas fa-chart-line me-1"></i> Switch to Trading

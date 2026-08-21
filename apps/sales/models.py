@@ -170,8 +170,12 @@ class SalesItem(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        line_price = (self.unit_price - self.discount) * self.quantity
-        self.subtotal = line_price * (1 + (self.tax_rate / 100))
+        tax = Decimal(str(self.tax_rate or 0))
+        disc = Decimal(str(self.discount or 0))
+        qty = Decimal(str(self.quantity or 0))
+        price = Decimal(str(self.unit_price or 0))
+        line_price = (price - disc) * qty
+        self.subtotal = line_price * (Decimal('1.00') + (tax / Decimal('100.00')))
         is_new = self.pk is None
         
         if not self.cost_price:

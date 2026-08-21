@@ -24,6 +24,7 @@ urlpatterns = [
     path('expenses/', include('apps.expenses.urls')),
     path('reports/', include('apps.reports.urls')),
     path('trading/', include('apps.trading.urls')),
+    path('voice/', include('apps.voice.urls')),
 
     # Direct static & media serving for uploaded company logos, barcodes & QR codes
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
