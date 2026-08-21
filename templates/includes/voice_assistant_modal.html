@@ -71,7 +71,7 @@
 
                 <!-- Text Fallback Input Box -->
                 <div class="input-group mb-3 shadow-sm">
-                    <input type="text" id="voiceTextInput" class="form-control" placeholder="Type command in Roman Urdu or English (e.g. Ahmed ko 50 bag sale karo)..." />
+                    <input type="text" id="voiceTextInput" class="form-control" placeholder="Type command in Roman Urdu or English (e.g. Sales invoice banao 50 bags wheat)..." />
                     <button class="btn btn-primary fw-bold" type="button" id="sendVoiceTextBtn">
                         <i class="fas fa-paper-plane me-1"></i> Process
                     </button>
@@ -102,25 +102,40 @@
                         <i class="fas fa-exclamation-triangle me-1"></i> <span id="stockWarningMsg"></span>
                     </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <span class="text-muted small d-block">Supplier / Customer Party:</span>
-                            <strong class="fs-5 text-dark" id="draftPartyName">-</strong>
+                    <!-- Party / Driver Header Block -->
+                    <div class="p-3 bg-light rounded border mb-3">
+                        <div class="row g-2">
+                            <div class="col-md-6" id="partyBlock">
+                                <span class="text-muted small d-block" id="partyRoleLabel">Supplier Name:</span>
+                                <strong class="fs-5 text-dark" id="draftPartyName">-</strong>
+                            </div>
+                            <div class="col-md-6 d-none" id="driverBlock">
+                                <span class="text-muted small d-block">Driver Name:</span>
+                                <strong class="fs-5 text-dark" id="draftDriverName">-</strong>
+                            </div>
+                            <div class="col-md-6 text-md-end d-none" id="vehicleBlock">
+                                <span class="text-muted small d-block">Vehicle Number:</span>
+                                <strong class="fs-5 text-primary font-monospace" id="draftVehicleNo">-</strong>
+                            </div>
                         </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="text-muted small d-block">Seed Item / Variety:</span>
+                    </div>
+
+                    <!-- Items Summary Grid -->
+                    <div class="row g-3 mb-3" id="itemsSummaryRow">
+                        <div class="col-md-6">
+                            <span class="text-muted small d-block">Seed Product / Variety:</span>
                             <strong class="fs-5 text-dark" id="draftSeedName">-</strong>
                         </div>
-                        <div class="col-md-4">
-                            <span class="text-muted small d-block">Quantity / Bags:</span>
+                        <div class="col-md-6 text-md-end">
+                            <span class="text-muted small d-block">Quantity:</span>
                             <strong class="fs-5 text-dark font-monospace" id="draftQuantity">0 Bags</strong>
                         </div>
-                        <div class="col-md-4 text-md-center">
+                        <div class="col-md-6" id="rateBlock">
                             <span class="text-muted small d-block">Rate per Bag:</span>
                             <strong class="fs-5 text-dark font-monospace" id="draftRate">PKR 0.00</strong>
                         </div>
-                        <div class="col-md-4 text-md-end">
-                            <span class="text-muted small d-block">Total Amount:</span>
+                        <div class="col-md-6 text-md-end" id="totalBlock">
+                            <span class="text-muted small d-block">Total Calculated Amount:</span>
                             <strong class="fs-4 text-success font-monospace" id="draftTotalAmount">PKR 0.00</strong>
                         </div>
                     </div>
@@ -161,10 +176,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const draftPreviewCard = document.getElementById('draftPreviewCard');
     const draftDocTypeBadge = document.getElementById('draftDocTypeBadge');
+    
+    const partyBlock = document.getElementById('partyBlock');
+    const partyRoleLabel = document.getElementById('partyRoleLabel');
     const draftPartyName = document.getElementById('draftPartyName');
+    
+    const driverBlock = document.getElementById('driverBlock');
+    const draftDriverName = document.getElementById('draftDriverName');
+    const vehicleBlock = document.getElementById('vehicleBlock');
+    const draftVehicleNo = document.getElementById('draftVehicleNo');
+    
     const draftSeedName = document.getElementById('draftSeedName');
     const draftQuantity = document.getElementById('draftQuantity');
+    const rateBlock = document.getElementById('rateBlock');
     const draftRate = document.getElementById('draftRate');
+    const totalBlock = document.getElementById('totalBlock');
     const draftTotalAmount = document.getElementById('draftTotalAmount');
     
     const stockWarningAlert = document.getElementById('stockWarningAlert');
@@ -180,13 +206,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let isListening = false;
     let recognition = null;
 
-    // Initialize Web Speech API SpeechRecognition if available
+    // Web Speech API Initialization
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = 'ur-PK'; // Primary Urdu / Roman Urdu / English
+        recognition.lang = 'ur-PK';
 
         recognition.onstart = function() {
             isListening = true;
@@ -204,14 +230,14 @@ document.addEventListener('DOMContentLoaded', function() {
         recognition.onerror = function(event) {
             console.error('Speech recognition error:', event.error);
             stopListening();
-            voiceStatusText.innerText = "Voice error or silence. Try typing below.";
+            voiceStatusText.innerText = "Voice error or silence. Type your command below.";
         };
 
         recognition.onend = function() {
             stopListening();
         };
     } else {
-        voiceStatusText.innerText = "Browser microphone speech recognition not supported natively. Type command below.";
+        voiceStatusText.innerText = "Browser microphone speech recognition not supported. Type command below.";
     }
 
     function startListening() {
@@ -257,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Send voice command to Django Voice Backend
     function sendVoiceCommand(text) {
-        voiceStatusText.innerText = "Processing voice command...";
+        voiceStatusText.innerText = "Processing command...";
         
         fetch('/voice/process/', {
             method: 'POST',
@@ -300,28 +326,65 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Render Draft Preview Card & Disambiguation Choices
+    // Render Dynamic Draft Preview Card based on Document Type
     function renderDraftPreview(draft) {
         draftPreviewCard.classList.remove('d-none');
         approveDraftBtn.disabled = false;
 
-        const docLabels = {
-            'PURCHASE_INVOICE': 'PURCHASE INVOICE DRAFT',
-            'SALES_INVOICE': 'SALES INVOICE DRAFT',
-            'GATE_PASS': 'GATE PASS DRAFT',
-            'TRADING_SALES': 'SEEDS TRADING SALES DRAFT',
-            'TRADING_PURCHASE': 'SEEDS TRADING PURCHASE DRAFT',
-            'TRADING_GATEPASS': 'SEEDS TRADING GATE PASS DRAFT'
-        };
-        draftDocTypeBadge.innerText = docLabels[draft.doc_type] || 'DOCUMENT DRAFT';
+        const docType = draft.doc_type || 'PURCHASE_INVOICE';
+        
+        if (docType === 'PURCHASE_INVOICE') {
+            draftDocTypeBadge.innerText = 'PURCHASE INVOICE DRAFT';
+            draftDocTypeBadge.className = 'badge bg-success px-3 py-1 fs-6';
+            partyBlock.classList.remove('d-none');
+            partyRoleLabel.innerText = 'Supplier Name:';
+            draftPartyName.innerText = draft.party_name ? `${draft.party_name} ${draft.party_company ? '('+draft.party_company+')' : ''}` : '(Missing - Required)';
+            
+            driverBlock.classList.add('d-none');
+            vehicleBlock.classList.add('d-none');
+            rateBlock.classList.remove('d-none');
+            totalBlock.classList.remove('d-none');
 
-        draftPartyName.innerText = draft.party_name || '(Not Specified)';
-        draftSeedName.innerText = draft.seed_name ? `${draft.seed_name} ${draft.seed_variety || ''}` : '(Not Specified)';
-        draftQuantity.innerText = `${draft.quantity || 0} Bags`;
-        draftRate.innerText = `PKR ${(draft.rate || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-        draftTotalAmount.innerText = `PKR ${(draft.total_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        } else if (docType === 'SALES_INVOICE') {
+            draftDocTypeBadge.innerText = 'SALES INVOICE DRAFT';
+            draftDocTypeBadge.className = 'badge bg-primary px-3 py-1 fs-6';
+            partyBlock.classList.remove('d-none');
+            partyRoleLabel.innerText = 'Customer / Purchaser Name:';
+            draftPartyName.innerText = draft.party_name ? `${draft.party_name} ${draft.party_company ? '('+draft.party_company+')' : ''}` : '(Missing - Required)';
+            
+            driverBlock.classList.add('d-none');
+            vehicleBlock.classList.add('d-none');
+            rateBlock.classList.remove('d-none');
+            totalBlock.classList.remove('d-none');
 
-        // Stock Warning
+        } else if (docType === 'GATE_PASS') {
+            draftDocTypeBadge.innerText = 'GATE PASS DRAFT';
+            draftDocTypeBadge.className = 'badge bg-warning text-dark px-3 py-1 fs-6';
+            
+            if (draft.party_name) {
+                partyBlock.classList.remove('d-none');
+                partyRoleLabel.innerText = 'Party Name (Optional):';
+                draftPartyName.innerText = draft.party_name;
+            } else {
+                partyBlock.classList.add('d-none');
+            }
+
+            driverBlock.classList.remove('d-none');
+            draftDriverName.innerText = draft.driver_name || '(Missing - Required)';
+            
+            vehicleBlock.classList.remove('d-none');
+            draftVehicleNo.innerText = draft.vehicle_no || '(Missing - Required)';
+
+            rateBlock.classList.add('d-none');
+            totalBlock.classList.add('d-none');
+        }
+
+        draftSeedName.innerText = draft.seed_name ? `${draft.seed_name} ${draft.seed_variety || ''}` : '(Missing - Required)';
+        draftQuantity.innerText = draft.quantity ? `${draft.quantity} Bags` : '(Missing - Required)';
+        draftRate.innerText = draft.rate ? `PKR ${parseFloat(draft.rate).toLocaleString(undefined, {minimumFractionDigits: 2})}` : 'PKR 0.00';
+        draftTotalAmount.innerText = draft.total_amount ? `PKR ${parseFloat(draft.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}` : 'PKR 0.00';
+
+        // Stock Warning Alert
         if (draft.stock_warning) {
             stockWarningAlert.classList.remove('d-none');
             stockWarningMsg.innerText = draft.stock_warning;
@@ -446,12 +509,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 1.0;
             utterance.pitch = 1.0;
-            utterance.lang = 'ur-PK'; // Urdu / English speech
+            utterance.lang = 'ur-PK';
             window.speechSynthesis.speak(utterance);
         }
     }
 
-    // Helper to get Django CSRF Token
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {

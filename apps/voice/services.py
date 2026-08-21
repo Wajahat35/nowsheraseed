@@ -21,39 +21,50 @@ def normalize_str(s):
     s = re.sub(r'[^\w\s]', ' ', s)
     return re.sub(r'\s+', ' ', s)
 
+COMMON_STOP_WORDS = set([
+    'seed', 'seeds', 'banao', 'bana', 'invoice', 'purchase', 'sales', 'sale', 
+    'gate', 'pass', 'gatepass', 'rate', 'bags', 'bag', 'boray', 'bori', 'rupay', 
+    'rs', 'rupees', 'se', 'ko', 'hai', 'ka', 'ki', 'ke', 'aur', 'do', 'wala', 
+    'bhejni', 'karo', 'kar', 'dein', 'bata', 'karini', 'hain', 'naam', 'driver', 
+    'vehicle', 'gaari', 'gari', 'number', 'bana'
+])
+
 # ---------------------------------------------------------------------------
-# DATABASE ENTITY MATCHERS
+# DATABASE ENTITY MATCHERS (STOP-WORD FILTERED WORD OVERLAP + LEVENSHTEIN)
 # ---------------------------------------------------------------------------
 def match_supplier(query):
     if not query:
         return {'status': 'not_found', 'match': None, 'choices': []}
     
     q_norm = normalize_str(query)
-    suppliers = Supplier.objects.filter(is_active=True)
-    if not suppliers.exists():
+    q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+    suppliers = Supplier.objects.all()
+    if not suppliers.exists() or not q_words:
         return {'status': 'not_found', 'match': None, 'choices': []}
 
     matches = []
     for s in suppliers:
         name_norm = normalize_str(s.name)
         comp_norm = normalize_str(s.company_name or "")
-        
-        ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
-        ratio_comp = difflib.SequenceMatcher(None, q_norm, comp_norm).ratio()
-        
-        boost = 0.0
-        if q_norm in name_norm or name_norm in q_norm or (comp_norm and q_norm in comp_norm):
-            boost = 0.35
-            
-        score = max(ratio_name, ratio_comp) + boost
-        matches.append((score, s))
+        full_norm = f"{name_norm} {comp_norm}"
+        s_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+
+        # 1. Check word overlap
+        common = q_words.intersection(s_words)
+        if common:
+            score = 0.80 + (0.10 * len(common))
+            matches.append((score, s))
+        else:
+            ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
+            ratio_full = difflib.SequenceMatcher(None, q_norm, full_norm).ratio()
+            matches.append((max(ratio_name, ratio_full), s))
 
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_supplier = matches[0]
 
-    if best_score >= 0.75:
-        if len(matches) > 1 and matches[1][0] >= 0.70 and abs(best_score - matches[1][0]) < 0.10:
-            candidates = [m[1] for m in matches if m[0] >= 0.55][:4]
+    if best_score >= 0.70:
+        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.10:
+            candidates = [m[1] for m in matches if m[0] >= 0.50][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_supplier, 'choices': []}
     elif best_score >= 0.35:
@@ -68,31 +79,33 @@ def match_customer(query):
         return {'status': 'not_found', 'match': None, 'choices': []}
     
     q_norm = normalize_str(query)
-    customers = Customer.objects.filter(is_active=True)
-    if not customers.exists():
+    q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+    customers = Customer.objects.all()
+    if not customers.exists() or not q_words:
         return {'status': 'not_found', 'match': None, 'choices': []}
 
     matches = []
     for c in customers:
         name_norm = normalize_str(c.name)
         comp_norm = normalize_str(c.company_name or "")
-        
-        ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
-        ratio_comp = difflib.SequenceMatcher(None, q_norm, comp_norm).ratio()
-        
-        boost = 0.0
-        if q_norm in name_norm or name_norm in q_norm or (comp_norm and q_norm in comp_norm):
-            boost = 0.35
-            
-        score = max(ratio_name, ratio_comp) + boost
-        matches.append((score, c))
+        full_norm = f"{name_norm} {comp_norm}"
+        c_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+
+        common = q_words.intersection(c_words)
+        if common:
+            score = 0.80 + (0.10 * len(common))
+            matches.append((score, c))
+        else:
+            ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
+            ratio_full = difflib.SequenceMatcher(None, q_norm, full_norm).ratio()
+            matches.append((max(ratio_name, ratio_full), c))
 
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_cust = matches[0]
 
-    if best_score >= 0.75:
-        if len(matches) > 1 and matches[1][0] >= 0.70 and abs(best_score - matches[1][0]) < 0.10:
-            candidates = [m[1] for m in matches if m[0] >= 0.55][:4]
+    if best_score >= 0.70:
+        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.10:
+            candidates = [m[1] for m in matches if m[0] >= 0.50][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_cust, 'choices': []}
     elif best_score >= 0.35:
@@ -107,33 +120,32 @@ def match_seed(query):
         return {'status': 'not_found', 'match': None, 'choices': []}
     
     q_norm = normalize_str(query)
-    seeds = Seed.objects.filter(status='Active')
-    if not seeds.exists():
+    q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+    seeds = Seed.objects.all()
+    if not seeds.exists() or not q_words:
         return {'status': 'not_found', 'match': None, 'choices': []}
 
     matches = []
     for s in seeds:
         name_norm = normalize_str(s.name)
         var_norm = normalize_str(s.variety or "")
-        code_norm = normalize_str(s.code or "")
         full_norm = f"{name_norm} {var_norm}"
-        
-        ratio_full = difflib.SequenceMatcher(None, q_norm, full_norm).ratio()
-        ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
-        ratio_var = difflib.SequenceMatcher(None, q_norm, var_norm).ratio()
-        
-        boost = 0.0
-        if q_norm in full_norm or name_norm in q_norm or var_norm in q_norm:
-            boost = 0.35
-            
-        score = max(ratio_full, ratio_name, ratio_var) + boost
-        matches.append((score, s))
+        s_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+
+        common = q_words.intersection(s_words)
+        if common:
+            score = 0.80 + (0.10 * len(common))
+            matches.append((score, s))
+        else:
+            ratio_full = difflib.SequenceMatcher(None, q_norm, full_norm).ratio()
+            ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
+            matches.append((max(ratio_full, ratio_name), s))
 
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_seed = matches[0]
 
     if best_score >= 0.70:
-        if len(matches) > 1 and matches[1][0] >= 0.65 and abs(best_score - matches[1][0]) < 0.10:
+        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.10:
             candidates = [m[1] for m in matches if m[0] >= 0.50][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'variety': c.variety or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_seed, 'choices': []}
@@ -145,9 +157,10 @@ def match_seed(query):
 
 
 # ---------------------------------------------------------------------------
-# INTENT & NUMERIC PARSER
+# NUMERIC & ENTITY PARSER
 # ---------------------------------------------------------------------------
 def parse_voice_numbers(text):
+    """Extracts numbers, quantities, rates, and amounts from spoken text."""
     numbers = [int(n) for n in re.findall(r'\b\d+\b', text)]
     
     qty = None
@@ -175,6 +188,25 @@ def parse_voice_numbers(text):
     return qty, rate
 
 
+def parse_vehicle_number(text):
+    """Extracts vehicle/truck numbers like LEA-1234, LES 4890, etc."""
+    m = re.search(r'([a-z]{2,4}[-\s]?\d{3,4})', text, re.IGNORECASE)
+    if m:
+        return m.group(1).upper().replace(' ', '-')
+    return None
+
+
+def parse_driver_name(text):
+    """Extracts driver name from text."""
+    m = re.search(r'(?:driver|gari wala|driver ka naam|driver hai)\s+([a-z\s]+)', text, re.IGNORECASE)
+    if m:
+        name = m.group(1).strip().title()
+        name = re.sub(r'\b(hai|aur|ko|ka|ki|ke|bano|banao|bana|do)\b', '', name, flags=re.IGNORECASE).strip()
+        if len(name) > 2:
+            return name
+    return None
+
+
 def detect_intent(text):
     t_norm = normalize_str(text)
 
@@ -182,19 +214,21 @@ def detect_intent(text):
         return 'CANCEL'
     elif any(k in t_norm for k in ['haan', 'han', 'theek hai', 'approve', 'yes', 'save kar do', 'bilkul sahi', 'ok', 'confirm', 'sahi hai']):
         return 'APPROVE'
-    elif any(k in t_norm for k in ['purchase', 'khareed', 'khareedna', 'khareedi', 'buy']):
+    elif any(k in t_norm for k in ['purchase', 'khareed', 'khareedna', 'khareedi', 'buy', 'khareedari']):
         return 'CREATE_PURCHASE'
-    elif any(k in t_norm for k in ['sale', 'bechna', 'bech', 'bicho', 'sell']):
+    elif any(k in t_norm for k in ['sale', 'bechna', 'bech', 'bicho', 'sell', 'bikri', 'sales']):
         return 'CREATE_SALES'
     elif any(k in t_norm for k in ['gate pass', 'gatepass', 'bhejni', 'bahar bhej', 'inward', 'outward', 'truck']):
         return 'CREATE_GATEPASS'
-    elif any(k in t_norm for k in ['quantity', 'rate', 'price', 'supplier', 'customer', 'change', 'update', 'kar do', 'nahi']):
+    elif any(k in t_norm for k in ['quantity', 'rate', 'price', 'supplier', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'kar do', 'nahi']):
         return 'EDIT_DRAFT'
+    elif any(k in t_norm for k in ['invoice', 'document', 'banao', 'bana do', 'bana', 'bag', 'bags', 'wheat', 'rice', 'seed']):
+        return 'UNCLEAR_DOC_TYPE'
     return 'UNKNOWN'
 
 
 # ---------------------------------------------------------------------------
-# MAIN CONVERSATIONAL ENGINE
+# MAIN CONVERSATIONAL STATE MACHINE
 # ---------------------------------------------------------------------------
 def process_voice_command(user, text, session_id=None):
     text_clean = text.strip()
@@ -214,68 +248,180 @@ def process_voice_command(user, text, session_id=None):
         return {
             'session_id': None,
             'status': 'CANCELLED',
-            'response_text': "Ji, draft invoice cancel kar di gayi hai. Aap nayi voice command de sakte hain.",
+            'response_text': "Ji, draft cancel kar di gayi hai. Aap nayi voice command de sakte hain.",
             'draft': None
         }
 
     # 2. APPROVE INTENT
     if intent == 'APPROVE' and session and session.draft_data:
+        draft = session.draft_data
+
+        missing_err = check_missing_required_fields(draft)
+        if missing_err:
+            return {
+                'session_id': session.id,
+                'status': 'DRAFT_PENDING',
+                'response_text': missing_err,
+                'draft': draft
+            }
+
         doc_num, err = finalize_voice_draft(session)
         if err:
             return {
                 'session_id': session.id,
                 'status': 'DRAFT_PENDING',
                 'response_text': f"Validation error: {err}. Please correct the field.",
-                'draft': session.draft_data
+                'draft': draft
             }
         session.status = 'APPROVED'
         session.save()
         return {
             'session_id': None,
             'status': 'APPROVED',
-            'response_text': f"Invoice successfully create ho gayi hai! Reference Number: {doc_num}.",
-            'draft': session.draft_data,
+            'response_text': f"Document successfully create ho gaya hai! Reference Number: {doc_num}.",
+            'draft': draft,
             'final_doc_number': doc_num
         }
 
-    # 3. IF EDIT INTENT OR CONVERSATIONAL UPDATE TO EXISTING SESSION
-    if session and (intent == 'EDIT_DRAFT' or intent == 'UNKNOWN'):
-        draft = session.draft_data
+    # 3. UNCLEAR DOCUMENT TYPE
+    if intent == 'UNCLEAR_DOC_TYPE' and not session:
         qty, rate = parse_voice_numbers(text_clean)
+        seed_res = match_seed(text_clean)
+        
+        draft_data = {
+            'doc_type': None,
+            'party_id': None,
+            'party_name': None,
+            'party_company': None,
+            'party_ambiguous': [],
+            'seed_id': seed_res['match'].id if seed_res and seed_res['status'] == 'high_confidence' else None,
+            'seed_name': seed_res['match'].name if seed_res and seed_res['status'] == 'high_confidence' else None,
+            'seed_ambiguous': seed_res['choices'] if seed_res and seed_res['status'] == 'ambiguous' else [],
+            'quantity': qty or None,
+            'rate': float(rate) if rate else None,
+            'total_amount': float((qty or 0) * (rate or 0)),
+            'driver_name': parse_driver_name(text_clean),
+            'vehicle_no': parse_vehicle_number(text_clean),
+            'stock_warning': None
+        }
 
-        updated_field = None
+        session = VoiceDraftSession.objects.create(
+            user=user,
+            doc_type='PURCHASE_INVOICE',
+            draft_data=draft_data,
+            transcript_history=[{'user': text_clean, 'time': str(timezone.now())}]
+        )
+
+        return {
+            'session_id': session.id,
+            'status': 'DRAFT_PENDING',
+            'response_text': "Aap Purchase Invoice, Sales Invoice ya Gate Pass banana chahte hain?",
+            'draft': draft_data
+        }
+
+    # 4. CONVERSATIONAL UPDATE TO EXISTING ACTIVE SESSION
+    if session:
+        draft = session.draft_data
+        
+        if not draft.get('doc_type') or any(k in text_clean.lower() for k in ['purchase', 'sale', 'sales', 'gate', 'pass']):
+            if intent == 'CREATE_SALES':
+                draft['doc_type'] = 'SALES_INVOICE'
+                session.doc_type = 'SALES_INVOICE'
+            elif intent == 'CREATE_PURCHASE':
+                draft['doc_type'] = 'PURCHASE_INVOICE'
+                session.doc_type = 'PURCHASE_INVOICE'
+            elif intent == 'CREATE_GATEPASS':
+                draft['doc_type'] = 'GATE_PASS'
+                session.doc_type = 'GATE_PASS'
+
+        doc_type = draft.get('doc_type') or 'PURCHASE_INVOICE'
+
+        qty, rate = parse_voice_numbers(text_clean)
         if qty:
             draft['quantity'] = qty
-            updated_field = f"Quantity {qty} bags"
         if rate:
             draft['rate'] = float(rate)
-            updated_field = f"Rate PKR {rate}"
 
-        if 'supplier' in text_clean.lower() or 'party' in text_clean.lower():
+        v_num = parse_vehicle_number(text_clean)
+        if v_num:
+            draft['vehicle_no'] = v_num
+        
+        d_name = parse_driver_name(text_clean)
+        if d_name:
+            draft['driver_name'] = d_name
+        elif doc_type == 'GATE_PASS' and not draft.get('driver_name'):
+            if not qty and not rate and not v_num and len(text_clean) < 30 and not any(k in text_clean.lower() for k in ['pass', 'gate', 'invoice']):
+                draft['driver_name'] = text_clean.title()
+
+        # Match party (Supplier vs Customer)
+        if doc_type == 'PURCHASE_INVOICE':
             supp_res = match_supplier(text_clean)
             if supp_res['status'] == 'high_confidence':
                 draft['party_id'] = supp_res['match'].id
                 draft['party_name'] = supp_res['match'].name
-                updated_field = f"Supplier {supp_res['match'].name}"
+                draft['party_company'] = supp_res['match'].company_name or ''
+                draft['party_ambiguous'] = []
+            elif supp_res['status'] == 'ambiguous':
+                draft['party_ambiguous'] = supp_res['choices']
+        elif doc_type == 'SALES_INVOICE':
+            cust_res = match_customer(text_clean)
+            if cust_res['status'] == 'high_confidence':
+                draft['party_id'] = cust_res['match'].id
+                draft['party_name'] = cust_res['match'].name
+                draft['party_company'] = cust_res['match'].company_name or ''
+                draft['party_ambiguous'] = []
+            elif cust_res['status'] == 'ambiguous':
+                draft['party_ambiguous'] = cust_res['choices']
 
-        tot_qty = draft.get('quantity', 0) or 0
+        # Match Seed if missing
+        if not draft.get('seed_name'):
+            seed_res = match_seed(text_clean)
+            if seed_res['status'] == 'high_confidence':
+                draft['seed_id'] = seed_res['match'].id
+                draft['seed_name'] = seed_res['match'].name
+                draft['seed_variety'] = seed_res['match'].variety or ''
+                draft['seed_ambiguous'] = []
+            elif seed_res['status'] == 'ambiguous':
+                draft['seed_ambiguous'] = seed_res['choices']
+
+        # Recalculate totals
+        t_qty = draft.get('quantity', 0) or 0
         u_rate = draft.get('rate', 0) or 0
-        draft['total_amount'] = float(tot_qty * u_rate)
+        draft['total_amount'] = float(t_qty * u_rate)
+
+        # Stock check for Sales
+        if doc_type == 'SALES_INVOICE' and draft.get('seed_id'):
+            batches = SeedBatch.objects.filter(seed_id=draft['seed_id'])
+            avail_stock = sum(b.current_qty for b in batches)
+            if t_qty > avail_stock:
+                draft['stock_warning'] = f"Is seed ({draft.get('seed_name')}) ka available stock {avail_stock} bags hai, lekin aap ne {t_qty} bags sale karne ko kaha hai."
+            else:
+                draft['stock_warning'] = None
 
         session.draft_data = draft
         session.transcript_history.append({'user': text_clean, 'time': str(timezone.now())})
         session.save()
 
-        summary_msg = f"{updated_field} update ho gaya hai. Total amount PKR {draft['total_amount']:,.2f} hai. Kya invoice approve karni hai?"
+        # Check missing required fields
+        question = get_next_missing_question(draft)
+        if question:
+            return {
+                'session_id': session.id,
+                'status': 'DRAFT_PENDING',
+                'response_text': question,
+                'draft': draft
+            }
+
+        summary = build_draft_summary_response(draft)
         return {
             'session_id': session.id,
             'status': 'DRAFT_PENDING',
-            'response_text': summary_msg,
+            'response_text': summary,
             'draft': draft
         }
 
-    # 4. INITIAL COMMAND PARSING & CREATION OF NEW DRAFT
-    if intent in ['CREATE_PURCHASE', 'CREATE_SALES', 'CREATE_GATEPASS', 'UNKNOWN']:
+    # 5. INITIAL NEW COMMAND PARSING
+    if intent in ['CREATE_PURCHASE', 'CREATE_SALES', 'CREATE_GATEPASS']:
         doc_type = 'PURCHASE_INVOICE'
         if intent == 'CREATE_SALES':
             doc_type = 'SALES_INVOICE'
@@ -285,42 +431,33 @@ def process_voice_command(user, text, session_id=None):
         party_res = None
         if doc_type == 'PURCHASE_INVOICE':
             party_res = match_supplier(text_clean)
-        else:
+        elif doc_type == 'SALES_INVOICE':
             party_res = match_customer(text_clean)
 
         seed_res = match_seed(text_clean)
         qty, rate = parse_voice_numbers(text_clean)
+        v_num = parse_vehicle_number(text_clean)
+        d_name = parse_driver_name(text_clean)
 
-        # Fallback to default party or seed if missing
-        fallback_party = None
-        if not party_res or party_res['status'] == 'not_found':
-            if doc_type == 'PURCHASE_INVOICE':
-                fallback_party = Supplier.objects.first()
-            else:
-                fallback_party = Customer.objects.first()
-
-        fallback_seed = None
-        if not seed_res or seed_res['status'] == 'not_found':
-            fallback_seed = Seed.objects.first()
-
-        party_obj = party_res['match'] if party_res and party_res['status'] == 'high_confidence' else fallback_party
-        seed_obj = seed_res['match'] if seed_res and seed_res['status'] == 'high_confidence' else fallback_seed
+        party_obj = party_res['match'] if party_res and party_res['status'] == 'high_confidence' else None
+        seed_obj = seed_res['match'] if seed_res and seed_res['status'] == 'high_confidence' else None
 
         draft_data = {
             'doc_type': doc_type,
             'party_id': party_obj.id if party_obj else None,
             'party_name': party_obj.name if party_obj else None,
+            'party_company': party_obj.company_name if party_obj and hasattr(party_obj, 'company_name') else '',
             'party_ambiguous': party_res['choices'] if party_res and party_res['status'] == 'ambiguous' else [],
             'seed_id': seed_obj.id if seed_obj else None,
             'seed_name': seed_obj.name if seed_obj else None,
             'seed_variety': seed_obj.variety if seed_obj else None,
             'seed_ambiguous': seed_res['choices'] if seed_res and seed_res['status'] == 'ambiguous' else [],
-            'quantity': qty or 100,
-            'rate': float(rate) if rate else (float(seed_obj.purchase_price) if seed_obj and seed_obj.purchase_price else 2500.0),
-            'total_amount': float((qty or 100) * (float(rate) if rate else (float(seed_obj.purchase_price) if seed_obj and seed_obj.purchase_price else 2500.0))),
+            'quantity': qty,
+            'rate': float(rate) if rate else (float(seed_obj.purchase_price) if seed_obj and seed_obj.purchase_price and doc_type == 'PURCHASE_INVOICE' else None),
+            'total_amount': float((qty or 0) * (float(rate) if rate else 0)),
+            'vehicle_no': v_num,
+            'driver_name': d_name,
             'stock_warning': None,
-            'vehicle_no': 'LES-1234' if doc_type == 'GATE_PASS' else '',
-            'driver_name': 'Driver' if doc_type == 'GATE_PASS' else '',
         }
 
         if doc_type == 'SALES_INVOICE' and seed_obj:
@@ -329,41 +466,157 @@ def process_voice_command(user, text, session_id=None):
             if qty and qty > avail_stock:
                 draft_data['stock_warning'] = f"Is seed ({seed_obj.name}) ka available stock {avail_stock} bags hai, lekin aap ne {qty} bags sale karne ko kaha hai."
 
-        if session:
-            session.doc_type = doc_type
-            session.draft_data = draft_data
-            session.save()
-        else:
-            session = VoiceDraftSession.objects.create(
-                user=user,
-                doc_type=doc_type,
-                draft_data=draft_data,
-                transcript_history=[{'user': text_clean, 'time': str(timezone.now())}]
-            )
+        session = VoiceDraftSession.objects.create(
+            user=user,
+            doc_type=doc_type,
+            draft_data=draft_data,
+            transcript_history=[{'user': text_clean, 'time': str(timezone.now())}]
+        )
 
-        resp_parts = []
-        if party_res and party_res['status'] == 'ambiguous':
-            names_str = ", ".join([c['name'] for c in party_res['choices']])
-            resp_parts.append(f"Mujhe multiple party names milay hain: {names_str}. Please select karein.")
+        question = get_next_missing_question(draft_data)
+        if question:
+            return {
+                'session_id': session.id,
+                'status': 'DRAFT_PENDING',
+                'response_text': question,
+                'draft': draft_data
+            }
 
-        if seed_res and seed_res['status'] == 'ambiguous':
-            seeds_str = ", ".join([c['name'] for c in seed_res['choices']])
-            resp_parts.append(f"Mujhe multiple seeds milay hain: {seeds_str}. Please select karein.")
-
-        if not resp_parts:
-            p_type_label = "Purchase Invoice" if doc_type == 'PURCHASE_INVOICE' else ("Sales Invoice" if doc_type == 'SALES_INVOICE' else "Gate Pass")
-            resp_parts.append(f"{p_type_label} draft ready hai. Supplier/Party: {draft_data['party_name']}, Seed: {draft_data['seed_name']}, Quantity: {draft_data['quantity']} bags, Total Amount: PKR {draft_data['total_amount']:,.2f}. Kya invoice bilkul theek hai?")
-
+        summary = build_draft_summary_response(draft_data)
         return {
             'session_id': session.id,
             'status': 'DRAFT_PENDING',
-            'response_text': " ".join(resp_parts),
+            'response_text': summary,
             'draft': draft_data
         }
 
+    return {
+        'session_id': None,
+        'status': 'UNKNOWN',
+        'response_text': "Samajh nahi aaya. Please Purchase Invoice, Sales Invoice, ya Gate Pass ki command dein.",
+        'draft': None
+    }
+
 
 # ---------------------------------------------------------------------------
-# FINALIZATION ENGINE (EXECUTED ONLY AFTER EXPLICIT USER APPROVAL)
+# MISSING REQUIRED FIELDS QUESTION GENERATOR
+# ---------------------------------------------------------------------------
+def check_missing_required_fields(draft):
+    doc_type = draft.get('doc_type')
+    if not doc_type:
+        return "Document type select nahi hua (Purchase Invoice, Sales Invoice ya Gate Pass)."
+
+    if doc_type == 'PURCHASE_INVOICE':
+        if not draft.get('party_name'):
+            return "Supplier ka naam missing hai. Please supplier ka naam bata dein."
+        if not draft.get('seed_name'):
+            return "Seed product name missing hai."
+        if not draft.get('quantity'):
+            return "Quantity missing hai."
+        if not draft.get('rate'):
+            return "Rate per bag missing hai."
+
+    elif doc_type == 'SALES_INVOICE':
+        if not draft.get('party_name'):
+            return "Customer ka naam missing hai. Please customer ka naam bata dein."
+        if not draft.get('seed_name'):
+            return "Seed product name missing hai."
+        if not draft.get('quantity'):
+            return "Quantity missing hai."
+        if not draft.get('rate'):
+            return "Rate per bag missing hai."
+
+    elif doc_type == 'GATE_PASS':
+        if not draft.get('seed_name'):
+            return "Seed product missing hai."
+        if not draft.get('quantity'):
+            return "Quantity missing hai."
+        if not draft.get('driver_name'):
+            return "Driver ka naam missing hai. Please driver ka naam bata dein."
+        if not draft.get('vehicle_no'):
+            return "Vehicle number missing hai. Please vehicle number bata dein."
+
+    return None
+
+
+def get_next_missing_question(draft):
+    doc_type = draft.get('doc_type')
+
+    if not doc_type:
+        return "Aap Purchase Invoice, Sales Invoice ya Gate Pass banana chahte hain?"
+
+    if doc_type == 'PURCHASE_INVOICE':
+        if draft.get('party_ambiguous'):
+            names = ", ".join([c['name'] for c in draft['party_ambiguous']])
+            return f"Mujhe multiple suppliers milay hain: {names}. Please select karein."
+        if not draft.get('party_name'):
+            return "Please supplier ka naam bata dein."
+        if draft.get('seed_ambiguous'):
+            seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
+            return f"Mujhe multiple seeds milay hain: {seeds}. Please select karein."
+        if not draft.get('seed_name'):
+            return f"Ji, {draft['party_name']} ki purchase invoice ke liye seed product name bata dein."
+        if not draft.get('quantity'):
+            return f"Kitnay bags {draft['seed_name']} purchase karne hain?"
+        if not draft.get('rate'):
+            return f"Rate per bag kya hai?"
+
+    elif doc_type == 'SALES_INVOICE':
+        if draft.get('party_ambiguous'):
+            names = ", ".join([c['name'] for c in draft['party_ambiguous']])
+            return f"Mujhe multiple customers milay hain: {names}. Please select karein."
+        if not draft.get('party_name'):
+            q_str = f"{draft.get('quantity')} bags {draft.get('seed_name')}" if draft.get('quantity') and draft.get('seed_name') else "sales invoice"
+            return f"Ji, {q_str} ki sales invoice bana raha hoon. Customer ka naam bata dein."
+        if draft.get('seed_ambiguous'):
+            seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
+            return f"Mujhe multiple seeds milay hain: {seeds}. Please select karein."
+        if not draft.get('seed_name'):
+            return f"{draft['party_name']} ko kaunsa seed sale karna hai?"
+        if not draft.get('quantity'):
+            return f"Kitnay bags {draft['seed_name']} sale karne hain?"
+        if not draft.get('rate'):
+            return f"Rate per bag kya hai?"
+
+    elif doc_type == 'GATE_PASS':
+        if draft.get('seed_ambiguous'):
+            seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
+            return f"Mujhe multiple seeds milay hain: {seeds}. Please select karein."
+        if not draft.get('seed_name'):
+            return "Kaunsa seed dispatch karna hai?"
+        if not draft.get('quantity'):
+            return f"Kitnay bags {draft['seed_name']} ka gate pass banana hai?"
+        if not draft.get('driver_name'):
+            q_str = f"{draft['quantity']} bags {draft['seed_name']}" if draft.get('quantity') and draft.get('seed_name') else "gate pass"
+            return f"Ji, {q_str} ka gate pass bana raha hoon. Driver ka naam bata dein."
+        if not draft.get('vehicle_no'):
+            return f"Driver {draft['driver_name']} ke truck/gaari ka vehicle number bata dein."
+
+    return None
+
+
+def build_draft_summary_response(draft):
+    doc_type = draft.get('doc_type')
+    qty = draft.get('quantity', 0)
+    seed = draft.get('seed_name', '')
+    tot = draft.get('total_amount', 0)
+
+    if doc_type == 'PURCHASE_INVOICE':
+        supp = draft.get('party_name', '')
+        return f"Purchase Invoice draft ready hai. Supplier: {supp}, Seed: {seed}, Quantity: {qty} bags, Rate: PKR {draft.get('rate'):,.2f}, Total Amount: PKR {tot:,.2f}. Kya Purchase Invoice bilkul theek hai?"
+    elif doc_type == 'SALES_INVOICE':
+        cust = draft.get('party_name', '')
+        return f"Sales Invoice draft ready hai. Customer: {cust}, Seed: {seed}, Quantity: {qty} bags, Rate: PKR {draft.get('rate'):,.2f}, Total Amount: PKR {tot:,.2f}. Kya Sales Invoice bilkul theek hai?"
+    elif doc_type == 'GATE_PASS':
+        driver = draft.get('driver_name', '')
+        vehicle = draft.get('vehicle_no', '')
+        return f"Gate Pass draft ready hai. Seed: {seed}, Quantity: {qty} bags, Driver: {driver}, Vehicle: {vehicle}. Kya Gate Pass bilkul theek hai?"
+
+    return "Draft ready hai. Kya approve karni hai?"
+
+
+# ---------------------------------------------------------------------------
+# FINALIZATION ENGINE (SAVING REAL DB RECORDS ONLY UPON EXPLICIT APPROVAL)
 # ---------------------------------------------------------------------------
 def finalize_voice_draft(session):
     draft = session.draft_data
@@ -381,8 +634,13 @@ def finalize_voice_draft(session):
                 qty = int(draft.get('quantity', 0) or 0)
                 rate = Decimal(str(draft.get('rate', 0) or 0))
 
-                supplier = Supplier.objects.filter(id=supp_id).first() if supp_id else Supplier.objects.first()
-                seed = Seed.objects.filter(id=seed_id).first() if seed_id else Seed.objects.first()
+                supplier = Supplier.objects.filter(id=supp_id).first() if supp_id else Supplier.objects.filter(name__icontains=draft.get('party_name', '')).first()
+                if not supplier:
+                    supplier = Supplier.objects.first()
+
+                seed = Seed.objects.filter(id=seed_id).first() if seed_id else Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first()
+                if not seed:
+                    seed = Seed.objects.first()
 
                 tot = Decimal(str(qty)) * rate
 
@@ -432,8 +690,13 @@ def finalize_voice_draft(session):
                 qty = int(draft.get('quantity', 0) or 0)
                 rate = Decimal(str(draft.get('rate', 0) or 0))
 
-                customer = Customer.objects.filter(id=cust_id).first() if cust_id else Customer.objects.first()
-                seed = Seed.objects.filter(id=seed_id).first() if seed_id else Seed.objects.first()
+                customer = Customer.objects.filter(id=cust_id).first() if cust_id else Customer.objects.filter(name__icontains=draft.get('party_name', '')).first()
+                if not customer:
+                    customer = Customer.objects.first()
+
+                seed = Seed.objects.filter(id=seed_id).first() if seed_id else Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first()
+                if not seed:
+                    seed = Seed.objects.first()
 
                 tot = Decimal(str(qty)) * rate
 
@@ -469,7 +732,7 @@ def finalize_voice_draft(session):
 
             # 3. GATE PASS
             elif doc_type == 'GATE_PASS':
-                party_name = draft.get('party_name') or 'Party'
+                party_name = draft.get('party_name') or ''
                 seed_name = draft.get('seed_name') or 'Wheat Seed'
                 qty = int(draft.get('quantity', 0) or 0)
                 vehicle = draft.get('vehicle_no') or 'LES-1234'
@@ -483,50 +746,10 @@ def finalize_voice_draft(session):
                     driver_mobile='0300-1234567',
                     total_bags=qty,
                     total_weight_kg=Decimal(str(qty * 50)),
-                    remarks=f"Party: {party_name} | Seed: {seed_name} (Via Voice Assistant)",
+                    remarks=f"Party: {party_name} | Seed: {seed_name} (Created via AI Voice Assistant)",
                     created_by=user
                 )
 
-                return gp.pass_number, None
-
-            # 4. TRADING SALES
-            elif doc_type == 'TRADING_SALES':
-                tot = Decimal(str(draft.get('total_amount', 0)))
-                inv = TradingSalesInvoice.objects.create(
-                    date=today,
-                    customer_name=draft.get('party_name') or 'Trading Customer',
-                    total_amount=tot,
-                    paid_amount=tot,
-                    remarks='Created via AI Voice Assistant',
-                    created_by=user
-                )
-                return inv.invoice_number, None
-
-            # 5. TRADING PURCHASE
-            elif doc_type == 'TRADING_PURCHASE':
-                tot = Decimal(str(draft.get('total_amount', 0)))
-                inv = TradingPurchaseInvoice.objects.create(
-                    date=today,
-                    supplier_name=draft.get('party_name') or 'Trading Supplier',
-                    total_amount=tot,
-                    paid_amount=tot,
-                    remarks='Created via AI Voice Assistant',
-                    created_by=user
-                )
-                return inv.invoice_number, None
-
-            # 6. TRADING GATEPASS
-            elif doc_type == 'TRADING_GATEPASS':
-                gp = TradingGatePass.objects.create(
-                    pass_type='Inward',
-                    date=today,
-                    vehicle_no=draft.get('vehicle_no') or 'LES-5566',
-                    party_name=draft.get('party_name') or 'Party',
-                    seed_item=draft.get('seed_name') or 'Seed Lot',
-                    bags_qty=draft.get('quantity', 0),
-                    gross_weight=Decimal(str(draft.get('quantity', 0) * 50)),
-                    created_by=user
-                )
                 return gp.pass_number, None
 
     except Exception as e:
