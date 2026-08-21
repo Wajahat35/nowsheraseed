@@ -13,13 +13,53 @@ from apps.gatepass.models import GatePass
 from apps.trading.models import TradingSalesInvoice, TradingPurchaseInvoice, TradingGatePass
 from .models import VoiceDraftSession
 
-# Helper for string normalization
+# ---------------------------------------------------------------------------
+# URDU SCRIPT & URDU DIGIT NORMALIZER / TRANSLITERATOR
+# ---------------------------------------------------------------------------
+URDU_DIGITS_MAP = {
+    '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
+    '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9',
+    '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+    '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9'
+}
+
+URDU_WORD_MAP = {
+    'پنجاب': 'punjab', 'سیڈ': 'seed', 'کارپوریشن': 'corporation',
+    'چوہدری': 'chaudry', 'فارمنگ': 'farming', 'سٹور': 'store',
+    'گندم': 'wheat', 'فیصل آباد': 'faisalabad', 'فیصلاباد': 'faisalabad',
+    'چاول': 'rice', 'باسمتی': 'basmati', 'سپر': 'super',
+    'پرچیز': 'purchase', 'خرید': 'purchase', 'خریداری': 'purchase', 'خریدنی': 'purchase', 'خریدے': 'purchase',
+    'سیلز': 'sales', 'سیل': 'sales', 'بیچ': 'sales', 'بیچنا': 'sales', 'بیچنی': 'sales', 'بیچو': 'sales',
+    'گیٹ پاس': 'gate pass', 'گیٹپاس': 'gate pass', 'گیٹ': 'gate', 'پاس': 'pass',
+    'انوائس': 'invoice', 'ڈرائیور': 'driver', 'گاڑی': 'vehicle', 'ٹرک': 'vehicle',
+    'بوری': 'bags', 'بوریاں': 'bags', 'بیگ': 'bags', 'بیگز': 'bags',
+    'ریٹ': 'rate', 'قیمت': 'rate', 'روپے': 'rate', 'پرنٹ': 'print',
+    'عمران': 'imran', 'اسلم': 'aslam', 'عثمان': 'usman', 'علی': 'ali', 'احمد': 'ahmed'
+}
+
+def normalize_text_all_languages(text):
+    if not text:
+        return ""
+    
+    # 1. Convert Urdu / Arabic digits to ASCII digits 0-9
+    for u_digit, a_digit in URDU_DIGITS_MAP.items():
+        text = text.replace(u_digit, a_digit)
+    
+    # 2. Transliterate Native Urdu Script words to Roman keywords
+    for u_word, r_word in URDU_WORD_MAP.items():
+        text = text.replace(u_word, r_word)
+        
+    return text
+
+
 def normalize_str(s):
     if not s:
         return ""
+    s = normalize_text_all_languages(s)
     s = s.lower().strip()
     s = re.sub(r'[^\w\s]', ' ', s)
     return re.sub(r'\s+', ' ', s)
+
 
 COMMON_STOP_WORDS = set([
     'seed', 'seeds', 'banao', 'bana', 'invoice', 'purchase', 'sales', 'sale', 
@@ -169,16 +209,17 @@ def match_seed(query):
 # ---------------------------------------------------------------------------
 def parse_voice_numbers(text):
     """Extracts numbers, quantities, rates, and amounts from spoken text."""
-    numbers = [int(n) for n in re.findall(r'\b\d+\b', text)]
+    text_norm = normalize_text_all_languages(text)
+    numbers = [int(n) for n in re.findall(r'\b\d+\b', text_norm)]
     
     qty = None
     rate = None
 
-    qty_match = re.search(r'(\d+)\s*(?:bag|bags|boray|bori|bora|kg|pack|kilo)', text, re.IGNORECASE)
+    qty_match = re.search(r'(\d+)\s*(?:bag|bags|boray|bori|bora|kg|pack|kilo)', text_norm, re.IGNORECASE)
     if qty_match:
         qty = int(qty_match.group(1))
 
-    rate_match = re.search(r'(?:rate|price|rupay|rs|rupees|per bag|rate ka)?\s*(\d+)\s*(?:rupay|rs|rupees|per bag)?', text, re.IGNORECASE)
+    rate_match = re.search(r'(?:rate|price|rupay|rs|rupees|per bag|rate ka)?\s*(\d+)\s*(?:rupay|rs|rupees|per bag)?', text_norm, re.IGNORECASE)
     if rate_match and int(rate_match.group(1)) > 100:
         rate = Decimal(rate_match.group(1))
 
@@ -198,7 +239,8 @@ def parse_voice_numbers(text):
 
 def parse_vehicle_number(text):
     """Extracts vehicle numbers like L251, LEA-1234, LES 4890, etc."""
-    m = re.search(r'(?:gari|gaari|vehicle|truck|car)\s*(?:ka\s*)?(?:number|no|num)?\s*(?:hai|is)?\s*([a-z0-9\s-]+)', text, re.IGNORECASE)
+    text_norm = normalize_text_all_languages(text)
+    m = re.search(r'(?:gari|gaari|vehicle|truck|car)\s*(?:ka\s*)?(?:number|no|num)?\s*(?:hai|is)?\s*([a-z0-9\s-]+)', text_norm, re.IGNORECASE)
     if m:
         val = m.group(1).strip()
         val = re.sub(r'^(hai|is|ka|number|no)\s+', '', val, flags=re.IGNORECASE).strip()
@@ -206,16 +248,16 @@ def parse_vehicle_number(text):
         if m_code and 'invoice' not in m_code.group(1).lower() and 'pass' not in m_code.group(1).lower():
             return m_code.group(1).upper().replace(' ', '-')
     
-    # Fallback search for vehicle pattern like L251
-    m_direct = re.search(r'\b([a-z]{1,3}[-\s]?\d{2,4})\b', text, re.IGNORECASE)
+    m_direct = re.search(r'\b([a-z]{1,3}[-\s]?\d{2,4})\b', text_norm, re.IGNORECASE)
     if m_direct and 'inv' not in m_direct.group(1).lower() and 'pass' not in m_direct.group(1).lower():
         return m_direct.group(1).upper().replace(' ', '-')
     return None
 
 
 def parse_driver_name(text):
-    """Extracts driver name from text like 'driver ka nam hai imran'."""
-    m = re.search(r'(?:driver|gari wala)\s*(?:ka\s*)?(?:nam|naam)?\s*(?:hai|is)?\s*([a-z]+)', text, re.IGNORECASE)
+    """Extracts driver name from text like 'driver ka nam hai imran' or native Urdu."""
+    text_norm = normalize_text_all_languages(text)
+    m = re.search(r'(?:driver|gari wala)\s*(?:ka\s*)?(?:nam|naam)?\s*(?:hai|is)?\s*([a-z]+)', text_norm, re.IGNORECASE)
     if m:
         name = m.group(1).strip().title()
         if name.lower() not in ['hai', 'is', 'ka', 'nam', 'naam', 'aur', 'gari', 'number', 'no']:
@@ -225,7 +267,8 @@ def parse_driver_name(text):
 
 def parse_invoice_ref(text):
     """Extracts invoice reference numbers like 'invoice 0021' -> '21'."""
-    m = re.search(r'(?:invoice|inv|bill)\s*#?\s*0*(\d{1,5})', text, re.IGNORECASE)
+    text_norm = normalize_text_all_languages(text)
+    m = re.search(r'(?:invoice|inv|bill)\s*#?\s*0*(\d{1,5})', text_norm, re.IGNORECASE)
     if m:
         return m.group(1)
     return None
@@ -244,7 +287,7 @@ def detect_intent(text):
         return 'CREATE_SALES'
     elif any(k in t_norm for k in ['gate pass', 'gatepass', 'bhejni', 'bahar bhej', 'inward', 'outward', 'truck', 'print']):
         return 'CREATE_GATEPASS'
-    elif any(k in t_norm for k in ['quantity', 'rate', 'price', 'supplier', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'kar do', 'nahi']):
+    elif any(k in t_norm for k in ['quantity', 'rate', 'price', 'supplier', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'nahi']):
         return 'EDIT_DRAFT'
     elif any(k in t_norm for k in ['invoice', 'document', 'banao', 'bana do', 'bana', 'bag', 'bags', 'wheat', 'rice', 'seed']):
         return 'UNCLEAR_DOC_TYPE'
@@ -450,12 +493,16 @@ def process_voice_command(user, text, session_id=None):
         }
 
     # 5. INITIAL NEW COMMAND PARSING
-    if intent in ['CREATE_PURCHASE', 'CREATE_SALES', 'CREATE_GATEPASS']:
+    if intent in ['CREATE_PURCHASE', 'CREATE_SALES', 'CREATE_GATEPASS', 'UNKNOWN']:
         doc_type = 'PURCHASE_INVOICE'
         if intent == 'CREATE_SALES':
             doc_type = 'SALES_INVOICE'
         elif intent == 'CREATE_GATEPASS':
             doc_type = 'GATE_PASS'
+        elif 'se' in normalize_str(text_clean):
+            doc_type = 'PURCHASE_INVOICE'
+        elif 'ko' in normalize_str(text_clean):
+            doc_type = 'SALES_INVOICE'
 
         party_res = None
         if doc_type == 'PURCHASE_INVOICE':
@@ -474,7 +521,8 @@ def process_voice_command(user, text, session_id=None):
 
         # Check for existing invoice link for Gate Pass (e.g. "invoice 0021 ka gate pass print krdo")
         linked_inv_no = None
-        if doc_type == 'GATE_PASS' and inv_ref:
+        if (doc_type == 'GATE_PASS' or 'gate' in text_clean.lower() or 'pass' in text_clean.lower() or 'پاس' in text_clean or 'گیٹ' in text_clean) and inv_ref:
+            doc_type = 'GATE_PASS'
             s_inv = SalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
             p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
             if s_inv:
