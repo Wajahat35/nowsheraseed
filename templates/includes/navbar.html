@@ -11,7 +11,13 @@
             </div>
         </form>
         
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-2">
+            {% if user.has_trading_access %}
+                <a href="{% url 'trading:dashboard' %}" class="btn btn-primary btn-sm fw-bold me-1" title="Switch to Trading Management System">
+                    <i class="fas fa-chart-line me-1"></i> Switch to Trading
+                </a>
+            {% endif %}
+
             <button class="btn btn-outline-secondary btn-sm" id="theme-toggle" title="Toggle Dark/Light Mode">
                 <i class="fas fa-moon"></i>
             </button>
@@ -43,6 +49,10 @@
                     </div>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    {% if user.has_both_access %}
+                        <li><a class="dropdown-item fw-bold text-primary" href="{% url 'accounts:select_module' %}"><i class="fas fa-layer-group me-2"></i> Switch System Portal</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                    {% endif %}
                     <li><a class="dropdown-item" href="{% url 'settings_app:company_settings' %}"><i class="fas fa-sliders-h me-2 text-muted"></i> System Settings</a></li>
                     <li><a class="dropdown-item" href="{% url 'accounts:audit_logs' %}"><i class="fas fa-history me-2 text-muted"></i> Activity Logs</a></li>
                     <li><hr class="dropdown-divider"></li>

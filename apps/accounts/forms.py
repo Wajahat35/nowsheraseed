@@ -7,7 +7,10 @@ class CustomUserCreationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'cnic', 'designation', 'role', 'avatar')
+        fields = (
+            'username', 'first_name', 'last_name', 'email', 'phone', 'cnic',
+            'designation', 'role', 'can_access_seed', 'can_access_trading', 'avatar'
+        )
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -16,14 +19,17 @@ class CustomUserCreationForm(UserCreationForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'cnic': forms.TextInput(attrs={'class': 'form-control'}),
             'designation': forms.TextInput(attrs={'class': 'form-control'}),
+            'can_access_seed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'can_access_trading': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'avatar': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields:
-            if field != 'role':
+            if field not in ['role', 'can_access_seed', 'can_access_trading']:
                 self.fields[field].widget.attrs.update({'class': 'form-control'})
+
 
 class CustomUserChangeForm(UserChangeForm):
     password = None  # Exclude password field in edit form
@@ -31,7 +37,10 @@ class CustomUserChangeForm(UserChangeForm):
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'cnic', 'designation', 'role', 'is_active', 'avatar')
+        fields = (
+            'username', 'first_name', 'last_name', 'email', 'phone', 'cnic',
+            'designation', 'role', 'can_access_seed', 'can_access_trading', 'is_active', 'avatar'
+        )
         widgets = {
             'username': forms.TextInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -40,5 +49,8 @@ class CustomUserChangeForm(UserChangeForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'cnic': forms.TextInput(attrs={'class': 'form-control'}),
             'designation': forms.TextInput(attrs={'class': 'form-control'}),
+            'can_access_seed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'can_access_trading': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'avatar': forms.FileInput(attrs={'class': 'form-control'}),
         }

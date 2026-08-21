@@ -1,0 +1,71 @@
+{% extends 'trading/base_trading.html' %}
+{% load humanize %}
+
+{% block title %}Trading Accounts{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-wallet text-primary me-2"></i> Trading Accounts</h4>
+        <p class="text-muted small mb-0">Manage MetaTrader 4, MetaTrader 5, Binance, Bybit, and Custom Trading Accounts.</p>
+    </div>
+    <a href="{% url 'trading:account_create' %}" class="btn btn-primary fw-bold">
+        <i class="fas fa-plus me-1"></i> Add Trading Account
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Account Name</th>
+                    <th>Broker / Exchange</th>
+                    <th>Account #</th>
+                    <th>Platform</th>
+                    <th>Type</th>
+                    <th class="text-end">Balance ($)</th>
+                    <th class="text-end">Equity ($)</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acc in accounts %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'trading:account_detail' acc.pk %}" class="fw-bold text-decoration-none text-primary fs-6">
+                                {{ acc.name }}
+                            </a>
+                        </td>
+                        <td class="fw-semibold">{{ acc.broker_name }}</td>
+                        <td class="font-monospace">{{ acc.account_number }}</td>
+                        <td><span class="badge bg-secondary">{{ acc.platform }}</span></td>
+                        <td>{{ acc.account_type }}</td>
+                        <td class="text-end fw-bold font-monospace text-emerald">${{ acc.current_balance|intcomma }}</td>
+                        <td class="text-end fw-bold font-monospace text-info">${{ acc.current_equity|intcomma }}</td>
+                        <td class="text-center">
+                            {% if acc.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'trading:account_detail' acc.pk %}" class="btn btn-sm btn-outline-info me-1" title="View Account Profile"><i class="fas fa-eye"></i></a>
+                            <a href="{% url 'trading:account_edit' acc.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Account"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="{% url 'trading:account_toggle' acc.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning me-1" title="Toggle Status"><i class="fas fa-power-off"></i></button>
+                            </form>
+                            <a href="{% url 'trading:account_delete' acc.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Account"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i> No trading accounts added yet. Click <strong>Add Trading Account</strong> above.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+<div class="border-end bg-dark text-white" id="sidebar-wrapper" style="min-width: 250px; background-color: #0f172a !important;">
+    <div class="sidebar-heading text-center py-4 border-bottom border-secondary">
+        <div class="d-flex align-items-center justify-content-center gap-2">
+            <span class="fs-3">📈</span>
+            <div class="text-start">
+                <h5 class="fw-bold mb-0 text-white" style="letter-spacing: 0.5px;">Trading App</h5>
+                <small class="text-primary fw-semibold" style="font-size: 0.72rem;">Account & Trade Management</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="list-group list-group-flush my-2">
+        <a href="{% url 'trading:dashboard' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if request.resolver_match.url_name == 'dashboard' %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-chart-pie me-3" style="width: 20px;"></i> Dashboard
+        </a>
+        
+        <a href="{% url 'trading:account_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'account' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-wallet me-3" style="width: 20px;"></i> Trading Accounts
+        </a>
+
+        <a href="{% url 'trading:trade_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'trade' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-exchange-alt me-3" style="width: 20px;"></i> Trade Management
+        </a>
+
+        <a href="{% url 'trading:deposit_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'deposit' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-arrow-down text-success me-3" style="width: 20px;"></i> Deposits
+        </a>
+
+        <a href="{% url 'trading:withdrawal_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'withdrawal' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-arrow-up text-danger me-3" style="width: 20px;"></i> Withdrawals
+        </a>
+
+        <a href="{% url 'trading:reports' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if request.resolver_match.url_name == 'reports' %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-file-contract me-3" style="width: 20px;"></i> Reports & Analytics
+        </a>
+
+        {% if user.is_admin %}
+            <a href="{% url 'accounts:user_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center">
+                <i class="fas fa-user-shield me-3" style="width: 20px;"></i> User Permissions
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="mt-auto p-3 border-top border-secondary">
+        {% if user.has_seed_access %}
+            <a href="{% url 'dashboard:home' %}" class="btn btn-emerald text-white w-100 btn-sm mb-2 fw-bold" style="background-color: #10b981;">
+                <i class="fas fa-seedling me-1"></i> Switch to Seed ERP
+            </a>
+        {% endif %}
+        <a href="{% url 'accounts:logout' %}" class="btn btn-outline-danger w-100 btn-sm fw-semibold">
+            <i class="fas fa-power-off me-1"></i> Logout
+        </a>
+    </div>
+</div>

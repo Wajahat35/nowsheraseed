@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 
-{% block title %}Login{% endblock %}
+{% block title %}Login — Enterprise System Portal{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center align-items-center min-vh-100 py-5">
-    <div class="col-md-5 col-lg-4">
+<div class="row justify-content-center align-items-center min-vh-100 py-4">
+    <div class="col-md-8 col-lg-6">
         <div class="card-custom p-4 shadow-lg border-0">
             <div class="text-center mb-4">
-                <img src="{{ company.get_logo_url }}" style="max-height: 80px;" class="mb-2" alt="{{ company.name }}">
-                <h3 class="fw-bold mt-2 mb-0">{{ company.name|default:"AgriSeed ERP" }}</h3>
-                <p class="text-muted small">Enterprise Agriculture Seed Management ERP</p>
+                <img src="{{ company.get_logo_url }}" style="max-height: 70px;" class="mb-2" alt="{{ company.name }}">
+                <h3 class="fw-bold mt-1 mb-0 text-emerald">{{ company.name|default:"NOWSHERA SEED CORPORATION" }}</h3>
+                <p class="text-muted small">Enterprise Portal — Select Account System & Log In</p>
             </div>
             
             {% if form.errors %}
@@ -18,8 +18,31 @@
                 </div>
             {% endif %}
 
+            <!-- System Module Choice Cards -->
+            <label class="form-label fw-bold text-center d-block mb-3 text-dark">
+                <i class="fas fa-layer-group me-1 text-emerald"></i> Select Your System Module to Access:
+            </label>
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="card p-3 text-center border-2 portal-card active-portal" id="card_seed" onclick="selectPortal('seed')" style="cursor: pointer; border-color: #10b981; background-color: #f0fdf4;">
+                        <div class="fs-2 mb-1">🌱</div>
+                        <h6 class="fw-bold mb-1 text-success">Seed Management</h6>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Inventory, Sales, Gatepass & Ledger</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card p-3 text-center border-2 portal-card" id="card_trading" onclick="selectPortal('trading')" style="cursor: pointer; border-color: #cbd5e1; background-color: #ffffff;">
+                        <div class="fs-2 mb-1">📈</div>
+                        <h6 class="fw-bold mb-1 text-primary">Trading Management</h6>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">MT4/MT5, Trades, P&L & Accounts</small>
+                    </div>
+                </div>
+            </div>
+
             <form method="POST">
                 {% csrf_token %}
+                <input type="hidden" name="target_system" id="target_system" value="seed">
+
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Username</label>
                     <div class="input-group">
@@ -36,15 +59,40 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="btn btn-emerald w-100 py-2 fw-bold text-white" style="background-color: #10b981;">
-                    <i class="fas fa-sign-in-alt me-2"></i> Sign In to ERP
+                <button type="submit" id="login_submit_btn" class="btn btn-emerald w-100 py-2 fw-bold text-white fs-6" style="background-color: #10b981;">
+                    <i class="fas fa-sign-in-alt me-2"></i> Enter Seed Management ERP
                 </button>
             </form>
             
             <div class="mt-4 text-center">
-                <small class="text-muted">Need credentials? Contact your System Administrator.</small>
+                <small class="text-muted"><i class="fas fa-shield-alt me-1"></i> Authorized Personnel Only. System Access Logged.</small>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function selectPortal(system) {
+    document.getElementById('target_system').value = system;
+    const cardSeed = document.getElementById('card_seed');
+    const cardTrading = document.getElementById('card_trading');
+    const btn = document.getElementById('login_submit_btn');
+
+    if (system === 'seed') {
+        cardSeed.style.borderColor = '#10b981';
+        cardSeed.style.backgroundColor = '#f0fdf4';
+        cardTrading.style.borderColor = '#cbd5e1';
+        cardTrading.style.backgroundColor = '#ffffff';
+        btn.style.backgroundColor = '#10b981';
+        btn.innerHTML = '<i class="fas fa-seedling me-2"></i> Enter Seed Management ERP';
+    } else {
+        cardTrading.style.borderColor = '#3b82f6';
+        cardTrading.style.backgroundColor = '#eff6ff';
+        cardSeed.style.borderColor = '#cbd5e1';
+        cardSeed.style.backgroundColor = '#ffffff';
+        btn.style.backgroundColor = '#3b82f6';
+        btn.innerHTML = '<i class="fas fa-chart-line me-2"></i> Enter Trading Management System';
+    }
+}
+</script>
 {% endblock %}

@@ -25,9 +25,35 @@ class UserLoginView(LoginView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        log_activity(self.request.user, 'LOGIN', 'Accounts', f"User {self.request.user.username} logged in successfully.", self.request)
-        messages.success(self.request, f"Welcome back, {self.request.user.get_full_name() or self.request.user.username}!")
-        return response
+        user = self.request.user
+        log_activity(user, 'LOGIN', 'Accounts', f"User {user.username} logged in successfully.", self.request)
+        messages.success(self.request, f"Welcome back, {user.get_full_name() or user.username}!")
+
+        target = self.request.POST.get('target_system') or self.request.GET.get('target')
+
+        if target == 'seed' and user.has_seed_access():
+            return redirect('dashboard:home')
+        elif target == 'trading' and user.has_trading_access():
+            return redirect('trading:dashboard')
+
+        if user.has_both_access():
+            return redirect('accounts:select_module')
+        elif user.has_trading_access():
+            return redirect('trading:dashboard')
+        return redirect('dashboard:home')
+
+
+class SelectModuleView(LoginRequiredMixin, View):
+    template_name = 'accounts/select_module.html'
+
+    def get(self, request):
+        user = request.user
+        if not user.has_both_access():
+            if user.has_trading_access():
+                return redirect('trading:dashboard')
+            return redirect('dashboard:home')
+        return render(request, self.template_name)
+
 
 class UserLogoutView(LogoutView):
     next_page = 'accounts:login'
@@ -96,7 +122,6 @@ class UserPermissionView(LoginRequiredMixin, AdminRequiredMixin, View):
 
     def get(self, request, pk):
         user = get_object_or_404(User, pk=pk)
-        # Get or create permission objects for all modules
         perms = {}
         for module_key, module_label in MODULE_CHOICES:
             perm, _ = UserPermission.objects.get_or_create(

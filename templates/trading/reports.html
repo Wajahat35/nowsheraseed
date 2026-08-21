@@ -1,0 +1,141 @@
+{% extends 'trading/base_trading.html' %}
+{% load humanize %}
+
+{% block title %}Trading Reports & Performance Analytics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-contract text-primary me-2"></i> Trading Performance Reports</h4>
+        <p class="text-muted small mb-0">Generate, filter, and export trading performance statistics, Win/Loss metrics, deposits, and P&L history.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'trading:export_csv' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-file-csv me-1"></i> Export CSV</a>
+        <a href="{% url 'trading:export_excel' %}" class="btn btn-outline-success btn-sm"><i class="fas fa-file-excel me-1"></i> Export Excel</a>
+        <a href="{% url 'trading:export_pdf' %}" class="btn btn-outline-danger btn-sm"><i class="fas fa-file-pdf me-1"></i> Export PDF Report</a>
+    </div>
+</div>
+
+<!-- Report Filters -->
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white mb-4">
+    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-filter text-primary me-2"></i> Report Filter Controls</h5>
+    <form method="GET" class="row g-3">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold">Trading Account</label>
+            <select name="account" class="form-select form-select-sm">
+                <option value="">-- All Accounts --</option>
+                {% for a in accounts %}
+                    <option value="{{ a.id }}" {% if acc_id == a.id|stringformat:"s" %}selected{% endif %}>{{ a.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Date From</label>
+            <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Date To</label>
+            <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold">Market Type</label>
+            <select name="market_type" class="form-select form-select-sm">
+                <option value="">-- All Markets --</option>
+                <option value="Forex" {% if market_type == 'Forex' %}selected{% endif %}>Forex</option>
+                <option value="Crypto" {% if market_type == 'Crypto' %}selected{% endif %}>Crypto</option>
+                <option value="Gold" {% if market_type == 'Gold' %}selected{% endif %}>Gold & Metals</option>
+                <option value="Indices" {% if market_type == 'Indices' %}selected{% endif %}>Indices</option>
+                <option value="Stocks" {% if market_type == 'Stocks' %}selected{% endif %}>Stocks</option>
+            </select>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-primary btn-sm fw-bold w-100"><i class="fas fa-search me-1"></i> Generate Report</button>
+            <a href="{% url 'trading:reports' %}" class="btn btn-light btn-sm border">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Filtered Performance KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-success">
+            <div class="text-muted small fw-bold text-uppercase">Gross Profit</div>
+            <div class="fs-4 fw-bold text-success font-monospace">+${{ stats.total_profit|intcomma }}</div>
+            <small class="text-muted">{{ stats.winning_trades_count }} Winning Trades</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-danger">
+            <div class="text-muted small fw-bold text-uppercase">Gross Loss</div>
+            <div class="fs-4 fw-bold text-danger font-monospace">-${{ stats.total_loss|intcomma }}</div>
+            <small class="text-muted">{{ stats.losing_trades_count }} Losing Trades</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-primary">
+            <div class="text-muted small fw-bold text-uppercase">Net Realized P&L</div>
+            <div class="fs-4 fw-bold font-monospace {% if stats.net_profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if stats.net_profit_loss >= 0 %}+{% endif %}${{ stats.net_profit_loss|intcomma }}
+            </div>
+            <small class="text-muted">Win Rate: <strong>{{ stats.win_rate }}%</strong></small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info">
+            <div class="text-muted small fw-bold text-uppercase">Total Capital Flow</div>
+            <div class="fs-6 font-monospace">Deposits: <strong class="text-success">${{ stats.total_deposits|intcomma }}</strong></div>
+            <div class="fs-6 font-monospace">Withdrawals: <strong class="text-danger">${{ stats.total_withdrawals|intcomma }}</strong></div>
+        </div>
+    </div>
+</div>
+
+<!-- Trades Performance Table -->
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+    <h5 class="fw-bold text-dark mb-3"><i class="fas fa-list text-primary me-2"></i> Report Trades Log</h5>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Account</th>
+                    <th>Symbol</th>
+                    <th>Market</th>
+                    <th>Type</th>
+                    <th>Lots</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th class="text-end">Net P/L ($)</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in trades %}
+                    <tr>
+                        <td>{{ t.trade_date }}</td>
+                        <td>{{ t.account.name }}</td>
+                        <td class="fw-bold text-primary">{{ t.symbol }}</td>
+                        <td>{{ t.market_type }}</td>
+                        <td><span class="badge {% if t.direction == 'Buy' %}bg-success{% else %}bg-danger{% endif %}">{{ t.direction }}</span></td>
+                        <td class="font-monospace">{{ t.lot_size }}</td>
+                        <td class="font-monospace">{{ t.entry_price }}</td>
+                        <td class="font-monospace">{{ t.exit_price|default:"-" }}</td>
+                        <td class="text-end font-monospace fw-bold {% if t.net_profit > 0 %}text-success{% elif t.net_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
+                            {% if t.net_profit > 0 %}+{% endif %}${{ t.net_profit|intcomma }}
+                        </td>
+                        <td><span class="badge bg-secondary">{{ t.status }}</span></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">No trading data found matching the selected report filters.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

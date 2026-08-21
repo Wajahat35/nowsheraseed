@@ -1,0 +1,309 @@
+{% extends 'trading/base_trading.html' %}
+{% load humanize %}
+
+{% block title %}Trading Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark mb-1"><i class="fas fa-chart-pie text-primary me-2"></i> Trading Dashboard</h3>
+        <p class="text-muted small mb-0">Overview of trading accounts, open/closed trades, financial deposits, and performance metrics.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'trading:trade_create' %}" class="btn btn-primary fw-bold">
+            <i class="fas fa-plus me-1"></i> Add Trade
+        </a>
+        <a href="{% url 'trading:account_create' %}" class="btn btn-outline-primary fw-semibold">
+            <i class="fas fa-wallet me-1"></i> Add Account
+        </a>
+        <a href="{% url 'trading:deposit_create' %}" class="btn btn-outline-success fw-semibold">
+            <i class="fas fa-arrow-down me-1"></i> Deposit
+        </a>
+    </div>
+</div>
+
+<!-- Key Performance Cards Row 1: Financial & Account Totals -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-primary">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Total Balance</div>
+                    <div class="fs-4 fw-bold text-dark font-monospace">${{ stats.total_balance|intcomma }}</div>
+                    <small class="text-muted">{{ stats.total_accounts }} Accounts ({{ stats.total_accounts }} Active)</small>
+                </div>
+                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle fs-3">
+                    <i class="fas fa-wallet"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Current Equity</div>
+                    <div class="fs-4 fw-bold text-info font-monospace">${{ stats.total_equity|intcomma }}</div>
+                    <small class="text-muted">Balance + Open Trades</small>
+                </div>
+                <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle fs-3">
+                    <i class="fas fa-coins"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Total Deposits</div>
+                    <div class="fs-4 fw-bold text-success font-monospace">${{ stats.total_deposits|intcomma }}</div>
+                    <small class="text-muted">Funding Capital</small>
+                </div>
+                <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle fs-3">
+                    <i class="fas fa-arrow-down"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-danger">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase">Total Withdrawals</div>
+                    <div class="fs-4 fw-bold text-danger font-monospace">${{ stats.total_withdrawals|intcomma }}</div>
+                    <small class="text-muted">Payouts</small>
+                </div>
+                <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle fs-3">
+                    <i class="fas fa-arrow-up"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Performance Cards Row 2: Trading Performance & Win Rates -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
+            <div class="text-muted small fw-bold text-uppercase mb-1">Net Realized P&L</div>
+            <div class="fs-4 fw-bold font-monospace {% if stats.net_profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if stats.net_profit_loss >= 0 %}+{% endif %}${{ stats.net_profit_loss|intcomma }}
+            </div>
+            <div class="d-flex justify-content-between small text-muted mt-2">
+                <span>Profit: <strong class="text-success">${{ stats.total_profit|intcomma }}</strong></span>
+                <span>Loss: <strong class="text-danger">${{ stats.total_loss|intcomma }}</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
+            <div class="text-muted small fw-bold text-uppercase mb-1">Win Rate %</div>
+            <div class="fs-4 fw-bold text-emerald font-monospace" style="color: #10b981;">
+                {{ stats.win_rate }}%
+            </div>
+            <div class="progress mt-2" style="height: 6px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.win_rate }}%"></div>
+                <div class="progress-bar bg-danger" role="progressbar" style="width: {{ stats.loss_rate }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
+            <div class="text-muted small fw-bold text-uppercase mb-1">Trades Executed</div>
+            <div class="fs-4 fw-bold text-dark font-monospace">{{ stats.total_trades }}</div>
+            <div class="d-flex justify-content-between small text-muted mt-2">
+                <span>Wins: <strong class="text-success">{{ stats.winning_trades_count }}</strong></span>
+                <span>Losses: <strong class="text-danger">{{ stats.losing_trades_count }}</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white">
+            <div class="text-muted small fw-bold text-uppercase mb-1">Best vs Worst Trade</div>
+            <div class="d-flex justify-content-between align-items-center mt-1">
+                <div>
+                    <small class="text-muted d-block">Best Win</small>
+                    <span class="fw-bold text-success font-monospace">+${{ stats.best_trade|intcomma }}</span>
+                </div>
+                <div class="text-end">
+                    <small class="text-muted d-block">Worst Loss</small>
+                    <span class="fw-bold text-danger font-monospace">${{ stats.worst_trade|intcomma }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-chart-line text-primary me-2"></i> Monthly Trading Performance (Net P&L)</h5>
+            <div style="height: 280px;">
+                <canvas id="monthlyPlChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
+            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-chart-pie text-info me-2"></i> Win vs Loss Breakdown</h5>
+            <div style="height: 250px;" class="d-flex align-items-center justify-content-center">
+                <canvas id="winLossChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accounts Quick Grid & Recent Trades -->
+<div class="row g-3 mb-4">
+    <!-- Active Accounts List -->
+    <div class="col-lg-5">
+        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-wallet text-primary me-2"></i> Active Trading Accounts</h5>
+                <a href="{% url 'trading:account_list' %}" class="btn btn-sm btn-outline-primary fw-semibold">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Account</th>
+                            <th>Platform</th>
+                            <th class="text-end">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for acc in accounts %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'trading:account_detail' acc.pk %}" class="fw-bold text-decoration-none text-dark">
+                                        {{ acc.name }}
+                                    </a>
+                                    <div class="small text-muted">{{ acc.broker_name }} (#{{ acc.account_number }})</div>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ acc.platform }}</span></td>
+                                <td class="text-end fw-bold font-monospace text-emerald">${{ acc.current_balance|intcomma }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">No trading accounts added yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Trades -->
+    <div class="col-lg-7">
+        <div class="card p-4 border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-exchange-alt text-success me-2"></i> Recent Trades</h5>
+                <a href="{% url 'trading:trade_list' %}" class="btn btn-sm btn-outline-success fw-semibold">View All Trades</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Lots</th>
+                            <th class="text-end">Net P/L ($)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in recent_trades %}
+                            <tr>
+                                <td>{{ t.trade_date }}</td>
+                                <td class="fw-bold text-primary">{{ t.symbol }}</td>
+                                <td>
+                                    {% if t.direction == 'Buy' %}
+                                        <span class="badge bg-success">BUY</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">SELL</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ t.lot_size }}</td>
+                                <td class="text-end font-monospace fw-bold {% if t.net_profit > 0 %}text-success{% elif t.net_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                    {% if t.net_profit > 0 %}+{% endif %}${{ t.net_profit|intcomma }}
+                                </td>
+                                <td>
+                                    {% if t.status == 'Open' %}
+                                        <span class="badge bg-warning text-dark">Open</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Closed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-3">No trade logs recorded yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const monthlyLabels = JSON.parse('{{ chart_labels_json|escapejs }}');
+    const monthlyData = JSON.parse('{{ chart_data_json|escapejs }}');
+
+    // Monthly Bar Chart
+    const ctxMonthly = document.getElementById('monthlyPlChart').getContext('2d');
+    new Chart(ctxMonthly, {
+        type: 'bar',
+        data: {
+            labels: monthlyLabels.length > 0 ? monthlyLabels : ['No Data'],
+            datasets: [{
+                label: 'Monthly Net P&L ($)',
+                data: monthlyData.length > 0 ? monthlyData : [0],
+                backgroundColor: monthlyData.map(val => val >= 0 ? '#10b981' : '#ef4444'),
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Win vs Loss Doughnut Chart
+    const ctxPie = document.getElementById('winLossChart').getContext('2d');
+    new Chart(ctxPie, {
+        type: 'doughnut',
+        data: {
+            labels: ['Winning Trades', 'Losing Trades', 'Break-even'],
+            datasets: [{
+                data: [{{ stats.winning_trades_count }}, {{ stats.losing_trades_count }}, {{ stats.break_even_trades_count }}],
+                backgroundColor: ['#10b981', '#ef4444', '#94a3b8']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

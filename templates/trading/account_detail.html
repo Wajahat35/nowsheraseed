@@ -1,0 +1,172 @@
+{% extends 'trading/base_trading.html' %}
+{% load humanize %}
+
+{% block title %}Account: {{ account.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-wallet text-primary me-2"></i> {{ account.name }}</h4>
+        <p class="text-muted small mb-0">{{ account.broker_name }} | Account #{{ account.account_number }} | Platform: {{ account.platform }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'trading:account_edit' account.pk %}" class="btn btn-outline-primary fw-semibold"><i class="fas fa-edit me-1"></i> Edit Account</a>
+        <a href="{% url 'trading:trade_create' %}?account={{ account.pk }}" class="btn btn-primary fw-bold"><i class="fas fa-plus me-1"></i> Add Trade</a>
+        <a href="{% url 'trading:account_list' %}" class="btn btn-light border">Back to Accounts</a>
+    </div>
+</div>
+
+<!-- Account Financial Summary -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-primary">
+            <div class="text-muted small fw-bold text-uppercase">Initial Balance</div>
+            <div class="fs-4 fw-bold font-monospace">${{ account.initial_balance|intcomma }}</div>
+            <small class="text-muted">Opened {{ account.opening_date }}</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-success">
+            <div class="text-muted small fw-bold text-uppercase">Current Balance</div>
+            <div class="fs-4 fw-bold text-success font-monospace">${{ account.current_balance|intcomma }}</div>
+            <small class="text-muted">Deposits + Realized P/L</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-info">
+            <div class="text-muted small fw-bold text-uppercase">Current Equity</div>
+            <div class="fs-4 fw-bold text-info font-monospace">${{ account.current_equity|intcomma }}</div>
+            <small class="text-muted">Balance + Floating P/L</small>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3 border-0 shadow-sm rounded-3 bg-white border-start border-4 border-warning">
+            <div class="text-muted small fw-bold text-uppercase">Net Realized P&L</div>
+            <div class="fs-4 fw-bold font-monospace {% if stats.net_profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {% if stats.net_profit_loss >= 0 %}+{% endif %}${{ stats.net_profit_loss|intcomma }}
+            </div>
+            <small class="text-muted">Win Rate: <strong>{{ stats.win_rate }}%</strong></small>
+        </div>
+    </div>
+</div>
+
+<!-- Financial Activity Breakdown Tabs -->
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white mb-4">
+    <h5 class="fw-bold mb-3"><i class="fas fa-list text-primary me-2"></i> Account Activity Log</h5>
+
+    <ul class="nav nav-tabs mb-3" id="accountTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold" id="trades-tab" data-bs-toggle="tab" data-bs-target="#trades-pane" type="button" role="tab">Trades ({{ trades|length }})</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold text-success" id="deposits-tab" data-bs-toggle="tab" data-bs-target="#deposits-pane" type="button" role="tab">Deposits ({{ deposits|length }})</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold text-danger" id="withdrawals-tab" data-bs-toggle="tab" data-bs-target="#withdrawals-pane" type="button" role="tab">Withdrawals ({{ withdrawals|length }})</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="accountTabContent">
+        <!-- Trades Pane -->
+        <div class="tab-pane fade show active" id="trades-pane" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Lots</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th class="text-end">Net P/L ($)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in trades %}
+                            <tr>
+                                <td>{{ t.trade_date }}</td>
+                                <td class="fw-bold text-primary">{{ t.symbol }}</td>
+                                <td><span class="badge {% if t.direction == 'Buy' %}bg-success{% else %}bg-danger{% endif %}">{{ t.direction }}</span></td>
+                                <td>{{ t.lot_size }}</td>
+                                <td>{{ t.entry_price }}</td>
+                                <td>{{ t.exit_price|default:"-" }}</td>
+                                <td class="text-end font-monospace fw-bold {% if t.net_profit > 0 %}text-success{% elif t.net_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                    {% if t.net_profit > 0 %}+{% endif %}${{ t.net_profit|intcomma }}
+                                </td>
+                                <td><span class="badge bg-secondary">{{ t.status }}</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="8" class="text-center text-muted py-3">No trades logged for this account yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Deposits Pane -->
+        <div class="tab-pane fade" id="deposits-pane" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Ref ID</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in deposits %}
+                            <tr>
+                                <td>{{ d.deposit_date }}</td>
+                                <td class="fw-bold text-success font-monospace">+${{ d.amount|intcomma }}</td>
+                                <td>{{ d.payment_method }}</td>
+                                <td>{{ d.transaction_id|default:"-" }}</td>
+                                <td>{{ d.notes|default:"-" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No deposits logged.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Withdrawals Pane -->
+        <div class="tab-pane fade" id="withdrawals-pane" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Ref ID</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for w in withdrawals %}
+                            <tr>
+                                <td>{{ w.withdrawal_date }}</td>
+                                <td class="fw-bold text-danger font-monospace">-${{ w.amount|intcomma }}</td>
+                                <td>{{ w.payment_method }}</td>
+                                <td>{{ w.transaction_id|default:"-" }}</td>
+                                <td>{{ w.notes|default:"-" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No withdrawals logged.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

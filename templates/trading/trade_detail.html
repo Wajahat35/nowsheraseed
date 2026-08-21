@@ -1,0 +1,57 @@
+{% extends 'trading/base_trading.html' %}
+{% load humanize %}
+
+{% block title %}Trade Detail: {{ trade.symbol }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">
+            <i class="fas fa-exchange-alt text-primary me-2"></i> Trade #{{ trade.id }}: {{ trade.direction }} {{ trade.symbol }}
+        </h4>
+        <p class="text-muted small mb-0">Account: {{ trade.account.name }} | Date: {{ trade.trade_date }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'trading:trade_edit' trade.pk %}" class="btn btn-outline-primary fw-semibold"><i class="fas fa-edit me-1"></i> Edit Trade</a>
+        <a href="{% url 'trading:trade_list' %}" class="btn btn-light border">Back to Trades</a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white mb-4">
+    <div class="row g-4">
+        <div class="col-md-6 border-end">
+            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Trade Parameters</h5>
+            <div class="row g-3">
+                <div class="col-6"><strong>Trading Account:</strong><div class="text-primary fw-bold">{{ trade.account.name }}</div></div>
+                <div class="col-6"><strong>Broker & Platform:</strong><div>{{ trade.account.broker_name }} ({{ trade.account.platform }})</div></div>
+                <div class="col-6"><strong>Symbol:</strong><div class="fw-bold fs-5 text-dark">{{ trade.symbol }}</div></div>
+                <div class="col-6"><strong>Market Type:</strong><div>{{ trade.market_type }}</div></div>
+                <div class="col-6"><strong>Direction:</strong><div><span class="badge {% if trade.direction == 'Buy' %}bg-success{% else %}bg-danger{% endif %} fs-6">{{ trade.direction }}</span></div></div>
+                <div class="col-6"><strong>Lot Size / Quantity:</strong><div class="font-monospace fw-bold">{{ trade.lot_size }}</div></div>
+                <div class="col-6"><strong>Entry Price:</strong><div class="font-monospace">{{ trade.entry_price }}</div></div>
+                <div class="col-6"><strong>Exit Price:</strong><div class="font-monospace">{{ trade.exit_price|default:"-" }}</div></div>
+                <div class="col-6"><strong>Stop Loss (SL):</strong><div class="font-monospace text-danger">{{ trade.stop_loss|default:"-" }}</div></div>
+                <div class="col-6"><strong>Take Profit (TP):</strong><div class="font-monospace text-success">{{ trade.take_profit|default:"-" }}</div></div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">Financial Performance</h5>
+            <div class="row g-3">
+                <div class="col-6"><strong>Gross Profit / Loss:</strong><div class="font-monospace fw-bold fs-5">${{ trade.profit_loss|intcomma }}</div></div>
+                <div class="col-6"><strong>Status:</strong><div><span class="badge bg-secondary fs-6">{{ trade.status }}</span></div></div>
+                <div class="col-6"><strong>Commission:</strong><div class="font-monospace">${{ trade.commission|intcomma }}</div></div>
+                <div class="col-6"><strong>Swap / Fee:</strong><div class="font-monospace">${{ trade.swap_fee|intcomma }}</div></div>
+                <div class="col-12 p-3 bg-light rounded border mt-3">
+                    <div class="text-muted small fw-bold text-uppercase">Net Realized P&L</div>
+                    <div class="fs-3 fw-bold font-monospace {% if trade.net_profit > 0 %}text-success{% elif trade.net_profit < 0 %}text-danger{% else %}text-muted{% endif %}">
+                        {% if trade.net_profit > 0 %}+{% endif %}${{ trade.net_profit|intcomma }}
+                    </div>
+                </div>
+                <div class="col-12"><strong>Strategy:</strong> <div>{{ trade.strategy|default:"N/A" }}</div></div>
+                <div class="col-12"><strong>Notes:</strong> <div>{{ trade.notes|default:"No notes entered." }}</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

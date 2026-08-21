@@ -1,0 +1,54 @@
+{% extends 'trading/base_trading.html' %}
+{% load humanize %}
+
+{% block title %}Account Deposits{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-arrow-down text-success me-2"></i> Trading Account Deposits</h4>
+        <p class="text-muted small mb-0">Record and track capital deposits across trading accounts.</p>
+    </div>
+    <a href="{% url 'trading:deposit_create' %}" class="btn btn-success fw-bold">
+        <i class="fas fa-plus me-1"></i> Add Deposit
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Trading Account</th>
+                    <th class="text-end">Amount</th>
+                    <th>Currency</th>
+                    <th>Payment Method</th>
+                    <th>Transaction Ref / ID</th>
+                    <th>Notes</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deposits %}
+                    <tr>
+                        <td>{{ d.deposit_date }}</td>
+                        <td class="fw-bold text-primary">{{ d.account.name }} ({{ d.account.broker_name }})</td>
+                        <td class="text-end fw-bold font-monospace text-success">+${{ d.amount|intcomma }}</td>
+                        <td>{{ d.currency }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ d.payment_method }}</span></td>
+                        <td class="font-monospace small">{{ d.transaction_id|default:"-" }}</td>
+                        <td>{{ d.notes|default:"-" }}</td>
+                        <td class="text-center">
+                            <a href="{% url 'trading:deposit_edit' d.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Deposit"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'trading:deposit_delete' d.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Deposit"><i class="fas fa-trash"></i></a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i> No deposits recorded yet. Click <strong>Add Deposit</strong> above.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

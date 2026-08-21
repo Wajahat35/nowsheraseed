@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'apps.expenses',
     'apps.reports',
     'apps.dashboard',
+    'apps.trading',
 ]
 
 MIDDLEWARE = [
@@ -96,9 +97,6 @@ WSGI_APPLICATION = 'seed_erp.wsgi.application'
 # ---------------------------------------------------------------------------
 # DATABASE
 # ---------------------------------------------------------------------------
-# In production (Render), DATABASE_URL is set automatically when a PostgreSQL
-# database is attached.  Locally it falls back to SQLite so nothing changes
-# for local development.
 import dj_database_url  # noqa: E402
 
 _database_url = os.environ.get('DATABASE_URL', '')
@@ -176,7 +174,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # AUTHENTICATION
 # ---------------------------------------------------------------------------
 LOGIN_URL = 'accounts:login'
-LOGIN_REDIRECT_URL = 'dashboard:home'
+LOGIN_REDIRECT_URL = 'accounts:select_module'
 LOGOUT_REDIRECT_URL = 'accounts:login'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -195,7 +193,6 @@ REST_FRAMEWORK = {
 
 # ---------------------------------------------------------------------------
 # PRODUCTION SECURITY SETTINGS
-# (Only applied when DEBUG=False i.e. on Render)
 # ---------------------------------------------------------------------------
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

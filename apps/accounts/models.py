@@ -32,6 +32,10 @@ class User(AbstractUser):
     designation = models.CharField(max_length=100, blank=True, null=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
 
+    # Module / Web App Permissions
+    can_access_seed = models.BooleanField(default=True, verbose_name="Can Access Seed Management")
+    can_access_trading = models.BooleanField(default=True, verbose_name="Can Access Trading Management")
+
     def is_admin(self):
         return self.is_superuser or (self.role and self.role.name == Role.ADMIN)
 
@@ -46,6 +50,15 @@ class User(AbstractUser):
 
     def is_salesman(self):
         return self.is_admin() or (self.role and self.role.name == Role.SALESMAN)
+
+    def has_seed_access(self):
+        return self.is_superuser or self.can_access_seed
+
+    def has_trading_access(self):
+        return self.is_superuser or self.can_access_trading
+
+    def has_both_access(self):
+        return self.has_seed_access() and self.has_trading_access()
 
     def has_module_perm(self, module, action='view'):
         """Check if user has permission for a module action. Admins always have all permissions."""
@@ -109,6 +122,7 @@ MODULE_CHOICES = [
     ('reports', 'Reports'),
     ('settings', 'Settings'),
     ('accounts', 'User Management'),
+    ('trading', 'Trading Management'),
 ]
 
 class UserPermission(models.Model):

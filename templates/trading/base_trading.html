@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trading Management System{% endblock %} | Enterprise Portal</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div id="wrapper" class="d-flex">
+        <!-- Trading Sidebar -->
+        {% if user.is_authenticated %}
+            {% include 'trading/includes/trading_sidebar.html' %}
+        {% endif %}
+        
+        <!-- Page Content -->
+        <div id="page-content-wrapper" class="flex-grow-1">
+            {% if user.is_authenticated %}
+                <nav class="navbar navbar-expand-lg top-navbar bg-white border-bottom px-4 py-2">
+                    <div class="container-fluid px-0">
+                        <div class="d-flex align-items-center">
+                            <h5 class="fw-bold mb-0 text-primary">
+                                <i class="fas fa-chart-line me-2"></i> Trading Account Management System
+                            </h5>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            {% if user.has_seed_access %}
+                                <a href="{% url 'dashboard:home' %}" class="btn btn-emerald btn-sm text-white fw-bold me-2" style="background-color: #10b981;">
+                                    <i class="fas fa-seedling me-1"></i> Switch to Seed ERP
+                                </a>
+                            {% endif %}
+                            {% if user.has_both_access %}
+                                <a href="{% url 'accounts:select_module' %}" class="btn btn-outline-secondary btn-sm me-2" title="Switch Portal">
+                                    <i class="fas fa-layer-group"></i> Portal
+                                </a>
+                            {% endif %}
+
+                            <div class="dropdown">
+                                <a class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" href="#" role="button" data-bs-toggle="dropdown">
+                                    <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: 700;">
+                                        {{ user.username|slice:":1"|upper }}
+                                    </div>
+                                    <div class="d-none d-lg-block text-start me-1">
+                                        <div class="fw-semibold small lh-1">{{ user.get_full_name|default:user.username }}</div>
+                                        <small class="text-muted" style="font-size: 0.75rem;">Trader / Manager</small>
+                                    </div>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+            {% endif %}
+            
+            <div class="container-fluid p-4">
+                {% include 'includes/messages.html' %}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
