@@ -26,11 +26,11 @@ COMMON_STOP_WORDS = set([
     'gate', 'pass', 'gatepass', 'rate', 'bags', 'bag', 'boray', 'bori', 'rupay', 
     'rs', 'rupees', 'se', 'ko', 'hai', 'ka', 'ki', 'ke', 'aur', 'do', 'wala', 
     'bhejni', 'karo', 'kar', 'dein', 'bata', 'karini', 'hain', 'naam', 'driver', 
-    'vehicle', 'gaari', 'gari', 'number', 'bana'
+    'vehicle', 'gaari', 'gari', 'number', 'bana', 'print', 'krdo', 'kardo', 'kr'
 ])
 
 # ---------------------------------------------------------------------------
-# DATABASE ENTITY MATCHERS (STOP-WORD FILTERED WORD OVERLAP + LEVENSHTEIN)
+# DATABASE ENTITY MATCHERS
 # ---------------------------------------------------------------------------
 def match_supplier(query):
     if not query:
@@ -49,7 +49,9 @@ def match_supplier(query):
         full_norm = f"{name_norm} {comp_norm}"
         s_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
 
-        # 1. Check word overlap
+        if q_norm and (q_norm in name_norm or name_norm in q_norm or (comp_norm and q_norm in comp_norm)):
+            return {'status': 'high_confidence', 'match': s, 'choices': []}
+
         common = q_words.intersection(s_words)
         if common:
             score = 0.80 + (0.10 * len(common))
@@ -91,6 +93,9 @@ def match_customer(query):
         full_norm = f"{name_norm} {comp_norm}"
         c_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
 
+        if q_norm and (q_norm in name_norm or name_norm in q_norm or (comp_norm and q_norm in comp_norm)):
+            return {'status': 'high_confidence', 'match': c, 'choices': []}
+
         common = q_words.intersection(c_words)
         if common:
             score = 0.80 + (0.10 * len(common))
@@ -131,6 +136,9 @@ def match_seed(query):
         var_norm = normalize_str(s.variety or "")
         full_norm = f"{name_norm} {var_norm}"
         s_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+
+        if q_norm and (q_norm in name_norm or q_norm in var_norm or name_norm in q_norm):
+            return {'status': 'high_confidence', 'match': s, 'choices': []}
 
         common = q_words.intersection(s_words)
         if common:
@@ -189,21 +197,37 @@ def parse_voice_numbers(text):
 
 
 def parse_vehicle_number(text):
-    """Extracts vehicle/truck numbers like LEA-1234, LES 4890, etc."""
-    m = re.search(r'([a-z]{2,4}[-\s]?\d{3,4})', text, re.IGNORECASE)
+    """Extracts vehicle numbers like L251, LEA-1234, LES 4890, etc."""
+    m = re.search(r'(?:gari|gaari|vehicle|truck|car)\s*(?:ka\s*)?(?:number|no|num)?\s*(?:hai|is)?\s*([a-z0-9\s-]+)', text, re.IGNORECASE)
     if m:
-        return m.group(1).upper().replace(' ', '-')
+        val = m.group(1).strip()
+        val = re.sub(r'^(hai|is|ka|number|no)\s+', '', val, flags=re.IGNORECASE).strip()
+        m_code = re.search(r'([a-z]{1,4}[-\s]?\d{2,4})', val, re.IGNORECASE)
+        if m_code and 'invoice' not in m_code.group(1).lower() and 'pass' not in m_code.group(1).lower():
+            return m_code.group(1).upper().replace(' ', '-')
+    
+    # Fallback search for vehicle pattern like L251
+    m_direct = re.search(r'\b([a-z]{1,3}[-\s]?\d{2,4})\b', text, re.IGNORECASE)
+    if m_direct and 'inv' not in m_direct.group(1).lower() and 'pass' not in m_direct.group(1).lower():
+        return m_direct.group(1).upper().replace(' ', '-')
     return None
 
 
 def parse_driver_name(text):
-    """Extracts driver name from text."""
-    m = re.search(r'(?:driver|gari wala|driver ka naam|driver hai)\s+([a-z\s]+)', text, re.IGNORECASE)
+    """Extracts driver name from text like 'driver ka nam hai imran'."""
+    m = re.search(r'(?:driver|gari wala)\s*(?:ka\s*)?(?:nam|naam)?\s*(?:hai|is)?\s*([a-z]+)', text, re.IGNORECASE)
     if m:
         name = m.group(1).strip().title()
-        name = re.sub(r'\b(hai|aur|ko|ka|ki|ke|bano|banao|bana|do)\b', '', name, flags=re.IGNORECASE).strip()
-        if len(name) > 2:
+        if name.lower() not in ['hai', 'is', 'ka', 'nam', 'naam', 'aur', 'gari', 'number', 'no']:
             return name
+    return None
+
+
+def parse_invoice_ref(text):
+    """Extracts invoice reference numbers like 'invoice 0021' -> '21'."""
+    m = re.search(r'(?:invoice|inv|bill)\s*#?\s*0*(\d{1,5})', text, re.IGNORECASE)
+    if m:
+        return m.group(1)
     return None
 
 
@@ -218,7 +242,7 @@ def detect_intent(text):
         return 'CREATE_PURCHASE'
     elif any(k in t_norm for k in ['sale', 'bechna', 'bech', 'bicho', 'sell', 'bikri', 'sales']):
         return 'CREATE_SALES'
-    elif any(k in t_norm for k in ['gate pass', 'gatepass', 'bhejni', 'bahar bhej', 'inward', 'outward', 'truck']):
+    elif any(k in t_norm for k in ['gate pass', 'gatepass', 'bhejni', 'bahar bhej', 'inward', 'outward', 'truck', 'print']):
         return 'CREATE_GATEPASS'
     elif any(k in t_norm for k in ['quantity', 'rate', 'price', 'supplier', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'kar do', 'nahi']):
         return 'EDIT_DRAFT'
@@ -349,11 +373,8 @@ def process_voice_command(user, text, session_id=None):
         d_name = parse_driver_name(text_clean)
         if d_name:
             draft['driver_name'] = d_name
-        elif doc_type == 'GATE_PASS' and not draft.get('driver_name'):
-            if not qty and not rate and not v_num and len(text_clean) < 30 and not any(k in text_clean.lower() for k in ['pass', 'gate', 'invoice']):
-                draft['driver_name'] = text_clean.title()
 
-        # Match party (Supplier vs Customer)
+        # Match party
         if doc_type == 'PURCHASE_INVOICE':
             supp_res = match_supplier(text_clean)
             if supp_res['status'] == 'high_confidence':
@@ -384,6 +405,15 @@ def process_voice_command(user, text, session_id=None):
             elif seed_res['status'] == 'ambiguous':
                 draft['seed_ambiguous'] = seed_res['choices']
 
+        # Auto-lookup DB unit price if not spoken
+        if not draft.get('rate') and draft.get('seed_id'):
+            s_obj = Seed.objects.filter(id=draft['seed_id']).first()
+            if s_obj:
+                if doc_type == 'SALES_INVOICE':
+                    draft['rate'] = float(s_obj.retail_price) if s_obj.retail_price else 3000.0
+                elif doc_type == 'PURCHASE_INVOICE':
+                    draft['rate'] = float(s_obj.purchase_price) if s_obj.purchase_price else 2500.0
+
         # Recalculate totals
         t_qty = draft.get('quantity', 0) or 0
         u_rate = draft.get('rate', 0) or 0
@@ -402,7 +432,6 @@ def process_voice_command(user, text, session_id=None):
         session.transcript_history.append({'user': text_clean, 'time': str(timezone.now())})
         session.save()
 
-        # Check missing required fields
         question = get_next_missing_question(draft)
         if question:
             return {
@@ -438,12 +467,41 @@ def process_voice_command(user, text, session_id=None):
         qty, rate = parse_voice_numbers(text_clean)
         v_num = parse_vehicle_number(text_clean)
         d_name = parse_driver_name(text_clean)
+        inv_ref = parse_invoice_ref(text_clean)
 
         party_obj = party_res['match'] if party_res and party_res['status'] == 'high_confidence' else None
         seed_obj = seed_res['match'] if seed_res and seed_res['status'] == 'high_confidence' else None
 
+        # Check for existing invoice link for Gate Pass (e.g. "invoice 0021 ka gate pass print krdo")
+        linked_inv_no = None
+        if doc_type == 'GATE_PASS' and inv_ref:
+            s_inv = SalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+            p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+            if s_inv:
+                linked_inv_no = s_inv.invoice_number
+                party_obj = s_inv.customer
+                first_item = s_inv.items.first()
+                if first_item:
+                    seed_obj = first_item.seed
+                    qty = qty or first_item.quantity
+            elif p_inv:
+                linked_inv_no = p_inv.invoice_number
+                party_obj = p_inv.supplier
+                first_item = p_inv.items.first()
+                if first_item:
+                    seed_obj = first_item.seed
+                    qty = qty or first_item.quantity
+
+        # Preserve exact database unit price if not spoken
+        if not rate and seed_obj:
+            if doc_type == 'SALES_INVOICE':
+                rate = float(seed_obj.retail_price) if seed_obj.retail_price else 3000.0
+            elif doc_type == 'PURCHASE_INVOICE':
+                rate = float(seed_obj.purchase_price) if seed_obj.purchase_price else 2500.0
+
         draft_data = {
             'doc_type': doc_type,
+            'linked_invoice_number': linked_inv_no,
             'party_id': party_obj.id if party_obj else None,
             'party_name': party_obj.name if party_obj else None,
             'party_company': party_obj.company_name if party_obj and hasattr(party_obj, 'company_name') else '',
@@ -453,7 +511,7 @@ def process_voice_command(user, text, session_id=None):
             'seed_variety': seed_obj.variety if seed_obj else None,
             'seed_ambiguous': seed_res['choices'] if seed_res and seed_res['status'] == 'ambiguous' else [],
             'quantity': qty,
-            'rate': float(rate) if rate else (float(seed_obj.purchase_price) if seed_obj and seed_obj.purchase_price and doc_type == 'PURCHASE_INVOICE' else None),
+            'rate': float(rate) if rate else None,
             'total_amount': float((qty or 0) * (float(rate) if rate else 0)),
             'vehicle_no': v_num,
             'driver_name': d_name,
@@ -610,7 +668,8 @@ def build_draft_summary_response(draft):
     elif doc_type == 'GATE_PASS':
         driver = draft.get('driver_name', '')
         vehicle = draft.get('vehicle_no', '')
-        return f"Gate Pass draft ready hai. Seed: {seed}, Quantity: {qty} bags, Driver: {driver}, Vehicle: {vehicle}. Kya Gate Pass bilkul theek hai?"
+        linked = f" (Invoice #{draft['linked_invoice_number']})" if draft.get('linked_invoice_number') else ""
+        return f"Gate Pass draft ready hai{linked}. Seed: {seed}, Quantity: {qty} bags, Driver: {driver}, Vehicle: {vehicle}. Kya Gate Pass bilkul theek hai?"
 
     return "Draft ready hai. Kya approve karni hai?"
 
@@ -737,6 +796,12 @@ def finalize_voice_draft(session):
                 qty = int(draft.get('quantity', 0) or 0)
                 vehicle = draft.get('vehicle_no') or 'LES-1234'
                 driver = draft.get('driver_name') or 'Driver'
+                linked_inv = draft.get('linked_invoice_number') or ''
+
+                rem = f"Party: {party_name} | Seed: {seed_name}"
+                if linked_inv:
+                    rem += f" | Linked Invoice: #{linked_inv}"
+                rem += " (Created via AI Voice Assistant)"
 
                 gp = GatePass.objects.create(
                     pass_type='MANUAL',
@@ -746,7 +811,7 @@ def finalize_voice_draft(session):
                     driver_mobile='0300-1234567',
                     total_bags=qty,
                     total_weight_kg=Decimal(str(qty * 50)),
-                    remarks=f"Party: {party_name} | Seed: {seed_name} (Created via AI Voice Assistant)",
+                    remarks=rem,
                     created_by=user
                 )
 

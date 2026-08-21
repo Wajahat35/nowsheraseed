@@ -31,6 +31,13 @@
         70% { transform: scale(1.1); box-shadow: 0 0 0 18px rgba(239, 68, 68, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
+    .print-invoice-preview {
+        border: 2px solid #0f172a;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 24px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 </style>
 
 <!-- Floating Mic Button -->
@@ -66,12 +73,12 @@
                         </button>
                     </div>
                     <div class="fw-bold text-dark mb-1" id="voiceStatusText">Click Microphone or Type below to Speak</div>
-                    <small class="text-muted">Example: <em>"Ali Traders se 100 bag wheat seed purchase ki hai rate 2500"</em></small>
+                    <small class="text-muted">Example: <em>"punjab seed corporation se faislabad wheat k 50 bag ki purchase invoice bana do"</em></small>
                 </div>
 
                 <!-- Text Fallback Input Box -->
                 <div class="input-group mb-3 shadow-sm">
-                    <input type="text" id="voiceTextInput" class="form-control" placeholder="Type command in Roman Urdu or English (e.g. Sales invoice banao 50 bags wheat)..." />
+                    <input type="text" id="voiceTextInput" class="form-control" placeholder="Type command in Roman Urdu or English..." />
                     <button class="btn btn-primary fw-bold" type="button" id="sendVoiceTextBtn">
                         <i class="fas fa-paper-plane me-1"></i> Process
                     </button>
@@ -84,17 +91,25 @@
                     <div id="assistantResponseText" class="fw-semibold text-primary">Assistant: "Ji, bolen main sun raha hoon."</div>
                 </div>
 
-                <!-- Disambiguation Choice Buttons (If low confidence / ambiguous party/seed matches) -->
+                <!-- Disambiguation Choice Buttons -->
                 <div id="disambiguationPanel" class="alert alert-warning border-warning shadow-sm mb-3 d-none">
                     <div class="fw-bold mb-2"><i class="fas fa-question-circle me-1"></i> Multiple Matches Found. Please Select:</div>
                     <div id="disambiguationChoices" class="d-flex flex-wrap gap-2"></div>
                 </div>
 
-                <!-- Live Draft Preview Card -->
-                <div id="draftPreviewCard" class="card border-0 shadow-sm p-4 bg-white border-start border-5 border-success d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h6 class="fw-bold text-dark mb-0"><i class="fas fa-file-invoice text-success me-2"></i> Document Draft Preview</h6>
-                        <span class="badge bg-success px-3 py-1 fs-6" id="draftDocTypeBadge">PURCHASE INVOICE DRAFT</span>
+                <!-- Live Draft Print Format Preview Card -->
+                <div id="draftPreviewCard" class="print-invoice-preview shadow-sm d-none">
+                    
+                    <!-- Company Branding Header -->
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                        <div>
+                            <h4 class="fw-bold text-dark mb-0"><i class="fas fa-seedling text-success me-2"></i> NOWSHERA SEEDS</h4>
+                            <small class="text-muted">High Yield Quality Certified Seed Processing & Management</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-dark fs-6 px-3 py-2" id="draftDocTypeBadge">PURCHASE INVOICE DRAFT</span>
+                            <div class="small text-muted mt-1" id="draftLinkedInvRef"></div>
+                        </div>
                     </div>
 
                     <!-- Stock Warning Alert -->
@@ -102,42 +117,54 @@
                         <i class="fas fa-exclamation-triangle me-1"></i> <span id="stockWarningMsg"></span>
                     </div>
 
-                    <!-- Party / Driver Header Block -->
-                    <div class="p-3 bg-light rounded border mb-3">
-                        <div class="row g-2">
-                            <div class="col-md-6" id="partyBlock">
-                                <span class="text-muted small d-block" id="partyRoleLabel">Supplier Name:</span>
-                                <strong class="fs-5 text-dark" id="draftPartyName">-</strong>
+                    <!-- Invoice Header Block (Billed To / From) -->
+                    <div class="row mb-3 p-3 bg-light rounded border">
+                        <div class="col-md-6" id="partyBlock">
+                            <span class="text-muted small d-block uppercase fw-bold" id="partyRoleLabel">SUPPLIER DETAILS:</span>
+                            <strong class="fs-5 text-dark d-block" id="draftPartyName">-</strong>
+                            <small class="text-muted" id="draftPartyCompany"></small>
+                        </div>
+                        <div class="col-md-6 text-md-end" id="transportBlock">
+                            <div id="driverSubBlock" class="d-none mb-1">
+                                <span class="text-muted small">Driver Name: </span>
+                                <strong class="fs-6 text-dark" id="draftDriverName">-</strong>
                             </div>
-                            <div class="col-md-6 d-none" id="driverBlock">
-                                <span class="text-muted small d-block">Driver Name:</span>
-                                <strong class="fs-5 text-dark" id="draftDriverName">-</strong>
-                            </div>
-                            <div class="col-md-6 text-md-end d-none" id="vehicleBlock">
-                                <span class="text-muted small d-block">Vehicle Number:</span>
-                                <strong class="fs-5 text-primary font-monospace" id="draftVehicleNo">-</strong>
+                            <div id="vehicleSubBlock" class="d-none">
+                                <span class="text-muted small">Vehicle Number: </span>
+                                <strong class="fs-6 text-primary font-monospace" id="draftVehicleNo">-</strong>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Items Summary Grid -->
-                    <div class="row g-3 mb-3" id="itemsSummaryRow">
-                        <div class="col-md-6">
-                            <span class="text-muted small d-block">Seed Product / Variety:</span>
-                            <strong class="fs-5 text-dark" id="draftSeedName">-</strong>
-                        </div>
-                        <div class="col-md-6 text-md-end">
-                            <span class="text-muted small d-block">Quantity:</span>
-                            <strong class="fs-5 text-dark font-monospace" id="draftQuantity">0 Bags</strong>
-                        </div>
-                        <div class="col-md-6" id="rateBlock">
-                            <span class="text-muted small d-block">Rate per Bag:</span>
-                            <strong class="fs-5 text-dark font-monospace" id="draftRate">PKR 0.00</strong>
-                        </div>
-                        <div class="col-md-6 text-md-end" id="totalBlock">
-                            <span class="text-muted small d-block">Total Calculated Amount:</span>
-                            <strong class="fs-4 text-success font-monospace" id="draftTotalAmount">PKR 0.00</strong>
-                        </div>
+                    <!-- Official Invoice Print Line Items Table -->
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 50%;">Seed Description / Variety</th>
+                                    <th class="text-center" style="width: 15%;">Quantity</th>
+                                    <th class="text-end" style="width: 15%;" id="thUnitPrice">Unit Price</th>
+                                    <th class="text-end" style="width: 20%;" id="thTotalAmount">Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <strong id="draftSeedName" class="text-dark fs-6">-</strong>
+                                        <div class="small text-muted" id="draftSeedVariety">Variety: -</div>
+                                    </td>
+                                    <td class="text-center fw-bold font-monospace fs-6" id="draftQuantity">0 Bags</td>
+                                    <td class="text-end font-monospace fs-6" id="draftRate">PKR 0.00</td>
+                                    <td class="text-end fw-bold text-success font-monospace fs-6" id="draftTotalAmount">PKR 0.00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Grand Total Banner -->
+                    <div class="d-flex justify-content-between align-items-center p-3 bg-dark text-white rounded mb-3" id="grandTotalBanner">
+                        <span class="fs-6 fw-bold">TOTAL AMOUNT PAYABLE (PKR):</span>
+                        <span class="fs-4 fw-bold font-monospace text-emerald-400" id="draftGrandTotalBanner">PKR 0.00</span>
                     </div>
 
                     <div class="alert alert-info py-2 px-3 mb-0 small text-center fw-semibold">
@@ -176,22 +203,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const draftPreviewCard = document.getElementById('draftPreviewCard');
     const draftDocTypeBadge = document.getElementById('draftDocTypeBadge');
+    const draftLinkedInvRef = document.getElementById('draftLinkedInvRef');
     
     const partyBlock = document.getElementById('partyBlock');
     const partyRoleLabel = document.getElementById('partyRoleLabel');
     const draftPartyName = document.getElementById('draftPartyName');
+    const draftPartyCompany = document.getElementById('draftPartyCompany');
     
-    const driverBlock = document.getElementById('driverBlock');
+    const driverSubBlock = document.getElementById('driverSubBlock');
     const draftDriverName = document.getElementById('draftDriverName');
-    const vehicleBlock = document.getElementById('vehicleBlock');
+    const vehicleSubBlock = document.getElementById('vehicleSubBlock');
     const draftVehicleNo = document.getElementById('draftVehicleNo');
     
     const draftSeedName = document.getElementById('draftSeedName');
+    const draftSeedVariety = document.getElementById('draftSeedVariety');
     const draftQuantity = document.getElementById('draftQuantity');
-    const rateBlock = document.getElementById('rateBlock');
+    
+    const thUnitPrice = document.getElementById('thUnitPrice');
     const draftRate = document.getElementById('draftRate');
-    const totalBlock = document.getElementById('totalBlock');
+    const thTotalAmount = document.getElementById('thTotalAmount');
     const draftTotalAmount = document.getElementById('draftTotalAmount');
+    
+    const grandTotalBanner = document.getElementById('grandTotalBanner');
+    const draftGrandTotalBanner = document.getElementById('draftGrandTotalBanner');
     
     const stockWarningAlert = document.getElementById('stockWarningAlert');
     const stockWarningMsg = document.getElementById('stockWarningMsg');
@@ -326,63 +360,91 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Render Dynamic Draft Preview Card based on Document Type
+    // Render Print-Style Invoice Preview Card
     function renderDraftPreview(draft) {
         draftPreviewCard.classList.remove('d-none');
         approveDraftBtn.disabled = false;
 
         const docType = draft.doc_type || 'PURCHASE_INVOICE';
         
+        if (draft.linked_invoice_number) {
+            draftLinkedInvRef.innerText = `Linked Invoice Ref: #${draft.linked_invoice_number}`;
+        } else {
+            draftLinkedInvRef.innerText = '';
+        }
+
         if (docType === 'PURCHASE_INVOICE') {
-            draftDocTypeBadge.innerText = 'PURCHASE INVOICE DRAFT';
-            draftDocTypeBadge.className = 'badge bg-success px-3 py-1 fs-6';
-            partyBlock.classList.remove('d-none');
-            partyRoleLabel.innerText = 'Supplier Name:';
-            draftPartyName.innerText = draft.party_name ? `${draft.party_name} ${draft.party_company ? '('+draft.party_company+')' : ''}` : '(Missing - Required)';
+            draftDocTypeBadge.innerText = 'OFFICIAL PURCHASE INVOICE';
+            draftDocTypeBadge.className = 'badge bg-success fs-6 px-3 py-2';
             
-            driverBlock.classList.add('d-none');
-            vehicleBlock.classList.add('d-none');
-            rateBlock.classList.remove('d-none');
-            totalBlock.classList.remove('d-none');
+            partyBlock.classList.remove('d-none');
+            partyRoleLabel.innerText = 'SUPPLIER DETAILS:';
+            draftPartyName.innerText = draft.party_name || '(Missing - Required)';
+            draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : '';
+            
+            driverSubBlock.classList.add('d-none');
+            vehicleSubBlock.classList.add('d-none');
+            
+            thUnitPrice.classList.remove('d-none');
+            draftRate.classList.remove('d-none');
+            thTotalAmount.classList.remove('d-none');
+            draftTotalAmount.classList.remove('d-none');
+            grandTotalBanner.classList.remove('d-none');
 
         } else if (docType === 'SALES_INVOICE') {
-            draftDocTypeBadge.innerText = 'SALES INVOICE DRAFT';
-            draftDocTypeBadge.className = 'badge bg-primary px-3 py-1 fs-6';
-            partyBlock.classList.remove('d-none');
-            partyRoleLabel.innerText = 'Customer / Purchaser Name:';
-            draftPartyName.innerText = draft.party_name ? `${draft.party_name} ${draft.party_company ? '('+draft.party_company+')' : ''}` : '(Missing - Required)';
+            draftDocTypeBadge.innerText = 'OFFICIAL SALES INVOICE';
+            draftDocTypeBadge.className = 'badge bg-primary fs-6 px-3 py-2';
             
-            driverBlock.classList.add('d-none');
-            vehicleBlock.classList.add('d-none');
-            rateBlock.classList.remove('d-none');
-            totalBlock.classList.remove('d-none');
+            partyBlock.classList.remove('d-none');
+            partyRoleLabel.innerText = 'CUSTOMER / PURCHASER DETAILS:';
+            draftPartyName.innerText = draft.party_name || '(Missing - Required)';
+            draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : '';
+            
+            driverSubBlock.classList.add('d-none');
+            vehicleSubBlock.classList.add('d-none');
+            
+            thUnitPrice.classList.remove('d-none');
+            draftRate.classList.remove('d-none');
+            thTotalAmount.classList.remove('d-none');
+            draftTotalAmount.classList.remove('d-none');
+            grandTotalBanner.classList.remove('d-none');
 
         } else if (docType === 'GATE_PASS') {
-            draftDocTypeBadge.innerText = 'GATE PASS DRAFT';
-            draftDocTypeBadge.className = 'badge bg-warning text-dark px-3 py-1 fs-6';
+            draftDocTypeBadge.innerText = 'OFFICIAL GATE PASS';
+            draftDocTypeBadge.className = 'badge bg-warning text-dark fs-6 px-3 py-2';
             
             if (draft.party_name) {
                 partyBlock.classList.remove('d-none');
-                partyRoleLabel.innerText = 'Party Name (Optional):';
+                partyRoleLabel.innerText = 'PARTY DETAILS:';
                 draftPartyName.innerText = draft.party_name;
+                draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : '';
             } else {
                 partyBlock.classList.add('d-none');
             }
 
-            driverBlock.classList.remove('d-none');
+            driverSubBlock.classList.remove('d-none');
             draftDriverName.innerText = draft.driver_name || '(Missing - Required)';
             
-            vehicleBlock.classList.remove('d-none');
+            vehicleSubBlock.classList.remove('d-none');
             draftVehicleNo.innerText = draft.vehicle_no || '(Missing - Required)';
 
-            rateBlock.classList.add('d-none');
-            totalBlock.classList.add('d-none');
+            thUnitPrice.classList.add('d-none');
+            draftRate.classList.add('d-none');
+            thTotalAmount.classList.add('d-none');
+            draftTotalAmount.classList.add('d-none');
+            grandTotalBanner.classList.add('d-none');
         }
 
-        draftSeedName.innerText = draft.seed_name ? `${draft.seed_name} ${draft.seed_variety || ''}` : '(Missing - Required)';
+        draftSeedName.innerText = draft.seed_name || '(Missing - Required)';
+        draftSeedVariety.innerText = draft.seed_variety ? `Variety: ${draft.seed_variety}` : '';
         draftQuantity.innerText = draft.quantity ? `${draft.quantity} Bags` : '(Missing - Required)';
-        draftRate.innerText = draft.rate ? `PKR ${parseFloat(draft.rate).toLocaleString(undefined, {minimumFractionDigits: 2})}` : 'PKR 0.00';
-        draftTotalAmount.innerText = draft.total_amount ? `PKR ${parseFloat(draft.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}` : 'PKR 0.00';
+        
+        const rateVal = draft.rate ? parseFloat(draft.rate) : 0;
+        const totalVal = draft.total_amount ? parseFloat(draft.total_amount) : 0;
+
+        draftRate.innerText = `PKR ${rateVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        draftTotalAmount.innerText = `PKR ${totalVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        draftGrandTotalBanner.innerText = `PKR ${totalVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 
         // Stock Warning Alert
         if (draft.stock_warning) {
@@ -392,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
             stockWarningAlert.classList.add('d-none');
         }
 
-        // Disambiguation Choices (Party or Seed)
+        // Disambiguation Choices
         disambiguationChoices.innerHTML = '';
         let hasChoices = false;
 
@@ -448,12 +510,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Approve Draft Button
+    // Approve & Save Draft Button
     approveDraftBtn.addEventListener('click', function() {
         if (!currentSessionId) return;
 
         approveDraftBtn.disabled = true;
-        approveDraftBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Finalizing...`;
+        approveDraftBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Saving...`;
 
         fetch('/voice/approve/', {
             method: 'POST',
@@ -502,7 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
         approveDraftBtn.disabled = true;
     }
 
-    // Text to Speech synthesis for assistant voice output
+    // Text to Speech synthesis
     function speakText(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
