@@ -294,15 +294,22 @@ def parse_driver_name(text):
 
 
 def parse_invoice_ref(text):
+    """Extracts invoice reference numbers like '0018', 'invoice 0018', 'sales invoice gate pass 0018'."""
     text_norm = normalize_text_all_languages(text)
-    clean_digits = re.sub(r'\s+', '', text_norm)
-    m = re.search(r'(?:invoice|inv|bill|pur|pur-)\s*#?\s*0*(\d{1,5})', clean_digits, re.IGNORECASE)
+    
+    m = re.search(r'(?:invoice|inv|bill|pur|sales|purchase|gatepass|pass)\s*(?:gate\s*)?(?:pass\s*)?(?:number|no|#)?\s*0*(\d{1,5})', text_norm, re.IGNORECASE)
     if m:
         return m.group(1)
     
-    m_sep = re.search(r'(?:invoice|inv|bill|pur)\s*(?:0\s*)*(\d{1,5})', text_norm, re.IGNORECASE)
-    if m_sep:
-        return m_sep.group(1)
+    clean_digits = re.sub(r'\s+', '', text_norm)
+    m_clean = re.search(r'(?:invoice|inv|bill|pur|sales|purchase|gatepass|pass)\s*(?:gate\s*)?(?:pass\s*)?(?:number|no|#)?\s*0*(\d{1,5})', clean_digits, re.IGNORECASE)
+    if m_clean:
+        return m_clean.group(1)
+
+    m_direct = re.search(r'\b0*(\d{3,5})\b', text_norm)
+    if m_direct:
+        return m_direct.group(1)
+
     return None
 
 
@@ -412,36 +419,39 @@ def process_voice_command(user, text, session_id=None):
             return {
                 'session_id': session.id if session else None,
                 'status': 'DRAFT_PENDING' if session else 'UNKNOWN',
-                'response_text': f"Yeh Invoice #{inv_ref} / Gate Pass available nahi hai.",
+                'response_text': f"Yeh Invoice #{inv_ref} / Outward Gate Pass available nahi hai.",
                 'draft': session.draft_data if session else None
             }
         
         party_obj = None
         seed_obj = None
-        qty = parse_voice_numbers(text_clean)[0]
+        qty = None
+        party_name_str = ""
 
         if s_inv:
             linked_inv_no = s_inv.invoice_number
             party_obj = s_inv.customer
+            party_name_str = s_inv.customer.name if s_inv.customer else ""
             first_item = s_inv.items.first()
             if first_item:
                 seed_obj = first_item.seed
-                qty = qty or first_item.quantity
+                qty = first_item.quantity
         elif p_inv:
             linked_inv_no = p_inv.invoice_number
             party_obj = p_inv.supplier
+            party_name_str = p_inv.supplier.name if p_inv.supplier else ""
             first_item = p_inv.items.first()
             if first_item:
                 seed_obj = first_item.seed
-                qty = qty or first_item.quantity
+                qty = first_item.quantity
         elif t_s_inv:
             linked_inv_no = t_s_inv.invoice_number
-            party_name = t_s_inv.customer_name
-            qty = qty or t_s_inv.quantity
+            party_name_str = t_s_inv.customer_name
+            qty = t_s_inv.quantity
         elif t_p_inv:
             linked_inv_no = t_p_inv.invoice_number
-            party_name = t_p_inv.supplier_name
-            qty = qty or t_p_inv.quantity
+            party_name_str = t_p_inv.supplier_name
+            qty = t_p_inv.quantity
 
         v_num = parse_vehicle_number(text_clean)
         d_name = parse_driver_name(text_clean)
@@ -450,7 +460,7 @@ def process_voice_command(user, text, session_id=None):
             'doc_type': 'GATE_PASS',
             'linked_invoice_number': linked_inv_no,
             'party_id': party_obj.id if party_obj else None,
-            'party_name': party_obj.name if party_obj else (party_name if 'party_name' in locals() else ''),
+            'party_name': party_obj.name if party_obj else (party_name_str or 'Customer'),
             'party_company': getattr(party_obj, 'company_name', ''),
             'party_ambiguous': [],
             'seed_id': seed_obj.id if seed_obj else None,
@@ -614,7 +624,7 @@ def process_voice_command(user, text, session_id=None):
                 draft['party_ambiguous'] = cust_res['choices']
 
         qty, rate = parse_voice_numbers(text_clean)
-        if qty:
+        if qty and not draft.get('linked_invoice_number'):
             draft['quantity'] = qty
         if rate:
             draft['rate'] = float(rate)
@@ -778,10 +788,11 @@ def check_missing_required_fields(draft):
             return "Rate per bag bata dein."
 
     elif doc_type == 'GATE_PASS':
-        if not draft.get('seed_name'):
-            return "Seed product name bata dein."
-        if not draft.get('quantity'):
-            return "Quantity bata dein."
+        if not draft.get('linked_invoice_number'):
+            if not draft.get('seed_name'):
+                return "Seed product name bata dein."
+            if not draft.get('quantity'):
+                return "Quantity bata dein."
         if not draft.get('driver_name'):
             return "Driver ka naam bata dein."
         if not draft.get('vehicle_no'):
@@ -829,15 +840,20 @@ def get_next_missing_question(draft):
             return f"Rate per bag kya hai?"
 
     elif doc_type == 'GATE_PASS':
-        if draft.get('seed_ambiguous'):
-            seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
-            return f"Multiple seeds milay hain: {seeds}. Select karein."
-        if not draft.get('seed_name'):
-            return "Seed product name bata dein."
-        if not draft.get('quantity'):
-            return "Quantity bata dein."
+        linked = f"Invoice #{draft['linked_invoice_number']}" if draft.get('linked_invoice_number') else "Gate Pass"
+        
+        if not draft.get('linked_invoice_number'):
+            if draft.get('seed_ambiguous'):
+                seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
+                return f"Multiple seeds milay hain: {seeds}. Select karein."
+            if not draft.get('seed_name'):
+                return "Seed product name bata dein."
+            if not draft.get('quantity'):
+                return "Quantity bata dein."
+        
+        if not draft.get('driver_name') and not draft.get('vehicle_no'):
+            return f"{linked} ke Outward Gate Pass ke liye Driver aur Vehicle number bata dein."
         if not draft.get('driver_name'):
-            linked = f"Invoice #{draft['linked_invoice_number']}" if draft.get('linked_invoice_number') else "Gate Pass"
             return f"{linked} ke liye Driver ka naam bata dein."
         if not draft.get('vehicle_no'):
             return f"Driver {draft['driver_name']} ke gaari ka vehicle number bata dein."
@@ -854,7 +870,7 @@ def build_draft_summary_response(draft):
         return "Sales Invoice draft ready hai. Approve karain?"
     elif doc_type == 'GATE_PASS':
         linked = f"Invoice #{draft['linked_invoice_number']} ka " if draft.get('linked_invoice_number') else ""
-        return f"{linked}Gate Pass draft ready hai. Approve karain?"
+        return f"{linked}Outward Gate Pass draft ready hai. Approve karain?"
 
     return "Draft ready hai. Approve karain?"
 
@@ -878,11 +894,11 @@ def finalize_voice_draft(session):
                 qty = int(draft.get('quantity', 0) or 0)
                 rate = Decimal(str(draft.get('rate', 0) or 0))
 
-                supplier = Supplier.objects.filter(id=supp_id).first() if supp_id else Supplier.objects.filter(name__icontains=draft.get('party_name', '')).first()
+                supplier = Supplier.objects.filter(id=supp_id).first() if supp_id else (Supplier.objects.filter(name__icontains=draft.get('party_name', '')).first() if draft.get('party_name') else Supplier.objects.first())
                 if not supplier:
                     supplier = Supplier.objects.first()
 
-                seed = Seed.objects.filter(id=seed_id).first() if seed_id else Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first()
+                seed = Seed.objects.filter(id=seed_id).first() if seed_id else (Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first() if draft.get('seed_name') else Seed.objects.first())
                 if not seed:
                     seed = Seed.objects.first()
 
@@ -934,11 +950,11 @@ def finalize_voice_draft(session):
                 qty = int(draft.get('quantity', 0) or 0)
                 rate = Decimal(str(draft.get('rate', 0) or 0))
 
-                customer = Customer.objects.filter(id=cust_id).first() if cust_id else Customer.objects.filter(name__icontains=draft.get('party_name', '')).first()
+                customer = Customer.objects.filter(id=cust_id).first() if cust_id else (Customer.objects.filter(name__icontains=draft.get('party_name', '')).first() if draft.get('party_name') else Customer.objects.first())
                 if not customer:
                     customer = Customer.objects.first()
 
-                seed = Seed.objects.filter(id=seed_id).first() if seed_id else Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first()
+                seed = Seed.objects.filter(id=seed_id).first() if seed_id else (Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first() if draft.get('seed_name') else Seed.objects.first())
                 if not seed:
                     seed = Seed.objects.first()
 
@@ -974,7 +990,7 @@ def finalize_voice_draft(session):
 
                 return inv.invoice_number, f"/sales/{inv.pk}/print/", None
 
-            # 3. GATE PASS
+            # 3. GATE PASS (OUTWARD FOR SALES, INWARD FOR PURCHASE)
             elif doc_type == 'GATE_PASS':
                 party_name = draft.get('party_name') or ''
                 seed_name = draft.get('seed_name') or 'Wheat Seed'
@@ -983,13 +999,16 @@ def finalize_voice_draft(session):
                 driver = draft.get('driver_name') or 'Driver'
                 linked_inv = draft.get('linked_invoice_number') or ''
 
+                pass_type = 'SALES' if (linked_inv and linked_inv.startswith('INV-')) else ('PURCHASE' if (linked_inv and linked_inv.startswith('PUR-')) else 'MANUAL')
+
                 rem = f"Party: {party_name} | Seed: {seed_name}"
                 if linked_inv:
                     rem += f" | Linked Invoice: #{linked_inv}"
-                rem += " (Created via AI Voice Assistant)"
+                rem += " (Outward Gate Pass created via AI Voice Assistant)"
 
                 gp = GatePass.objects.create(
-                    pass_type='MANUAL',
+                    pass_type=pass_type,
+                    invoice_reference=linked_inv if linked_inv else None,
                     vehicle_number=vehicle,
                     driver_name=driver,
                     driver_cnic='35201-1234567-1',
