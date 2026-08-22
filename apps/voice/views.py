@@ -35,7 +35,7 @@ class VoiceApproveView(LoginRequiredMixin, View):
             if not session:
                 return JsonResponse({'error': 'No active pending draft session found.'}, status=404)
 
-            doc_num, err = finalize_voice_draft(session)
+            doc_num, print_url, err = finalize_voice_draft(session)
             if err:
                 return JsonResponse({'error': f"Failed to save document: {err}"}, status=400)
 
@@ -45,7 +45,8 @@ class VoiceApproveView(LoginRequiredMixin, View):
             return JsonResponse({
                 'status': 'APPROVED',
                 'final_doc_number': doc_num,
-                'response_text': f"Document successfully created! Reference Number: {doc_num}."
+                'print_url': print_url,
+                'response_text': f"Document #{doc_num} save ho gaya hai."
             })
 
         except Exception as e:

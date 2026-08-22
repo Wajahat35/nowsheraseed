@@ -97,6 +97,18 @@
                     <div id="disambiguationChoices" class="d-flex flex-wrap gap-2"></div>
                 </div>
 
+                <!-- Approval Success Banner & Print Button Card -->
+                <div id="approvedSuccessCard" class="alert alert-success border-success shadow p-4 mb-3 d-none text-center rounded-3">
+                    <div class="display-6 text-success mb-2"><i class="fas fa-check-circle"></i></div>
+                    <h4 class="fw-bold text-dark mb-1" id="approvedDocTitle">Document Created Successfully!</h4>
+                    <p class="text-muted mb-3" id="approvedDocDesc">Your document has been verified and saved to the database.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="#" id="directPrintBtn" target="_blank" class="btn btn-emerald text-white fw-bold px-4 py-2 shadow" style="background-color: #10b981;">
+                            <i class="fas fa-print me-2"></i> Print Document (<span id="approvedDocNum"></span>)
+                        </a>
+                    </div>
+                </div>
+
                 <!-- Official Invoice Print Layout Preview Card -->
                 <div id="draftPreviewCard" class="print-invoice-preview shadow-sm d-none">
                     
@@ -211,6 +223,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const assistantResponseText = document.getElementById('assistantResponseText');
     
     const draftPreviewCard = document.getElementById('draftPreviewCard');
+    const approvedSuccessCard = document.getElementById('approvedSuccessCard');
+    const approvedDocTitle = document.getElementById('approvedDocTitle');
+    const approvedDocDesc = document.getElementById('approvedDocDesc');
+    const approvedDocNum = document.getElementById('approvedDocNum');
+    const directPrintBtn = document.getElementById('directPrintBtn');
+    
     const draftDocTypeBadge = document.getElementById('draftDocTypeBadge');
     const draftDocRefNo = document.getElementById('draftDocRefNo');
     const draftLinkedInvRef = document.getElementById('draftLinkedInvRef');
@@ -355,9 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
             speakText(data.response_text);
 
             if (data.status === 'APPROVED') {
-                resetDraftUI();
-                alert(`SUCCESS! ${data.response_text}`);
-                window.location.reload();
+                handleApprovalSuccess(data);
             } else if (data.status === 'CANCELLED') {
                 resetDraftUI();
             } else if (data.draft) {
@@ -370,10 +386,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Handle Document Approval & Render Direct Print Button
+    function handleApprovalSuccess(data) {
+        draftPreviewCard.classList.add('d-none');
+        approvedSuccessCard.classList.remove('d-none');
+        
+        const docNum = data.final_doc_number || 'Document';
+        approvedDocTitle.innerText = `Document #${docNum} Created Successfully!`;
+        approvedDocNum.innerText = docNum;
+        approvedDocDesc.innerText = data.response_text || 'Your document has been verified and saved.';
+        
+        if (data.print_url) {
+            directPrintBtn.href = data.print_url;
+            directPrintBtn.onclick = function() {
+                window.open(data.print_url, '_blank');
+            };
+        } else {
+            directPrintBtn.classList.add('d-none');
+        }
+
+        approveDraftBtn.disabled = false;
+        approveDraftBtn.className = 'btn btn-emerald text-white fw-bold px-4';
+        approveDraftBtn.style.backgroundColor = '#10b981';
+        approveDraftBtn.innerHTML = `<i class="fas fa-print me-1"></i> Print Document (${docNum})`;
+        approveDraftBtn.onclick = function() {
+            if (data.print_url) window.open(data.print_url, '_blank');
+        };
+    }
+
     // Render Official Seed ERP Print Invoice Preview Card
     function renderDraftPreview(draft) {
+        approvedSuccessCard.classList.add('d-none');
         draftPreviewCard.classList.remove('d-none');
         approveDraftBtn.disabled = false;
+        approveDraftBtn.className = 'btn btn-success fw-bold px-4';
+        approveDraftBtn.innerHTML = `<i class="fas fa-check-circle me-1"></i> Approve & Save Document`;
 
         const docType = draft.doc_type || 'PURCHASE_INVOICE';
         
@@ -541,14 +588,12 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(res => res.json())
         .then(data => {
-            approveDraftBtn.disabled = false;
-            approveDraftBtn.innerHTML = `<i class="fas fa-check-circle me-1"></i> Approve & Save Document`;
-
             if (data.error) {
+                approveDraftBtn.disabled = false;
+                approveDraftBtn.innerHTML = `<i class="fas fa-check-circle me-1"></i> Approve & Save Document`;
                 alert(`Error: ${data.error}`);
             } else {
-                alert(`SUCCESS! ${data.response_text}`);
-                window.location.reload();
+                handleApprovalSuccess(data);
             }
         });
     });
@@ -575,8 +620,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetDraftUI() {
         currentSessionId = null;
         draftPreviewCard.classList.add('d-none');
+        approvedSuccessCard.classList.add('d-none');
         disambiguationPanel.classList.add('d-none');
         approveDraftBtn.disabled = true;
+        approveDraftBtn.className = 'btn btn-success fw-bold px-4';
+        approveDraftBtn.innerHTML = `<i class="fas fa-check-circle me-1"></i> Approve & Save Document`;
     }
 
     // Enhanced Natural Text to Speech Synthesis with Voice Priority Selector

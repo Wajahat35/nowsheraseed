@@ -365,7 +365,7 @@ def process_voice_command(user, text, session_id=None):
                 'draft': draft
             }
 
-        doc_num, err = finalize_voice_draft(session)
+        doc_num, print_url, err = finalize_voice_draft(session)
         if err:
             return {
                 'session_id': session.id,
@@ -378,6 +378,7 @@ def process_voice_command(user, text, session_id=None):
         return {
             'session_id': None,
             'status': 'APPROVED',
+            'print_url': print_url,
             'response_text': f"Document #{doc_num} save ho gaya hai.",
             'draft': draft,
             'final_doc_number': doc_num
@@ -393,7 +394,6 @@ def process_voice_command(user, text, session_id=None):
         t_s_inv = None
         t_p_inv = None
 
-        # Check explicit purchase vs sales prefix if spoken
         if 'purchase' in text_norm or 'khareed' in text_norm or 'pur' in text_norm:
             p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
             t_p_inv = TradingPurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
@@ -408,7 +408,6 @@ def process_voice_command(user, text, session_id=None):
 
         found_inv = s_inv or p_inv or t_s_inv or t_p_inv
 
-        # Strict validation: If invoice reference not found in database, return error immediately
         if not found_inv:
             return {
                 'session_id': session.id if session else None,
@@ -417,7 +416,6 @@ def process_voice_command(user, text, session_id=None):
                 'draft': session.draft_data if session else None
             }
         
-        # Link invoice data
         party_obj = None
         seed_obj = None
         qty = parse_voice_numbers(text_clean)[0]
@@ -927,7 +925,7 @@ def finalize_voice_draft(session):
                     subtotal=tot
                 )
 
-                return inv.invoice_number, None
+                return inv.invoice_number, f"/purchases/{inv.pk}/print/", None
 
             # 2. SALES INVOICE
             elif doc_type == 'SALES_INVOICE':
@@ -974,7 +972,7 @@ def finalize_voice_draft(session):
                     subtotal=tot
                 )
 
-                return inv.invoice_number, None
+                return inv.invoice_number, f"/sales/{inv.pk}/print/", None
 
             # 3. GATE PASS
             elif doc_type == 'GATE_PASS':
@@ -1002,11 +1000,11 @@ def finalize_voice_draft(session):
                     created_by=user
                 )
 
-                return gp.pass_number, None
+                return gp.pass_number, f"/gatepass/{gp.pk}/print/", None
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return None, str(e)
+        return None, None, str(e)
 
-    return None, "Unknown Document Type"
+    return None, None, "Unknown Document Type"
