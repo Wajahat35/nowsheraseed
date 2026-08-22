@@ -36,6 +36,7 @@ URDU_WORD_MAP = {
     'انوائس': 'invoice', 'ان وائی': 'inv', 'انواِئس': 'invoice',
     'ڈرائیور': 'driver', 'گاڑی': 'vehicle', 'ٹرک': 'vehicle', 'نمبر': 'number',
     'عمران': 'imran', 'اسلم': 'aslam', 'عثمان': 'usman', 'علی': 'ali', 'احمد': 'ahmed', 'طارق': 'tariq',
+    'جنرل کارگو': 'general cargo', 'مینول': 'manual',
     'بوری': 'bags', 'بوریاں': 'bags', 'بیگ': 'bags', 'بیگز': 'bags', 'بینک': 'bags',
     'ریٹ': 'rate', 'قیمت': 'rate', 'روپے': 'rate',
     'زیرو': '0', 'ایک': '1', 'دو': '2', 'تین': '3', 'چار': '4', 'پانچ': '5',
@@ -271,12 +272,10 @@ def parse_vehicle_number(text):
     """Extracts vehicle plate numbers (e.g. L251, L-251, LES 1234, LES-1234, LEA-999, FD-123)."""
     text_norm = normalize_text_all_languages(text)
     
-    # 1. Match explicit vehicle keywords: gari, vehicle, truck, car, no, num
     m_kw = re.search(r'(?:gari|gaari|vehicle|truck|car)\s*(?:ka\s*)?(?:number|no|num)?\s*(?:hai|is)?\s*([a-z]{1,4}[-\s]?\d{2,4})', text_norm, re.IGNORECASE)
     if m_kw:
         return re.sub(r'\s+', '-', m_kw.group(1).upper())
 
-    # 2. Match standard Pakistani vehicle plate formats: e.g. L251, L-251, LES-1234, LES 1234
     m_plate = re.search(r'\b([a-z]{1,4}[-\s]?\d{2,4})\b', text_norm, re.IGNORECASE)
     if m_plate:
         val = m_plate.group(1).upper()
@@ -333,15 +332,58 @@ def parse_invoice_ref(text):
     if m:
         return m.group(1)
     
-    # Standalone invoice number lookup (3-5 digits not attached to a vehicle plate code)
     m_direct = re.search(r'\b0*(\d{3,5})\b', text_norm)
     if m_direct:
         val = m_direct.group(1)
-        # Verify it is not part of a vehicle code like L251 or LES1234
         if not re.search(rf'[a-z]{{1,4}}[-\s]?{val}', text_norm, re.IGNORECASE):
             return val
 
     return None
+
+
+def fetch_available_invoices_for_party(query):
+    """Searches Customer/Supplier and returns all active invoices for fallback selection."""
+    cust_res = match_customer(query)
+    supp_res = match_supplier(query)
+
+    invoices_list = []
+    party_name = None
+
+    if cust_res['status'] == 'high_confidence':
+        cust = cust_res['match']
+        party_name = cust.name
+        sales_invs = SalesInvoice.objects.filter(customer=cust).order_by('-id')[:8]
+        for inv in sales_invs:
+            item = inv.items.first()
+            invoices_list.append({
+                'invoice_number': inv.invoice_number,
+                'doc_type': 'SALES_INVOICE',
+                'party_name': cust.name,
+                'party_company': cust.company_name or '',
+                'date': str(inv.date),
+                'seed_name': item.seed.name if item else 'Seed Item',
+                'quantity': item.quantity if item else 0,
+                'grand_total': float(inv.grand_total)
+            })
+
+    elif supp_res['status'] == 'high_confidence':
+        supp = supp_res['match']
+        party_name = supp.name
+        pur_invs = PurchaseInvoice.objects.filter(supplier=supp).order_by('-id')[:8]
+        for inv in pur_invs:
+            item = inv.items.first()
+            invoices_list.append({
+                'invoice_number': inv.invoice_number,
+                'doc_type': 'PURCHASE_INVOICE',
+                'party_name': supp.name,
+                'party_company': supp.company_name or '',
+                'date': str(inv.date),
+                'seed_name': item.seed.name if item else 'Seed Item',
+                'quantity': item.quantity if item else 0,
+                'grand_total': float(inv.grand_total)
+            })
+
+    return party_name, invoices_list
 
 
 def detect_intent(text):
@@ -351,6 +393,8 @@ def detect_intent(text):
         return 'CANCEL'
     elif any(k in t_norm for k in ['haan', 'han', 'theek hai', 'approve', 'yes', 'save kar do', 'bilkul sahi', 'ok', 'confirm', 'sahi hai']):
         return 'APPROVE'
+    elif any(k in t_norm for k in ['general cargo', 'manual gate pass', 'general gate pass']):
+        return 'CREATE_MANUAL_GATEPASS'
     elif any(k in t_norm for k in ['purchase', 'khareed', 'khareedna', 'khareedi', 'buy', 'khareedari']):
         return 'CREATE_PURCHASE'
     elif any(k in t_norm for k in ['sale', 'bechna', 'bech', 'bicho', 'sell', 'bikri', 'sales']):
@@ -422,13 +466,91 @@ def process_voice_command(user, text, session_id=None):
             'final_doc_number': doc_num
         }
 
-    # 3. GATE PASS LINKING & PENDING INVOICE AVAILABILITY CHECK
+    # 3. MANUAL / GENERAL CARGO GATE PASS
+    if intent == 'CREATE_MANUAL_GATEPASS':
+        seed_res = match_seed(text_clean)
+        qty, rate = parse_voice_numbers(text_clean)
+        v_num = parse_vehicle_number(text_clean)
+        d_name = parse_driver_name(text_clean)
+        seed_obj = seed_res['match'] if seed_res and seed_res['status'] == 'high_confidence' else None
+
+        draft_data = {
+            'doc_type': 'GATE_PASS',
+            'is_manual': True,
+            'linked_invoice_number': None,
+            'party_name': 'General Cargo',
+            'seed_id': seed_obj.id if seed_obj else None,
+            'seed_name': seed_obj.name if seed_obj else None,
+            'seed_variety': getattr(seed_obj, 'variety', ''),
+            'quantity': qty or None,
+            'rate': 0.0,
+            'total_amount': 0.0,
+            'vehicle_no': v_num,
+            'driver_name': d_name,
+            'stock_warning': None,
+        }
+
+        if not session:
+            session = VoiceDraftSession.objects.create(
+                user=user,
+                doc_type='GATE_PASS',
+                draft_data=draft_data,
+                transcript_history=[{'user': text_clean, 'time': str(timezone.now())}]
+            )
+        else:
+            session.doc_type = 'GATE_PASS'
+            session.draft_data = draft_data
+            session.save()
+
+        question = get_next_missing_question(draft_data)
+        if question:
+            return {
+                'session_id': session.id,
+                'status': 'DRAFT_PENDING',
+                'response_text': question,
+                'draft': draft_data
+            }
+
+        summary = build_draft_summary_response(draft_data)
+        return {
+            'session_id': session.id,
+            'status': 'DRAFT_PENDING',
+            'response_text': summary,
+            'draft': draft_data
+        }
+
+    # 4. GATE PASS LINKING & INVOICE AVAILABILITY CHECK
     inv_ref = parse_invoice_ref(text_clean)
     is_gatepass_cmd = intent == 'CREATE_GATEPASS' or 'gate' in text_norm or 'pass' in text_norm or 'nikal' in text_norm
     is_explicit_inv_request = bool(re.search(r'(?:invoice|inv|bill|pur|sales|purchase)\s*#?\s*0*\d{1,5}', text_norm, re.IGNORECASE))
 
-    # Only run Section 3 if starting a new Gate Pass session or explicitly asking for a new invoice number!
-    if is_gatepass_cmd and inv_ref and (not session or is_explicit_inv_request):
+    # Case A: User says "print gate pass" without invoice number
+    if is_gatepass_cmd and not inv_ref and (not session or session.doc_type != 'GATE_PASS'):
+        draft_data = {
+            'doc_type': 'GATE_PASS',
+            'linked_invoice_number': None,
+            'party_name': None,
+            'seed_name': None,
+            'quantity': None,
+            'vehicle_no': None,
+            'driver_name': None,
+            'awaiting_invoice_ref': True
+        }
+        session = VoiceDraftSession.objects.create(
+            user=user,
+            doc_type='GATE_PASS',
+            draft_data=draft_data,
+            transcript_history=[{'user': text_clean, 'time': str(timezone.now())}]
+        )
+        return {
+            'session_id': session.id,
+            'status': 'DRAFT_PENDING',
+            'response_text': "Invoice number ya Purchase bill number bata dein.",
+            'draft': draft_data
+        }
+
+    # Case B: Invoice reference is provided or searched
+    if is_gatepass_cmd and inv_ref and (not session or is_explicit_inv_request or session.draft_data.get('awaiting_invoice_ref') or session.draft_data.get('failed_inv_ref')):
         s_inv = None
         p_inv = None
         t_s_inv = None
@@ -448,14 +570,31 @@ def process_voice_command(user, text, session_id=None):
 
         found_inv = s_inv or p_inv or t_s_inv or t_p_inv
 
+        # FALLBACK CONDITION: Invoice NOT found in DB -> Ask for Supplier/Customer Name to list available invoices!
         if not found_inv:
+            draft_data = session.draft_data if session else {'doc_type': 'GATE_PASS'}
+            draft_data['failed_inv_ref'] = inv_ref
+            draft_data['awaiting_party_for_invoices'] = True
+
+            if not session:
+                session = VoiceDraftSession.objects.create(
+                    user=user,
+                    doc_type='GATE_PASS',
+                    draft_data=draft_data,
+                    transcript_history=[{'user': text_clean, 'time': str(timezone.now())}]
+                )
+            else:
+                session.draft_data = draft_data
+                session.save()
+
             return {
-                'session_id': session.id if session else None,
-                'status': 'DRAFT_PENDING' if session else 'UNKNOWN',
-                'response_text': f"Yeh Invoice #{inv_ref} / Outward Gate Pass available nahi hai.",
-                'draft': session.draft_data if session else None
+                'session_id': session.id,
+                'status': 'DRAFT_PENDING',
+                'response_text': f"Invoice #{inv_ref} available nahi hai. Supplier ya Customer ka naam bata dein taake available invoices check ki ja sakain.",
+                'draft': draft_data
             }
         
+        # INVOICE FOUND -> Inherit all details automatically!
         party_obj = None
         seed_obj = None
         qty = None
@@ -537,7 +676,26 @@ def process_voice_command(user, text, session_id=None):
             'draft': draft_data
         }
 
-    # 4. UNCLEAR DOCUMENT TYPE (NEW COMMAND)
+    # Case C: Active Session Fallback - User provided Customer/Supplier Name to check available invoices!
+    if session and session.draft_data.get('awaiting_party_for_invoices'):
+        party_name_found, available_invs = fetch_available_invoices_for_party(text_clean)
+        
+        if available_invs:
+            draft = session.draft_data
+            draft['available_invoices'] = available_invs
+            draft['awaiting_party_for_invoices'] = False
+            session.draft_data = draft
+            session.save()
+
+            inv_summary = ", ".join([f"{inv['invoice_number']} ({inv['seed_name']} {inv['quantity']} bags)" for inv in available_invs[:3]])
+            return {
+                'session_id': session.id,
+                'status': 'DRAFT_PENDING',
+                'response_text': f"{party_name_found} ke {len(available_invs)} invoices milay hain: {inv_summary}. Kis invoice ka Gate Pass nikalna hai?",
+                'draft': draft
+            }
+
+    # 5. UNCLEAR DOCUMENT TYPE (NEW COMMAND)
     if intent == 'UNCLEAR_DOC_TYPE' and not session:
         qty, rate = parse_voice_numbers(text_clean)
         seed_res = match_seed(text_clean)
@@ -563,6 +721,7 @@ def process_voice_command(user, text, session_id=None):
 
         draft_data = {
             'doc_type': doc_type,
+            'payment_status': 'Unpaid',
             'party_id': party_obj.id if party_obj else None,
             'party_name': party_obj.name if party_obj else None,
             'party_company': party_obj.company_name if party_obj and hasattr(party_obj, 'company_name') else '',
@@ -603,7 +762,7 @@ def process_voice_command(user, text, session_id=None):
             'draft': draft_data
         }
 
-    # 5. CONVERSATIONAL UPDATE TO EXISTING ACTIVE SESSION
+    # 6. CONVERSATIONAL UPDATE TO EXISTING ACTIVE SESSION
     if session:
         draft = session.draft_data
         
@@ -618,6 +777,12 @@ def process_voice_command(user, text, session_id=None):
             session.doc_type = 'GATE_PASS'
 
         doc_type = draft.get('doc_type') or 'PURCHASE_INVOICE'
+
+        # Check for payment status toggle
+        if 'paid' in text_norm or 'payment ho gayi' in text_norm:
+            draft['payment_status'] = 'Paid'
+        elif 'unpaid' in text_norm or 'pending' in text_norm:
+            draft['payment_status'] = 'Unpaid'
 
         seed_res = match_seed(text_clean)
         if seed_res['status'] == 'high_confidence':
@@ -712,7 +877,7 @@ def process_voice_command(user, text, session_id=None):
             'draft': draft
         }
 
-    # 6. INITIAL NEW COMMAND PARSING
+    # 7. INITIAL NEW COMMAND PARSING
     if intent in ['CREATE_PURCHASE', 'CREATE_SALES', 'CREATE_GATEPASS', 'UNKNOWN']:
         doc_type = 'PURCHASE_INVOICE'
         if intent == 'CREATE_SALES':
@@ -746,6 +911,7 @@ def process_voice_command(user, text, session_id=None):
 
         draft_data = {
             'doc_type': doc_type,
+            'payment_status': 'Unpaid',
             'linked_invoice_number': None,
             'party_id': party_obj.id if party_obj else None,
             'party_name': party_obj.name if party_obj else None,
@@ -830,7 +996,7 @@ def check_missing_required_fields(draft):
             return "Rate per bag bata dein."
 
     elif doc_type == 'GATE_PASS':
-        if not draft.get('linked_invoice_number'):
+        if not draft.get('linked_invoice_number') and not draft.get('is_manual'):
             if not draft.get('seed_name'):
                 return "Seed product name bata dein."
             if not draft.get('quantity'):
@@ -884,7 +1050,7 @@ def get_next_missing_question(draft):
     elif doc_type == 'GATE_PASS':
         linked = f"Invoice #{draft['linked_invoice_number']}" if draft.get('linked_invoice_number') else "Gate Pass"
         
-        if not draft.get('linked_invoice_number'):
+        if not draft.get('linked_invoice_number') and not draft.get('is_manual'):
             if draft.get('seed_ambiguous'):
                 seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
                 return f"Multiple seeds milay hain: {seeds}. Select karein."
@@ -907,9 +1073,11 @@ def build_draft_summary_response(draft):
     doc_type = draft.get('doc_type')
 
     if doc_type == 'PURCHASE_INVOICE':
-        return "Purchase Invoice draft ready hai. Approve karain?"
+        p_status = draft.get('payment_status', 'Unpaid')
+        return f"Purchase Invoice ({p_status}) draft ready hai. Approve karain?"
     elif doc_type == 'SALES_INVOICE':
-        return "Sales Invoice draft ready hai. Approve karain?"
+        p_status = draft.get('payment_status', 'Unpaid')
+        return f"Sales Invoice ({p_status}) draft ready hai. Approve karain?"
     elif doc_type == 'GATE_PASS':
         linked = f"Invoice #{draft['linked_invoice_number']} ka " if draft.get('linked_invoice_number') else ""
         return f"{linked}Outward Gate Pass draft ready hai. Approve karain?"
@@ -929,6 +1097,11 @@ def finalize_voice_draft(session):
         with transaction.atomic():
             today = timezone.now().date()
 
+            # DEFAULT PAYMENT STATUS = UNPAID (PENDING) UNLESS EXPLICITLY PAID
+            pay_status_str = draft.get('payment_status', 'Unpaid')
+            is_paid = (pay_status_str == 'Paid')
+            payment_status_val = 'Paid' if is_paid else 'Pending'
+
             # 1. PURCHASE INVOICE
             if doc_type == 'PURCHASE_INVOICE':
                 supp_id = draft.get('party_id')
@@ -945,14 +1118,15 @@ def finalize_voice_draft(session):
                     seed = Seed.objects.first()
 
                 tot = Decimal(str(qty)) * rate
+                paid_amt = tot if is_paid else Decimal('0.00')
 
                 inv = PurchaseInvoice.objects.create(
                     supplier=supplier,
                     date=today,
                     subtotal=tot,
                     grand_total=tot,
-                    paid_amount=tot,
-                    payment_status='Paid',
+                    paid_amount=paid_amt,
+                    payment_status=payment_status_val,
                     notes='Created via AI Voice Assistant',
                     created_by=user
                 )
@@ -1001,14 +1175,15 @@ def finalize_voice_draft(session):
                     seed = Seed.objects.first()
 
                 tot = Decimal(str(qty)) * rate
+                paid_amt = tot if is_paid else Decimal('0.00')
 
                 inv = SalesInvoice.objects.create(
                     customer=customer,
                     date=today,
                     subtotal=tot,
                     grand_total=tot,
-                    paid_amount=tot,
-                    payment_status='Paid',
+                    paid_amount=paid_amt,
+                    payment_status=payment_status_val,
                     notes='Created via AI Voice Assistant',
                     created_by=user
                 )
@@ -1032,7 +1207,7 @@ def finalize_voice_draft(session):
 
                 return inv.invoice_number, f"/sales/{inv.pk}/print/", None
 
-            # 3. GATE PASS (OUTWARD FOR SALES, INWARD FOR PURCHASE)
+            # 3. GATE PASS (OUTWARD FOR SALES, INWARD FOR PURCHASE, MANUAL FOR GENERAL CARGO)
             elif doc_type == 'GATE_PASS':
                 party_name = draft.get('party_name') or ''
                 seed_name = draft.get('seed_name') or 'Wheat Seed'
@@ -1040,13 +1215,21 @@ def finalize_voice_draft(session):
                 vehicle = draft.get('vehicle_no') or 'LES-1234'
                 driver = draft.get('driver_name') or 'Driver'
                 linked_inv = draft.get('linked_invoice_number') or ''
+                is_manual = draft.get('is_manual', False)
 
-                pass_type = 'SALES' if (linked_inv and linked_inv.startswith('INV-')) else ('PURCHASE' if (linked_inv and linked_inv.startswith('PUR-')) else 'MANUAL')
+                if is_manual or not linked_inv:
+                    pass_type = 'MANUAL'
+                elif linked_inv.startswith('INV-'):
+                    pass_type = 'SALES'
+                elif linked_inv.startswith('PUR-'):
+                    pass_type = 'PURCHASE'
+                else:
+                    pass_type = 'MANUAL'
 
                 rem = f"Party: {party_name} | Seed: {seed_name}"
                 if linked_inv:
                     rem += f" | Linked Invoice: #{linked_inv}"
-                rem += " (Outward Gate Pass created via AI Voice Assistant)"
+                rem += " (Created via AI Voice Assistant)"
 
                 gp = GatePass.objects.create(
                     pass_type=pass_type,

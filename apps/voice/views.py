@@ -30,10 +30,14 @@ class VoiceApproveView(LoginRequiredMixin, View):
         try:
             data = json.loads(request.body.decode('utf-8'))
             session_id = data.get('session_id')
+            pay_status = data.get('payment_status') # 'Paid' or 'Unpaid'
             session = VoiceDraftSession.objects.filter(id=session_id, user=request.user, status='DRAFT_PENDING').first()
 
             if not session:
                 return JsonResponse({'error': 'No active pending draft session found.'}, status=404)
+
+            if pay_status:
+                session.draft_data['payment_status'] = pay_status
 
             doc_num, print_url, err = finalize_voice_draft(session)
             if err:

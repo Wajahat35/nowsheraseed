@@ -91,9 +91,9 @@
                     <div id="assistantResponseText" class="fw-semibold text-primary">Assistant: "Ji, bolen main sun raha hoon."</div>
                 </div>
 
-                <!-- Disambiguation Choice Buttons -->
+                <!-- Disambiguation & Available Invoices Choice Buttons -->
                 <div id="disambiguationPanel" class="alert alert-warning border-warning shadow-sm mb-3 d-none">
-                    <div class="fw-bold mb-2"><i class="fas fa-question-circle me-1"></i> Multiple Matches Found. Please Select:</div>
+                    <div class="fw-bold mb-2" id="disambiguationTitle"><i class="fas fa-question-circle me-1"></i> Available Options Found. Please Select:</div>
                     <div id="disambiguationChoices" class="d-flex flex-wrap gap-2"></div>
                 </div>
 
@@ -126,6 +126,23 @@
                             <span class="badge bg-success fs-6 px-3 py-2" id="draftDocTypeBadge">OFFICIAL PURCHASE INVOICE</span>
                             <h5 class="fw-bold mt-2 mb-0 text-dark" id="draftDocRefNo">DRAFT-PREVIEW</h5>
                             <div class="small text-muted" id="draftLinkedInvRef"></div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Status Toggle Bar for Sales/Purchase Invoices -->
+                    <div id="paymentStatusToggleBar" class="row mb-3 p-2 bg-light rounded border align-items-center d-none">
+                        <div class="col-md-6">
+                            <span class="fw-bold text-dark me-2"><i class="fas fa-wallet text-emerald me-1" style="color: #10b981;"></i> Invoice Payment Status:</span>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="btn-group" role="group" aria-label="Payment Status Toggle">
+                                <button type="button" class="btn btn-sm btn-outline-danger fw-bold active" id="payStatusUnpaidBtn">
+                                    <i class="fas fa-clock me-1"></i> Unpaid (Pending)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success fw-bold" id="payStatusPaidBtn">
+                                    <i class="fas fa-check me-1"></i> Paid
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -229,6 +246,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const approvedDocNum = document.getElementById('approvedDocNum');
     const directPrintBtn = document.getElementById('directPrintBtn');
     
+    const paymentStatusToggleBar = document.getElementById('paymentStatusToggleBar');
+    const payStatusUnpaidBtn = document.getElementById('payStatusUnpaidBtn');
+    const payStatusPaidBtn = document.getElementById('payStatusPaidBtn');
+    let currentPaymentStatus = 'Unpaid';
+    
     const draftDocTypeBadge = document.getElementById('draftDocTypeBadge');
     const draftDocRefNo = document.getElementById('draftDocRefNo');
     const draftLinkedInvRef = document.getElementById('draftLinkedInvRef');
@@ -259,6 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const stockWarningMsg = document.getElementById('stockWarningMsg');
     
     const disambiguationPanel = document.getElementById('disambiguationPanel');
+    const disambiguationTitle = document.getElementById('disambiguationTitle');
     const disambiguationChoices = document.getElementById('disambiguationChoices');
     
     const approveDraftBtn = document.getElementById('approveDraftBtn');
@@ -267,6 +290,23 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSessionId = null;
     let isListening = false;
     let recognition = null;
+
+    // Payment Status Toggle Event Handlers
+    payStatusUnpaidBtn.addEventListener('click', function() {
+        currentPaymentStatus = 'Unpaid';
+        payStatusUnpaidBtn.classList.add('active', 'btn-danger');
+        payStatusUnpaidBtn.classList.remove('btn-outline-danger');
+        payStatusPaidBtn.classList.remove('active', 'btn-success');
+        payStatusPaidBtn.classList.add('btn-outline-success');
+    });
+
+    payStatusPaidBtn.addEventListener('click', function() {
+        currentPaymentStatus = 'Paid';
+        payStatusPaidBtn.classList.add('active', 'btn-success');
+        payStatusPaidBtn.classList.remove('btn-outline-success');
+        payStatusUnpaidBtn.classList.remove('active', 'btn-danger');
+        payStatusUnpaidBtn.classList.add('btn-outline-danger');
+    });
 
     // Web Speech API Initialization
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -430,6 +470,17 @@ document.addEventListener('DOMContentLoaded', function() {
             draftLinkedInvRef.innerText = '';
         }
 
+        if (docType === 'PURCHASE_INVOICE' || docType === 'SALES_INVOICE') {
+            paymentStatusToggleBar.classList.remove('d-none');
+            if (draft.payment_status === 'Paid') {
+                payStatusPaidBtn.click();
+            } else {
+                payStatusUnpaidBtn.click();
+            }
+        } else {
+            paymentStatusToggleBar.classList.add('d-none');
+        }
+
         if (docType === 'PURCHASE_INVOICE') {
             draftDocTypeBadge.innerText = 'OFFICIAL PURCHASE INVOICE';
             draftDocTypeBadge.className = 'badge bg-success fs-6 px-3 py-2';
@@ -469,8 +520,8 @@ document.addEventListener('DOMContentLoaded', function() {
             grandTotalBanner.classList.remove('d-none');
 
         } else if (docType === 'GATE_PASS') {
-            draftDocTypeBadge.innerText = 'OFFICIAL GATE PASS';
-            draftDocTypeBadge.className = 'badge bg-warning text-dark fs-6 px-3 py-2';
+            draftDocTypeBadge.innerText = draft.is_manual ? 'MANUAL GENERAL CARGO GATE PASS' : 'OFFICIAL OUTWARD GATE PASS';
+            draftDocTypeBadge.className = draft.is_manual ? 'badge bg-secondary fs-6 px-3 py-2' : 'badge bg-warning text-dark fs-6 px-3 py-2';
             draftDocRefNo.innerText = 'GP-DRAFT';
             
             if (draft.party_name) {
@@ -514,12 +565,39 @@ document.addEventListener('DOMContentLoaded', function() {
             stockWarningAlert.classList.add('d-none');
         }
 
-        // Disambiguation Choices
+        // Available Invoices & Disambiguation Choices Panel
         disambiguationChoices.innerHTML = '';
         let hasChoices = false;
 
+        if (draft.available_invoices && draft.available_invoices.length > 0) {
+            hasChoices = true;
+            disambiguationTitle.innerHTML = `<i class="fas fa-list-check me-1"></i> Available Invoices Found for ${draft.available_invoices[0].party_name}:`;
+            
+            draft.available_invoices.forEach(inv => {
+                const card = document.createElement('div');
+                card.className = 'card border-primary p-2 flex-grow-1 shadow-sm';
+                card.style.minWidth = '220px';
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong class="text-primary fs-6">#${inv.invoice_number}</strong>
+                        <span class="badge bg-secondary">${inv.date}</span>
+                    </div>
+                    <div class="small text-dark fw-semibold">${inv.seed_name}</div>
+                    <div class="small text-muted mb-2">${inv.quantity} Bags | PKR ${parseFloat(inv.grand_total).toLocaleString()}</div>
+                    <button class="btn btn-sm btn-primary fw-bold w-100">
+                        <i class="fas fa-truck-loading me-1"></i> Select #${inv.invoice_number} for Gate Pass
+                    </button>
+                `;
+                card.querySelector('button').onclick = function() {
+                    sendVoiceCommand(inv.invoice_number);
+                };
+                disambiguationChoices.appendChild(card);
+            });
+        }
+
         if (draft.party_ambiguous && draft.party_ambiguous.length > 0) {
             hasChoices = true;
+            disambiguationTitle.innerHTML = `<i class="fas fa-question-circle me-1"></i> Multiple Parties Found. Please Select:`;
             draft.party_ambiguous.forEach(c => {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-outline-warning text-dark fw-bold';
@@ -531,6 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (draft.seed_ambiguous && draft.seed_ambiguous.length > 0) {
             hasChoices = true;
+            disambiguationTitle.innerHTML = `<i class="fas fa-question-circle me-1"></i> Multiple Seeds Found. Please Select:`;
             draft.seed_ambiguous.forEach(c => {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-sm btn-outline-success fw-bold';
@@ -584,7 +663,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
-            body: JSON.stringify({ session_id: currentSessionId })
+            body: JSON.stringify({ 
+                session_id: currentSessionId,
+                payment_status: currentPaymentStatus
+            })
         })
         .then(res => res.json())
         .then(data => {
@@ -622,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function() {
         draftPreviewCard.classList.add('d-none');
         approvedSuccessCard.classList.add('d-none');
         disambiguationPanel.classList.add('d-none');
+        paymentStatusToggleBar.classList.add('d-none');
         approveDraftBtn.disabled = true;
         approveDraftBtn.className = 'btn btn-success fw-bold px-4';
         approveDraftBtn.innerHTML = `<i class="fas fa-check-circle me-1"></i> Approve & Save Document`;
