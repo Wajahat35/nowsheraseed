@@ -35,7 +35,7 @@ URDU_WORD_MAP = {
     'گیٹ پاس': 'gate pass', 'گیٹپاس': 'gate pass', 'گیٹ': 'gate', 'پاس': 'pass', 'نکال': 'print', 'پرنٹ': 'print',
     'انوائس': 'invoice', 'ان وائی': 'inv', 'انواِئس': 'invoice',
     'ڈرائیور': 'driver', 'گاڑی': 'vehicle', 'ٹرک': 'vehicle', 'نمبر': 'number',
-    'عمران': 'imran', 'اسلم': 'aslam', 'عثمان': 'usman', 'علی': 'ali', 'احمد': 'ahmed',
+    'عمران': 'imran', 'اسلم': 'aslam', 'عثمان': 'usman', 'علی': 'ali', 'احمد': 'ahmed', 'طارق': 'tariq',
     'بوری': 'bags', 'بوریاں': 'bags', 'بیگ': 'bags', 'بیگز': 'bags', 'بینک': 'bags',
     'ریٹ': 'rate', 'قیمت': 'rate', 'روپے': 'rate',
     'زیرو': '0', 'ایک': '1', 'دو': '2', 'تین': '3', 'چار': '4', 'پانچ': '5',
@@ -268,28 +268,60 @@ def parse_voice_numbers(text):
 
 
 def parse_vehicle_number(text):
+    """Extracts vehicle plate numbers (e.g. L251, L-251, LES 1234, LES-1234, LEA-999, FD-123)."""
     text_norm = normalize_text_all_languages(text)
-    m = re.search(r'(?:gari|gaari|vehicle|truck|car)\s*(?:ka\s*)?(?:number|no|num)?\s*(?:hai|is)?\s*([a-z0-9\s-]+)', text_norm, re.IGNORECASE)
-    if m:
-        val = m.group(1).strip()
-        val = re.sub(r'^(hai|is|ka|number|no)\s+', '', val, flags=re.IGNORECASE).strip()
-        m_code = re.search(r'([a-z]{1,4}[-\s]?\d{2,4})', val, re.IGNORECASE)
-        if m_code and 'invoice' not in m_code.group(1).lower() and 'pass' not in m_code.group(1).lower():
-            return m_code.group(1).upper().replace(' ', '-')
     
-    m_direct = re.search(r'\b([a-z]{1,3}[-\s]?\d{2,4})\b', text_norm, re.IGNORECASE)
-    if m_direct and 'inv' not in m_direct.group(1).lower() and 'pass' not in m_direct.group(1).lower():
-        return m_direct.group(1).upper().replace(' ', '-')
+    # 1. Match explicit vehicle keywords: gari, vehicle, truck, car, no, num
+    m_kw = re.search(r'(?:gari|gaari|vehicle|truck|car)\s*(?:ka\s*)?(?:number|no|num)?\s*(?:hai|is)?\s*([a-z]{1,4}[-\s]?\d{2,4})', text_norm, re.IGNORECASE)
+    if m_kw:
+        return re.sub(r'\s+', '-', m_kw.group(1).upper())
+
+    # 2. Match standard Pakistani vehicle plate formats: e.g. L251, L-251, LES-1234, LES 1234
+    m_plate = re.search(r'\b([a-z]{1,4}[-\s]?\d{2,4})\b', text_norm, re.IGNORECASE)
+    if m_plate:
+        val = m_plate.group(1).upper()
+        if not any(k in val.lower() for k in ['inv', 'pur', 'bill', 'pass', 'gate']):
+            return re.sub(r'\s+', '-', val)
+
     return None
 
 
 def parse_driver_name(text):
+    """Extracts driver names (e.g. 'driver imran', 'driver ka naam aslam hai', 'imran')."""
     text_norm = normalize_text_all_languages(text)
-    m = re.search(r'(?:driver|gari wala)\s*(?:ka\s*)?(?:nam|naam)?\s*(?:hai|is)?\s*([a-z]+)', text_norm, re.IGNORECASE)
+    
+    m_kw = re.search(r'(?:driver|gari\s*wala)\s*(?:ka\s*)?(?:nam|naam)?\s*(?:hai|is)?\s*([a-z\s]+)', text_norm, re.IGNORECASE)
+    if m_kw:
+        raw_name = m_kw.group(1).strip()
+        words = []
+        for w in raw_name.split():
+            w_lower = w.lower()
+            if w_lower in ['hai', 'is', 'ka', 'nam', 'naam', 'aur', 'gari', 'vehicle', 'number', 'no']:
+                break
+            if re.match(r'^[a-z]{1,4}\d{2,4}$', w_lower):
+                break
+            words.append(w.title())
+        if words:
+            return ' '.join(words)
+            
+    return None
+
+
+def parse_fallback_driver(text):
+    """Fallback driver parser when user responds directly with a person's name (1-3 words)."""
+    text_clean = text.strip()
+    words = [w.title() for w in text_clean.split() if w.lower() not in ['hai', 'is', 'ka', 'nam', 'naam', 'gari', 'vehicle', 'number', 'no', 'gate', 'pass', 'invoice', 'sales', 'purchase', 'pur', 'inv']]
+    if words and len(words) <= 3 and not any(re.search(r'\d', w) for w in words):
+        return ' '.join(words)
+    return None
+
+
+def parse_fallback_vehicle(text):
+    """Fallback vehicle parser when user responds directly with a plate code (e.g. L251)."""
+    text_clean = text.strip()
+    m = re.search(r'\b([a-z]{1,4}[-\s]?\d{2,4})\b', text_clean, re.IGNORECASE)
     if m:
-        name = m.group(1).strip().title()
-        if name.lower() not in ['hai', 'is', 'ka', 'nam', 'naam', 'aur', 'gari', 'number', 'no']:
-            return name
+        return re.sub(r'\s+', '-', m.group(1).upper())
     return None
 
 
@@ -297,18 +329,17 @@ def parse_invoice_ref(text):
     """Extracts invoice reference numbers like '0018', 'invoice 0018', 'sales invoice gate pass 0018'."""
     text_norm = normalize_text_all_languages(text)
     
-    m = re.search(r'(?:invoice|inv|bill|pur|sales|purchase|gatepass|pass)\s*(?:gate\s*)?(?:pass\s*)?(?:number|no|#)?\s*0*(\d{1,5})', text_norm, re.IGNORECASE)
+    m = re.search(r'(?:invoice|inv|bill|pur|sales|purchase)\s*(?:gate\s*)?(?:pass\s*)?(?:number|no|#)?\s*0*(\d{1,5})', text_norm, re.IGNORECASE)
     if m:
         return m.group(1)
     
-    clean_digits = re.sub(r'\s+', '', text_norm)
-    m_clean = re.search(r'(?:invoice|inv|bill|pur|sales|purchase|gatepass|pass)\s*(?:gate\s*)?(?:pass\s*)?(?:number|no|#)?\s*0*(\d{1,5})', clean_digits, re.IGNORECASE)
-    if m_clean:
-        return m_clean.group(1)
-
+    # Standalone invoice number lookup (3-5 digits not attached to a vehicle plate code)
     m_direct = re.search(r'\b0*(\d{3,5})\b', text_norm)
     if m_direct:
-        return m_direct.group(1)
+        val = m_direct.group(1)
+        # Verify it is not part of a vehicle code like L251 or LES1234
+        if not re.search(rf'[a-z]{{1,4}}[-\s]?{val}', text_norm, re.IGNORECASE):
+            return val
 
     return None
 
@@ -394,8 +425,10 @@ def process_voice_command(user, text, session_id=None):
     # 3. GATE PASS LINKING & PENDING INVOICE AVAILABILITY CHECK
     inv_ref = parse_invoice_ref(text_clean)
     is_gatepass_cmd = intent == 'CREATE_GATEPASS' or 'gate' in text_norm or 'pass' in text_norm or 'nikal' in text_norm
+    is_explicit_inv_request = bool(re.search(r'(?:invoice|inv|bill|pur|sales|purchase)\s*#?\s*0*\d{1,5}', text_norm, re.IGNORECASE))
 
-    if is_gatepass_cmd and inv_ref:
+    # Only run Section 3 if starting a new Gate Pass session or explicitly asking for a new invoice number!
+    if is_gatepass_cmd and inv_ref and (not session or is_explicit_inv_request):
         s_inv = None
         p_inv = None
         t_s_inv = None
@@ -629,13 +662,22 @@ def process_voice_command(user, text, session_id=None):
         if rate:
             draft['rate'] = float(rate)
 
+        # DRIVER NAME AND VEHICLE NUMBER CONVERSATIONAL UPDATES
         v_num = parse_vehicle_number(text_clean)
         if v_num:
             draft['vehicle_no'] = v_num
+        elif doc_type == 'GATE_PASS' and not draft.get('vehicle_no'):
+            fb_v = parse_fallback_vehicle(text_clean)
+            if fb_v:
+                draft['vehicle_no'] = fb_v
         
         d_name = parse_driver_name(text_clean)
         if d_name:
             draft['driver_name'] = d_name
+        elif doc_type == 'GATE_PASS' and not draft.get('driver_name'):
+            fb_d = parse_fallback_driver(text_clean)
+            if fb_d:
+                draft['driver_name'] = fb_d
 
         t_qty = draft.get('quantity', 0) or 0
         u_rate = draft.get('rate', 0) or 0
