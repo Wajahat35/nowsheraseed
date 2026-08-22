@@ -29,11 +29,17 @@
         <div class="row align-items-center mb-4">
             <div class="col-8">
                 <table class="table table-sm table-borderless">
-                    <tr><td class="fw-bold">Vehicle Number:</td><td class="fs-5 fw-bold">{{ gatepass.vehicle_number }}</td></tr>
+                    <tr><td class="fw-bold" style="width: 35%;">Vehicle Number:</td><td class="fs-5 fw-bold">{{ gatepass.vehicle_number }}</td></tr>
                     <tr><td class="fw-bold">Driver Name:</td><td>{{ gatepass.driver_name }}</td></tr>
+                    {% if gatepass.driver_cnic %}
                     <tr><td class="fw-bold">Driver CNIC:</td><td>{{ gatepass.driver_cnic }}</td></tr>
+                    {% endif %}
+                    {% if gatepass.driver_mobile %}
                     <tr><td class="fw-bold">Driver Mobile:</td><td>{{ gatepass.driver_mobile }}</td></tr>
-                    <tr><td class="fw-bold">Transport Company:</td><td>{{ gatepass.transport_company|default:"Self / Direct" }}</td></tr>
+                    {% endif %}
+                    {% if gatepass.transport_company %}
+                    <tr><td class="fw-bold">Transport Company:</td><td>{{ gatepass.transport_company }}</td></tr>
+                    {% endif %}
                     <tr><td class="fw-bold">Invoice Ref #:</td><td>{{ gatepass.invoice_reference|default:"N/A" }}</td></tr>
                     <tr><td class="fw-bold">Total Seed Bags:</td><td class="fw-bold">{{ gatepass.total_bags }} Bags</td></tr>
                     <tr><td class="fw-bold">Total Net Weight:</td><td class="fw-bold">{{ gatepass.total_weight_kg }} Kg</td></tr>

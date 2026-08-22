@@ -23,8 +23,8 @@ class GatePass(models.Model):
     
     vehicle_number = models.CharField(max_length=50, help_text="e.g. LES-1234")
     driver_name = models.CharField(max_length=150)
-    driver_cnic = models.CharField(max_length=20, verbose_name="Driver CNIC (XXXXX-XXXXXXX-X)")
-    driver_mobile = models.CharField(max_length=30, verbose_name="Driver Mobile (03XXXXXXXXX)")
+    driver_cnic = models.CharField(max_length=20, blank=True, null=True, verbose_name="Driver CNIC (XXXXX-XXXXXXX-X)")
+    driver_mobile = models.CharField(max_length=30, blank=True, null=True, verbose_name="Driver Mobile (03XXXXXXXXX)")
     transport_company = models.CharField(max_length=200, blank=True, null=True)
     
     invoice_reference = models.CharField(max_length=100, blank=True, null=True, help_text="Sales/Purchase Invoice #")
