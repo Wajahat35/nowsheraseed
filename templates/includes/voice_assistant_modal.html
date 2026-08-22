@@ -518,7 +518,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.draft) {
                 renderDraftPreview(data.draft);
-                assistantResponseText.innerText = `Assistant: "Selected ${name}. Kya invoice approve karni hai?"`;
+                assistantResponseText.innerText = `Assistant: "Selected ${name}. Approve karain?"`;
+                speakText(`Selected ${name}. Approve karain?`);
             }
         });
     }
@@ -567,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             resetDraftUI();
             assistantResponseText.innerText = `Assistant: "Draft cancelled."`;
+            speakText("Draft cancelled.");
         });
     });
 
@@ -577,14 +579,23 @@ document.addEventListener('DOMContentLoaded', function() {
         approveDraftBtn.disabled = true;
     }
 
-    // Text to Speech synthesis
+    // Enhanced Natural Text to Speech Synthesis with Voice Priority Selector
     function speakText(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 1.0;
+            utterance.rate = 0.95;
             utterance.pitch = 1.0;
-            utterance.lang = 'ur-PK';
+            
+            const voices = window.speechSynthesis.getVoices();
+            const naturalVoice = voices.find(v => 
+                v.lang.includes('ur') || v.lang.includes('hi') || v.name.toLowerCase().includes('urdu') || v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('asad') || v.name.toLowerCase().includes('hemant')
+            );
+            if (naturalVoice) {
+                utterance.voice = naturalVoice;
+            } else {
+                utterance.lang = 'ur-PK';
+            }
             window.speechSynthesis.speak(utterance);
         }
     }
