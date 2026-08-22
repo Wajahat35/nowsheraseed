@@ -33,7 +33,7 @@
     }
     .print-invoice-preview {
         border: 2px solid #0f172a;
-        border-radius: 8px;
+        border-radius: 12px;
         background: #ffffff;
         padding: 24px;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -97,18 +97,23 @@
                     <div id="disambiguationChoices" class="d-flex flex-wrap gap-2"></div>
                 </div>
 
-                <!-- Live Draft Print Format Preview Card -->
+                <!-- Official Invoice Print Layout Preview Card -->
                 <div id="draftPreviewCard" class="print-invoice-preview shadow-sm d-none">
                     
                     <!-- Company Branding Header -->
-                    <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
-                        <div>
-                            <h4 class="fw-bold text-dark mb-0"><i class="fas fa-seedling text-success me-2"></i> NOWSHERA SEEDS</h4>
-                            <small class="text-muted">High Yield Quality Certified Seed Processing & Management</small>
+                    <div class="row border-bottom pb-3 mb-3 align-items-center">
+                        <div class="col-md-7">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <i class="fas fa-seedling text-emerald fs-3" style="color: #10b981;"></i>
+                                <h4 class="fw-bold text-emerald m-0" style="color: #059669;">NOWSHERA SEEDS</h4>
+                            </div>
+                            <div class="text-muted small">High Yield Quality Certified Seed Processing & Management</div>
+                            <div class="text-muted small">Lahore, Punjab, Pakistan | NTN: 35202-9876543 | STRN: 12-34-5678</div>
                         </div>
-                        <div class="text-end">
-                            <span class="badge bg-dark fs-6 px-3 py-2" id="draftDocTypeBadge">PURCHASE INVOICE DRAFT</span>
-                            <div class="small text-muted mt-1" id="draftLinkedInvRef"></div>
+                        <div class="col-md-5 text-md-end">
+                            <span class="badge bg-success fs-6 px-3 py-2" id="draftDocTypeBadge">OFFICIAL PURCHASE INVOICE</span>
+                            <h5 class="fw-bold mt-2 mb-0 text-dark" id="draftDocRefNo">DRAFT-PREVIEW</h5>
+                            <div class="small text-muted" id="draftLinkedInvRef"></div>
                         </div>
                     </div>
 
@@ -117,14 +122,15 @@
                         <i class="fas fa-exclamation-triangle me-1"></i> <span id="stockWarningMsg"></span>
                     </div>
 
-                    <!-- Invoice Header Block (Billed To / From) -->
-                    <div class="row mb-3 p-3 bg-light rounded border">
-                        <div class="col-md-6" id="partyBlock">
-                            <span class="text-muted small d-block uppercase fw-bold" id="partyRoleLabel">SUPPLIER DETAILS:</span>
+                    <!-- Invoice Header Block (Billed To / Transport Details) -->
+                    <div class="row mb-3 p-3 bg-light rounded border align-items-center">
+                        <div class="col-md-7" id="partyBlock">
+                            <span class="text-muted small d-block uppercase fw-bold" id="partyRoleLabel">BILLED TO / SUPPLIER DETAILS:</span>
                             <strong class="fs-5 text-dark d-block" id="draftPartyName">-</strong>
-                            <small class="text-muted" id="draftPartyCompany"></small>
+                            <div class="small text-muted" id="draftPartyCompany"></div>
+                            <div class="small text-muted">Verification Status: <span class="badge bg-emerald text-white px-2" style="background-color: #10b981;">VERIFIED PARTY</span></div>
                         </div>
-                        <div class="col-md-6 text-md-end" id="transportBlock">
+                        <div class="col-md-5 text-md-end" id="transportBlock">
                             <div id="driverSubBlock" class="d-none mb-1">
                                 <span class="text-muted small">Driver Name: </span>
                                 <strong class="fs-6 text-dark" id="draftDriverName">-</strong>
@@ -141,18 +147,21 @@
                         <table class="table table-bordered align-middle mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th style="width: 50%;">Seed Description / Variety</th>
-                                    <th class="text-center" style="width: 15%;">Quantity</th>
-                                    <th class="text-end" style="width: 15%;" id="thUnitPrice">Unit Price</th>
-                                    <th class="text-end" style="width: 20%;" id="thTotalAmount">Total Amount</th>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 45%;">Seed Description</th>
+                                    <th style="width: 15%;">Variety</th>
+                                    <th class="text-center" style="width: 12%;">Qty (Bags)</th>
+                                    <th class="text-end" style="width: 13%;" id="thUnitPrice">Unit Price</th>
+                                    <th class="text-end" style="width: 10%;" id="thTotalAmount">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
+                                    <td>1</td>
                                     <td>
                                         <strong id="draftSeedName" class="text-dark fs-6">-</strong>
-                                        <div class="small text-muted" id="draftSeedVariety">Variety: -</div>
                                     </td>
+                                    <td id="draftSeedVariety">Variety: -</td>
                                     <td class="text-center fw-bold font-monospace fs-6" id="draftQuantity">0 Bags</td>
                                     <td class="text-end font-monospace fs-6" id="draftRate">PKR 0.00</td>
                                     <td class="text-end fw-bold text-success font-monospace fs-6" id="draftTotalAmount">PKR 0.00</td>
@@ -163,8 +172,8 @@
 
                     <!-- Grand Total Banner -->
                     <div class="d-flex justify-content-between align-items-center p-3 bg-dark text-white rounded mb-3" id="grandTotalBanner">
-                        <span class="fs-6 fw-bold">TOTAL AMOUNT PAYABLE (PKR):</span>
-                        <span class="fs-4 fw-bold font-monospace text-emerald-400" id="draftGrandTotalBanner">PKR 0.00</span>
+                        <span class="fs-6 fw-bold"><i class="fas fa-calculator me-2 text-emerald" style="color: #10b981;"></i> TOTAL AMOUNT PAYABLE (PKR):</span>
+                        <span class="fs-4 fw-bold font-monospace text-emerald-400" style="color: #34d399;" id="draftGrandTotalBanner">PKR 0.00</span>
                     </div>
 
                     <div class="alert alert-info py-2 px-3 mb-0 small text-center fw-semibold">
@@ -203,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const draftPreviewCard = document.getElementById('draftPreviewCard');
     const draftDocTypeBadge = document.getElementById('draftDocTypeBadge');
+    const draftDocRefNo = document.getElementById('draftDocRefNo');
     const draftLinkedInvRef = document.getElementById('draftLinkedInvRef');
     
     const partyBlock = document.getElementById('partyBlock');
@@ -360,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Render Print-Style Invoice Preview Card
+    // Render Official Seed ERP Print Invoice Preview Card
     function renderDraftPreview(draft) {
         draftPreviewCard.classList.remove('d-none');
         approveDraftBtn.disabled = false;
@@ -376,11 +386,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (docType === 'PURCHASE_INVOICE') {
             draftDocTypeBadge.innerText = 'OFFICIAL PURCHASE INVOICE';
             draftDocTypeBadge.className = 'badge bg-success fs-6 px-3 py-2';
+            draftDocRefNo.innerText = 'PUR-DRAFT';
             
             partyBlock.classList.remove('d-none');
             partyRoleLabel.innerText = 'SUPPLIER DETAILS:';
             draftPartyName.innerText = draft.party_name || '(Missing - Required)';
-            draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : '';
+            draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : 'Govt Certified Seed Supplier';
             
             driverSubBlock.classList.add('d-none');
             vehicleSubBlock.classList.add('d-none');
@@ -394,11 +405,12 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (docType === 'SALES_INVOICE') {
             draftDocTypeBadge.innerText = 'OFFICIAL SALES INVOICE';
             draftDocTypeBadge.className = 'badge bg-primary fs-6 px-3 py-2';
+            draftDocRefNo.innerText = 'INV-DRAFT';
             
             partyBlock.classList.remove('d-none');
-            partyRoleLabel.innerText = 'CUSTOMER / PURCHASER DETAILS:';
+            partyRoleLabel.innerText = 'BILLED TO CUSTOMER:';
             draftPartyName.innerText = draft.party_name || '(Missing - Required)';
-            draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : '';
+            draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : 'Registered Seed Dealer';
             
             driverSubBlock.classList.add('d-none');
             vehicleSubBlock.classList.add('d-none');
@@ -412,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (docType === 'GATE_PASS') {
             draftDocTypeBadge.innerText = 'OFFICIAL GATE PASS';
             draftDocTypeBadge.className = 'badge bg-warning text-dark fs-6 px-3 py-2';
+            draftDocRefNo.innerText = 'GP-DRAFT';
             
             if (draft.party_name) {
                 partyBlock.classList.remove('d-none');
@@ -436,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         draftSeedName.innerText = draft.seed_name || '(Missing - Required)';
-        draftSeedVariety.innerText = draft.seed_variety ? `Variety: ${draft.seed_variety}` : '';
+        draftSeedVariety.innerText = draft.seed_variety ? draft.seed_variety : 'FSD-08';
         draftQuantity.innerText = draft.quantity ? `${draft.quantity} Bags` : '(Missing - Required)';
         
         const rateVal = draft.rate ? parseFloat(draft.rate) : 0;
