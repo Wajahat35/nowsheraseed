@@ -211,7 +211,7 @@ class Trade(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# SEEDS TRADING OPERATIONAL MODELS (Sales, Purchases & Gate Pass)
+# SEEDS TRADING OPERATIONAL MODELS (Mian Traders Sales, Purchases & Gate Pass)
 # ---------------------------------------------------------------------------
 class TradingSalesInvoice(models.Model):
     STATUS_CHOICES = [
@@ -225,6 +225,11 @@ class TradingSalesInvoice(models.Model):
     customer_name = models.CharField(max_length=150, verbose_name="Customer / Buyer Party Name")
     phone = models.CharField(max_length=30, blank=True, null=True)
     
+    # Crop Trading Fields
+    crop_name = models.CharField(max_length=150, verbose_name="Crop Name", blank=True, null=True, default="Wheat / Agricultural Crop")
+    crop_weight = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Crop Weight (Kg)")
+    rate_per_40kg = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Rate per 40 Kg (Maund) (PKR)")
+
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0.00, verbose_name="Total Amount (PKR)")
     paid_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0.00, verbose_name="Paid Amount (PKR)")
     balance_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0.00, verbose_name="Balance Amount (PKR)")
@@ -244,6 +249,13 @@ class TradingSalesInvoice(models.Model):
             last_id = last.id if last else 0
             self.invoice_number = f"TSL-{(last_id + 1):04d}"
 
+        # Auto-calculate total amount if Crop Weight (Kg) and Rate per 40 Kg are provided
+        c_weight = Decimal(str(self.crop_weight or 0))
+        r_40 = Decimal(str(self.rate_per_40kg or 0))
+
+        if c_weight > 0 and r_40 > 0:
+            self.total_amount = (c_weight / Decimal('40.0')) * r_40
+
         tot = Decimal(str(self.total_amount or 0))
         pd = Decimal(str(self.paid_amount or 0))
         self.balance_amount = max(Decimal('0.00'), tot - pd)
@@ -258,29 +270,42 @@ class TradingSalesInvoice(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.invoice_number} - {self.customer_name} (Balance: PKR {self.balance_amount})"
+        return f"{self.invoice_number} - {self.customer_name} (Mian Traders - PKR {self.total_amount})"
 
 
 class TradingSalesItem(models.Model):
     invoice = models.ForeignKey(TradingSalesInvoice, on_delete=models.CASCADE, related_name='items')
-    seed_name = models.CharField(max_length=150, verbose_name="Seed Variety / Item")
+    seed_name = models.CharField(max_length=150, verbose_name="Seed / Crop Variety")
+    crop_name = models.CharField(max_length=150, verbose_name="Crop Name", blank=True, null=True)
+    crop_weight = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Crop Weight (Kg)")
+    rate_per_40kg = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Rate per 40 Kg (PKR)")
+    
     bags_qty = models.IntegerField(default=1, verbose_name="Quantity / Bags")
-    weight_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Total Weight (KG / Maunds)")
-    unit_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Unit Rate (PKR)")
+    weight_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Total Weight (KG)")
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Unit Rate (PKR)")
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Subtotal (PKR)")
 
     def save(self, *args, **kwargs):
-        rate = Decimal(str(self.unit_price or 0))
-        if self.bags_qty and self.bags_qty > 0:
-            self.subtotal = Decimal(str(self.bags_qty)) * rate
-        elif self.weight_kg and self.weight_kg > 0:
-            self.subtotal = Decimal(str(self.weight_kg)) * rate
+        if self.crop_name and not self.seed_name:
+            self.seed_name = self.crop_name
+        elif self.seed_name and not self.crop_name:
+            self.crop_name = self.seed_name
+
+        c_weight = Decimal(str(self.crop_weight or self.weight_kg or 0))
+        r_40 = Decimal(str(self.rate_per_40kg or 0))
+
+        if c_weight > 0 and r_40 > 0:
+            self.subtotal = (c_weight / Decimal('40.0')) * r_40
+            self.weight_kg = c_weight
+        elif self.bags_qty and self.bags_qty > 0 and self.unit_price and Decimal(str(self.unit_price)) > 0:
+            self.subtotal = Decimal(str(self.bags_qty)) * Decimal(str(self.unit_price))
         else:
-            self.subtotal = rate
+            self.subtotal = Decimal(str(self.unit_price or 0))
+
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.seed_name} x {self.bags_qty} Bags (PKR {self.subtotal})"
+        return f"{self.seed_name} - {self.crop_weight} Kg @ {self.rate_per_40kg}/40kg (PKR {self.subtotal})"
 
 
 class TradingPurchaseInvoice(models.Model):
@@ -295,6 +320,11 @@ class TradingPurchaseInvoice(models.Model):
     supplier_name = models.CharField(max_length=150, verbose_name="Supplier / Grower Party Name")
     phone = models.CharField(max_length=30, blank=True, null=True)
     
+    # Crop Trading Fields
+    crop_name = models.CharField(max_length=150, verbose_name="Crop Name", blank=True, null=True, default="Wheat / Agricultural Crop")
+    crop_weight = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Crop Weight (Kg)")
+    rate_per_40kg = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Rate per 40 Kg (Maund) (PKR)")
+
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0.00, verbose_name="Total Amount (PKR)")
     paid_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0.00, verbose_name="Paid Amount (PKR)")
     balance_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0.00, verbose_name="Balance Amount (PKR)")
@@ -314,6 +344,13 @@ class TradingPurchaseInvoice(models.Model):
             last_id = last.id if last else 0
             self.invoice_number = f"TPR-{(last_id + 1):04d}"
 
+        # Auto-calculate total amount if Crop Weight (Kg) and Rate per 40 Kg are provided
+        c_weight = Decimal(str(self.crop_weight or 0))
+        r_40 = Decimal(str(self.rate_per_40kg or 0))
+
+        if c_weight > 0 and r_40 > 0:
+            self.total_amount = (c_weight / Decimal('40.0')) * r_40
+
         tot = Decimal(str(self.total_amount or 0))
         pd = Decimal(str(self.paid_amount or 0))
         self.balance_amount = max(Decimal('0.00'), tot - pd)
@@ -328,29 +365,42 @@ class TradingPurchaseInvoice(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.invoice_number} - {self.supplier_name} (Balance: PKR {self.balance_amount})"
+        return f"{self.invoice_number} - {self.supplier_name} (Mian Traders - PKR {self.total_amount})"
 
 
 class TradingPurchaseItem(models.Model):
     invoice = models.ForeignKey(TradingPurchaseInvoice, on_delete=models.CASCADE, related_name='items')
-    seed_name = models.CharField(max_length=150, verbose_name="Seed Variety / Item")
+    seed_name = models.CharField(max_length=150, verbose_name="Seed / Crop Variety")
+    crop_name = models.CharField(max_length=150, verbose_name="Crop Name", blank=True, null=True)
+    crop_weight = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Crop Weight (Kg)")
+    rate_per_40kg = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Rate per 40 Kg (PKR)")
+    
     bags_qty = models.IntegerField(default=1, verbose_name="Quantity / Bags")
-    weight_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Total Weight (KG / Maunds)")
-    unit_price = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Unit Rate (PKR)")
+    weight_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Total Weight (KG)")
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Unit Rate (PKR)")
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Subtotal (PKR)")
 
     def save(self, *args, **kwargs):
-        rate = Decimal(str(self.unit_price or 0))
-        if self.bags_qty and self.bags_qty > 0:
-            self.subtotal = Decimal(str(self.bags_qty)) * rate
-        elif self.weight_kg and self.weight_kg > 0:
-            self.subtotal = Decimal(str(self.weight_kg)) * rate
+        if self.crop_name and not self.seed_name:
+            self.seed_name = self.crop_name
+        elif self.seed_name and not self.crop_name:
+            self.crop_name = self.seed_name
+
+        c_weight = Decimal(str(self.crop_weight or self.weight_kg or 0))
+        r_40 = Decimal(str(self.rate_per_40kg or 0))
+
+        if c_weight > 0 and r_40 > 0:
+            self.subtotal = (c_weight / Decimal('40.0')) * r_40
+            self.weight_kg = c_weight
+        elif self.bags_qty and self.bags_qty > 0 and self.unit_price and Decimal(str(self.unit_price)) > 0:
+            self.subtotal = Decimal(str(self.bags_qty)) * Decimal(str(self.unit_price))
         else:
-            self.subtotal = rate
+            self.subtotal = Decimal(str(self.unit_price or 0))
+
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.seed_name} x {self.bags_qty} Bags (PKR {self.subtotal})"
+        return f"{self.seed_name} - {self.crop_weight} Kg @ {self.rate_per_40kg}/40kg (PKR {self.subtotal})"
 
 
 class TradingGatePass(models.Model):

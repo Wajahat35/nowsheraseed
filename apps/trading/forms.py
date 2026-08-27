@@ -82,17 +82,20 @@ class TradeForm(forms.ModelForm):
 
 
 # ---------------------------------------------------------------------------
-# SEEDS TRADING OPERATIONAL FORMS
+# SEEDS TRADING OPERATIONAL FORMS (MIAN TRADERS)
 # ---------------------------------------------------------------------------
 class TradingSalesInvoiceForm(forms.ModelForm):
     class Meta:
         model = TradingSalesInvoice
-        fields = ('date', 'customer_name', 'phone', 'total_amount', 'paid_amount', 'remarks')
+        fields = ('date', 'customer_name', 'phone', 'crop_name', 'crop_weight', 'rate_per_40kg', 'total_amount', 'paid_amount', 'remarks')
         widgets = {
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Tariq Seed Traders'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '0300-1234567'}),
-            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'crop_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Wheat / Paddy Rice / Maize'}),
+            'crop_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'e.g. 2000.00 (Kg)', 'id': 'id_crop_weight'}),
+            'rate_per_40kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'e.g. 4800.00 (per 40kg)', 'id': 'id_rate_per_40kg'}),
+            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Auto Calculated', 'id': 'id_total_amount'}),
             'paid_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
@@ -101,12 +104,15 @@ class TradingSalesInvoiceForm(forms.ModelForm):
 class TradingPurchaseInvoiceForm(forms.ModelForm):
     class Meta:
         model = TradingPurchaseInvoice
-        fields = ('date', 'supplier_name', 'phone', 'total_amount', 'paid_amount', 'remarks')
+        fields = ('date', 'supplier_name', 'phone', 'crop_name', 'crop_weight', 'rate_per_40kg', 'total_amount', 'paid_amount', 'remarks')
         widgets = {
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'supplier_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Punjab Seed Growers'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '0300-9876543'}),
-            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
+            'crop_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Wheat / Paddy Rice / Maize'}),
+            'crop_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'e.g. 2000.00 (Kg)', 'id': 'id_crop_weight'}),
+            'rate_per_40kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'e.g. 4800.00 (per 40kg)', 'id': 'id_rate_per_40kg'}),
+            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Auto Calculated', 'id': 'id_total_amount'}),
             'paid_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '0.00'}),
             'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }

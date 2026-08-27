@@ -1,55 +1,36 @@
-<div class="border-end bg-dark text-white" id="sidebar-wrapper" style="min-width: 250px; background-color: #0f172a !important;">
+<div class="border-end bg-dark text-white no-print" id="sidebar-wrapper" style="min-width: 250px; background-color: #0f172a !important;">
     <div class="sidebar-heading text-center py-4 border-bottom border-secondary">
         <div class="d-flex align-items-center justify-content-center gap-2">
             <span class="fs-3">🌾</span>
             <div class="text-start">
-                <h5 class="fw-bold mb-0 text-white" style="letter-spacing: 0.5px;">Seeds Trading</h5>
-                <small class="text-primary fw-semibold" style="font-size: 0.72rem;">Sales, Purchases & Gate Pass</small>
+                <h5 class="fw-bold mb-0 text-white" style="letter-spacing: 0.5px;">Mian Traders</h5>
+                <small class="text-success fw-semibold" style="font-size: 0.72rem;">Crop & Seed Sales, Purchases</small>
             </div>
         </div>
     </div>
     
     <div class="list-group list-group-flush my-2">
-        <a href="{% url 'trading:dashboard' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if request.resolver_match.url_name == 'dashboard' %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
-            <i class="fas fa-chart-pie me-3" style="width: 20px;"></i> Dashboard
+        <a href="{% url 'trading:dashboard' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2.5 px-4 d-flex align-items-center {% if request.resolver_match.url_name == 'dashboard' %}active text-success fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-chart-pie me-3 text-info" style="width: 20px;"></i> Dashboard
         </a>
 
-        <!-- Seed Trading Operations -->
-        <div class="px-4 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.68rem; letter-spacing: 1px;">Seed Trading Operations</div>
+        <!-- Seed & Crop Operations -->
+        <div class="px-4 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.68rem; letter-spacing: 1px;">Trading Operations</div>
         
-        <a href="{% url 'trading:sales_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'sales' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+        <a href="{% url 'trading:sales_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2.5 px-4 d-flex align-items-center {% if 'sales' in request.resolver_match.url_name %}active text-success fw-bold bg-secondary bg-opacity-25{% endif %}">
             <i class="fas fa-file-invoice-dollar text-success me-3" style="width: 20px;"></i> Sales Invoices
         </a>
 
-        <a href="{% url 'trading:purchase_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'purchase' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+        <a href="{% url 'trading:purchase_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2.5 px-4 d-flex align-items-center {% if 'purchase' in request.resolver_match.url_name %}active text-success fw-bold bg-secondary bg-opacity-25{% endif %}">
             <i class="fas fa-shopping-cart text-info me-3" style="width: 20px;"></i> Purchase Invoices
         </a>
 
-        <a href="{% url 'trading:gatepass_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'gatepass' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
+        <a href="{% url 'trading:gatepass_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2.5 px-4 d-flex align-items-center {% if 'gatepass' in request.resolver_match.url_name %}active text-success fw-bold bg-secondary bg-opacity-25{% endif %}">
             <i class="fas fa-truck text-warning me-3" style="width: 20px;"></i> Gate Passes
         </a>
 
-        <!-- Financial Trading & Accounts -->
-        <div class="px-4 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.68rem; letter-spacing: 1px;">Financial Accounts & Trades</div>
-
-        <a href="{% url 'trading:account_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'account' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
-            <i class="fas fa-wallet me-3" style="width: 20px;"></i> Trading Accounts
-        </a>
-
-        <a href="{% url 'trading:trade_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'trade' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
-            <i class="fas fa-exchange-alt me-3" style="width: 20px;"></i> Trade Management
-        </a>
-
-        <a href="{% url 'trading:deposit_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'deposit' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
-            <i class="fas fa-arrow-down text-success me-3" style="width: 20px;"></i> Deposits
-        </a>
-
-        <a href="{% url 'trading:withdrawal_list' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if 'withdrawal' in request.resolver_match.url_name %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
-            <i class="fas fa-arrow-up text-danger me-3" style="width: 20px;"></i> Withdrawals
-        </a>
-
-        <a href="{% url 'trading:reports' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2 px-4 d-flex align-items-center {% if request.resolver_match.url_name == 'reports' %}active text-primary fw-bold bg-secondary bg-opacity-25{% endif %}">
-            <i class="fas fa-file-contract me-3" style="width: 20px;"></i> Reports & Analytics
+        <a href="{% url 'trading:reports' %}" class="list-group-item list-group-item-action bg-transparent text-white border-0 py-2.5 px-4 d-flex align-items-center {% if request.resolver_match.url_name == 'reports' %}active text-success fw-bold bg-secondary bg-opacity-25{% endif %}">
+            <i class="fas fa-file-contract text-light me-3" style="width: 20px;"></i> Reports & Analytics
         </a>
     </div>
 
