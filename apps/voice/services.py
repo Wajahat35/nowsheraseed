@@ -24,24 +24,49 @@ URDU_DIGITS_MAP = {
 }
 
 URDU_WORD_MAP = {
-    'پنجاب': 'punjab', 'سیڈ': 'seed', 'سیٹ': 'seed', 'کارپوریشن': 'corporation',
-    'چوہدری': 'chaudry', 'چودھری': 'chaudry', 'فارمنگ': 'farming', 'سٹور': 'store',
-    'الرحمان': 'al-rehman', 'الرحمن': 'al-rehman', 'ایجنسی': 'agency', 'ٹریڈرز': 'traders',
+    # Al- prefixes with and without spaces
+    'ال رحمان': 'al-rehman', 'الرحمن': 'al-rehman', 'الرحمان': 'al-rehman', 'ال رحمن': 'al-rehman',
+    'ال سعید': 'al-rehman', 'السعید': 'al-rehman',
+    'ال ریحان': 'al-rehman', 'الریحان': 'al-rehman',
+    'ال فلاح': 'al-falah', 'الفلاح': 'al-falah',
+    'ال مدینہ': 'al-madina', 'المدینہ': 'al-madina',
+
+    # Company / Business types
+    'پنجاب': 'punjab', 'سیڈ': 'seed', 'سیٹ': 'seed', 'سعید': 'seed', 'سید': 'seed',
+    'کارپوریشن': 'corporation', 'کمپنی': 'company',
+    'چوہدری': 'chaudhry', 'چودھری': 'chaudhry', 'چودہری': 'chaudhry',
+    'فارمنگ': 'farming', 'فارم': 'farming', 'سٹور': 'store', 'سٹورز': 'store',
+    'ایجنسی': 'agency', 'ایجنسیز': 'agency', 'ٹریڈرز': 'traders', 'ٹریڈنگ': 'trading',
+    'مرچنٹ': 'merchant', 'کمیشن': 'commission', 'ایجنٹ': 'agent',
+    'ملک': 'malik', 'رانا': 'rana', 'خان': 'khan', 'میاں': 'mian', 'شیخ': 'sheikh', 'حاجی': 'haji',
+
+    # Crops & Commodities
     'گندم': 'wheat', 'ویٹ': 'wheat', 'فیصل آباد': 'faisalabad', 'فیصلاباد': 'faisalabad',
     'چاول': 'rice', 'رائس': 'rice', 'باسمتی': 'basmati', 'سپر': 'super', 'کرنل': 'kernel',
-    'کپاس': 'cotton', 'مکئی': 'maize', 'سرسوں': 'mustard',
+    'کپاس': 'cotton', 'کاٹن': 'cotton', 'مکئی': 'maize', 'سرسوں': 'mustard',
+    'مونگ': 'moong', 'ماش': 'mash', 'چنا': 'chana',
+
+    # Invoice / Transaction intents
     'پرچیز': 'purchase', 'خرید': 'purchase', 'خریداری': 'purchase', 'خریدنی': 'purchase', 'خریدے': 'purchase', 'خریدنا': 'purchase',
     'سیلز': 'sales', 'سیل': 'sales', 'بیچ': 'sales', 'بیچنا': 'sales', 'بیچنی': 'sales', 'بیچو': 'sales',
     'گیٹ پاس': 'gate pass', 'گیٹپاس': 'gate pass', 'گیٹ': 'gate', 'پاس': 'pass', 'نکال': 'print', 'پرنٹ': 'print',
-    'انوائس': 'invoice', 'ان وائی': 'inv', 'انواِئس': 'invoice',
+    'انوائس': 'invoice', 'ان وائی': 'invoice', 'انواِئس': 'invoice', 'بل': 'bill', 'رسید': 'receipt',
+
+    # Logistics & Entities
     'ڈرائیور': 'driver', 'گاڑی': 'vehicle', 'ٹرک': 'vehicle', 'نمبر': 'number',
     'عمران': 'imran', 'اسلم': 'aslam', 'عثمان': 'usman', 'علی': 'ali', 'احمد': 'ahmed', 'طارق': 'tariq',
     'جنرل کارگو': 'general cargo', 'مینول': 'manual',
-    'بوری': 'bags', 'بوریاں': 'bags', 'بیگ': 'bags', 'بیگز': 'bags', 'بینک': 'bags',
-    'ریٹ': 'rate', 'قیمت': 'rate', 'روپے': 'rate',
-    'زیرو': '0', 'ایک': '1', 'دو': '2', 'تین': '3', 'چار': '4', 'پانچ': '5',
-    'چھ': '6', 'سات': '7', 'آٹھ': '8', 'نو': '9', 'دس': '10', 'سو': '100',
-    'ون': '1', 'ٹو': '2', 'تھری': '3', 'فور': '4', 'فائیو': '5', 'سکس': '6', 'سیون': '7', 'ایٹ': '8', 'نائن': '9'
+    'بوری': 'bags', 'بوریاں': 'bags', 'بیگ': 'bags', 'بیگز': 'bags',
+    'کلو': 'kg', 'من': 'maund', 'مݨ': 'maund',
+    'ریٹ': 'rate', 'قیمت': 'rate', 'روپے': 'rate', 'روپیہ': 'rate',
+
+    # Urdu prepositions & verb phrases (crucial so they don't become customer names!)
+    'بنا دو': 'banao', 'بنا دیں': 'banao', 'بنا دی': 'banao', 'بنائے': 'banao', 'بناؤ': 'banao', 'بنا': 'banao',
+    'کر دو': 'kardo', 'کر دیں': 'kardo', 'کرو': 'kardo', 'کریں': 'kardo', 'کر': 'kardo',
+    'نکال دو': 'print', 'نکال دیں': 'print',
+    'کو': 'ko', 'کی': 'ki', 'کا': 'ka', 'کے': 'ke', 'سے': 'se',
+    'پر': 'par', 'میں': 'mein', 'ہے': 'hai', 'ہیں': 'hain', 'اور': 'aur', 'یا': 'ya',
+    'موت': 'invoice', 'مناؤ': 'banao', # Common Urdu speech-to-text mishearings for "invoice banao"!
 }
 
 def normalize_text_all_languages(text):
@@ -52,9 +77,10 @@ def normalize_text_all_languages(text):
     for u_digit, a_digit in URDU_DIGITS_MAP.items():
         text = text.replace(u_digit, a_digit)
     
-    # 2. Transliterate Native Urdu Script words to Roman keywords
-    for u_word, r_word in URDU_WORD_MAP.items():
-        text = text.replace(u_word, r_word)
+    # 2. Transliterate Native Urdu Script words to Roman keywords (sorted by length desc)
+    sorted_words = sorted(URDU_WORD_MAP.items(), key=lambda x: len(x[0]), reverse=True)
+    for u_word, r_word in sorted_words:
+        text = text.replace(u_word, f" {r_word} ")
         
     return text
 
@@ -73,13 +99,17 @@ COMMON_STOP_WORDS = set([
     'gate', 'pass', 'gatepass', 'rate', 'bags', 'bag', 'boray', 'bori', 'rupay', 
     'rs', 'rupees', 'se', 'ko', 'hai', 'ka', 'ki', 'ke', 'aur', 'do', 'wala', 
     'bhejni', 'karo', 'kar', 'dein', 'bata', 'karini', 'hain', 'naam', 'driver', 
-    'vehicle', 'gaari', 'gari', 'number', 'bana', 'print', 'krdo', 'kardo', 'kr',
-    'nikal', 'bhej', 'do'
+    'vehicle', 'gaari', 'gari', 'number', 'print', 'krdo', 'kardo', 'kr',
+    'nikal', 'bhej', 'bill', 'receipt', 'kilo', 'kg', 'maund',
+    # Native Urdu stop words
+    'کو', 'کی', 'کا', 'کے', 'سے', 'پر', 'میں', 'ہے', 'ہیں', 'اور', 'یا', 
+    'بناؤ', 'بنا', 'دو', 'دیں', 'دے', 'کرو', 'کر', 'کریں', 'نکال', 'پرنٹ', 
+    'نام', 'انوائس', 'بل', 'رسید', 'سیلز', 'سیل', 'پرچیز', 'خرید', 'گیٹ', 'پاس'
 ])
 
 GENERIC_PARTY_WORDS = set([
     'farming', 'store', 'traders', 'agency', 'corporation', 'company', 'seeds', 
-    'seed', 'grain', 'market', 'growers', 'farm', 'agri', 'enterprises', 'ltd', 'limited', 'co'
+    'seed', 'grain', 'market', 'growers', 'farm', 'agri', 'enterprises', 'ltd', 'limited', 'co', 'trading'
 ])
 
 SEED_CROP_WORDS = set([
@@ -100,6 +130,10 @@ PHONETIC_VARIANTS = {
     'alrehman': 'rahman',
     'al-rehman': 'rahman',
     'al rehman': 'rahman',
+    'al-rahman': 'rahman',
+    'alrahman': 'rahman',
+    'saeed': 'seed',
+    'seed': 'seed',
     'psc': 'punjab',
 }
 
