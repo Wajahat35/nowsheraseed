@@ -544,6 +544,32 @@ document.addEventListener('DOMContentLoaded', function() {
             thTotalAmount.classList.add('d-none');
             draftTotalAmount.classList.add('d-none');
             grandTotalBanner.classList.add('d-none');
+        } else if (docType === 'TRADING_SALES' || docType === 'TRADING_PURCHASE') {
+            const isSales = docType === 'TRADING_SALES';
+            draftDocTypeBadge.innerText = isSales ? 'MIAN TRADERS - CROP SALES INVOICE' : 'MIAN TRADERS - CROP PURCHASE INVOICE';
+            draftDocTypeBadge.className = isSales ? 'badge bg-success fs-6 px-3 py-2' : 'badge bg-info fs-6 px-3 py-2';
+            draftDocRefNo.innerText = isSales ? 'TSL-DRAFT' : 'TPR-DRAFT';
+
+            partyBlock.classList.remove('d-none');
+            partyRoleLabel.innerText = isSales ? 'CUSTOMER / BUYER:' : 'SUPPLIER / GROWER:';
+            draftPartyName.innerText = draft.party_name || '(Missing - Required)';
+            draftPartyCompany.innerText = 'Mian Traders (Commission Agent)';
+
+            driverSubBlock.classList.add('d-none');
+            vehicleSubBlock.classList.add('d-none');
+
+            paymentStatusToggleBar.classList.remove('d-none');
+            if (draft.payment_status === 'Paid') {
+                payStatusPaidBtn.click();
+            } else {
+                payStatusUnpaidBtn.click();
+            }
+
+            thUnitPrice.classList.remove('d-none');
+            draftRate.classList.remove('d-none');
+            thTotalAmount.classList.remove('d-none');
+            draftTotalAmount.classList.remove('d-none');
+            grandTotalBanner.classList.remove('d-none');
         }
 
         draftSeedName.innerText = draft.seed_name || '(Missing - Required)';
@@ -556,6 +582,17 @@ document.addEventListener('DOMContentLoaded', function() {
         draftRate.innerText = `PKR ${rateVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         draftTotalAmount.innerText = `PKR ${totalVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         draftGrandTotalBanner.innerText = `PKR ${totalVal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+        // Trading-specific field display
+        if (docType === 'TRADING_SALES' || docType === 'TRADING_PURCHASE') {
+            draftSeedName.innerText = draft.crop_name || '(Missing - Required)';
+            draftSeedVariety.innerText = 'Crop Trading';
+            const cropWeight = draft.crop_weight || 0;
+            const maunds = cropWeight > 0 ? (cropWeight / 40.0).toFixed(1) : '0';
+            draftQuantity.innerText = cropWeight ? `${cropWeight} Kg (${maunds} Maund)` : '(Missing - Required)';
+            const rate40 = draft.rate_per_40kg ? parseFloat(draft.rate_per_40kg) : 0;
+            draftRate.innerText = rate40 ? `PKR ${rate40.toLocaleString()} / 40 Kg` : '(Missing - Required)';
+        }
 
         // Stock Warning Alert
         if (draft.stock_warning) {

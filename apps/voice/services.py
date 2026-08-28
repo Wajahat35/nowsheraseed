@@ -82,12 +82,25 @@ GENERIC_PARTY_WORDS = set([
     'seed', 'grain', 'market', 'growers', 'farm', 'agri', 'enterprises', 'ltd', 'limited', 'co'
 ])
 
+SEED_CROP_WORDS = set([
+    'wheat', 'rice', 'basmati', 'cotton', 'maize', 'corn', 'mustard', 'gandum',
+    'chawal', 'kapas', 'makai', 'sarson', 'kernel', 'super', 'fsd', 'faisalabad',
+    'certified', 'hybrid', 'paddy', 'sugar', 'cane', 'sunflower', 'canola',
+    'barley', 'millet', 'sorghum', 'gram', 'chana', 'masoor', 'moong', 'daal',
+])
+
 def extract_clean_party_name(query):
     if not query:
         return ""
     q_norm = normalize_str(query)
-    words = [w.title() for w in q_norm.split() if len(w) > 1 and w not in COMMON_STOP_WORDS and not re.search(r'\d', w)]
+    words = [w.title() for w in q_norm.split() if len(w) > 1 and w not in COMMON_STOP_WORDS and w not in SEED_CROP_WORDS and not re.search(r'\d', w)]
     return ' '.join(words) if words else query.strip().title()
+
+def strip_seed_words_from_query(text):
+    """Remove seed/crop words and numbers from text before party matching."""
+    q_norm = normalize_str(text)
+    words = [w for w in q_norm.split() if w not in SEED_CROP_WORDS and not re.search(r'^\d+$', w)]
+    return ' '.join(words)
 
 def match_supplier(query):
     if not query:
@@ -295,6 +308,69 @@ def parse_voice_numbers(text):
     return qty, rate
 
 
+def parse_crop_name(text):
+    """Extract crop name from voice text."""
+    t = normalize_str(text)
+    CROP_MAP = {
+        'wheat': 'Wheat', 'gandum': 'Wheat', 'rice': 'Rice', 'chawal': 'Rice',
+        'basmati': 'Basmati Rice', 'cotton': 'Cotton', 'kapas': 'Cotton',
+        'maize': 'Maize', 'makai': 'Maize', 'corn': 'Maize',
+        'mustard': 'Mustard', 'sarson': 'Mustard', 'paddy': 'Paddy Rice',
+        'sugar': 'Sugarcane', 'sunflower': 'Sunflower', 'canola': 'Canola',
+        'barley': 'Barley', 'gram': 'Gram', 'chana': 'Gram',
+    }
+    for key, val in CROP_MAP.items():
+        if key in t:
+            return val
+    return None
+
+
+def parse_trading_fields(text):
+    """Parse crop_weight (kg), rate_per_40kg, and crop_name from trading voice commands."""
+    text_norm = normalize_text_all_languages(text)
+    numbers = [int(n) for n in re.findall(r'\b\d+\b', text_norm)]
+
+    crop_weight = None
+    rate_40kg = None
+
+    # Try to match explicit kg pattern: "2000 kg" or "2000 kilo"
+    kg_match = re.search(r'(\d+)\s*(?:kg|kilo|kilogram|kilograms)', text_norm, re.IGNORECASE)
+    if kg_match:
+        crop_weight = int(kg_match.group(1))
+
+    # Try to match rate pattern: "rate 4800" or "4800 rupees" or "rate per 40 kg 4800"
+    rate_match = re.search(r'(?:rate|price|rupay|rs|rupees|per\s*(?:40\s*kg|maund|man)?)?\s*(\d+)\s*(?:rupay|rs|rupees|per\s*(?:40\s*kg|maund|man)?)?', text_norm, re.IGNORECASE)
+    if rate_match and int(rate_match.group(1)) > 100:
+        candidate = int(rate_match.group(1))
+        if candidate != crop_weight:
+            rate_40kg = candidate
+
+    # Fallback: assign numbers by size
+    if not crop_weight and numbers:
+        for n in numbers:
+            if n >= 50:  # weight is usually larger
+                crop_weight = n
+                break
+    if not rate_40kg and numbers:
+        for n in numbers:
+            if n >= 100 and n != crop_weight:
+                rate_40kg = n
+                break
+
+    crop_name = parse_crop_name(text)
+
+    return crop_name, crop_weight, rate_40kg
+
+
+def parse_trading_party_name(text):
+    """Extract party name for trading invoices — just clean spoken words, no DB lookup."""
+    q_norm = normalize_str(text)
+    # Remove all command/intent words, seed words, numbers, and stop words
+    TRADING_STOP = COMMON_STOP_WORDS | SEED_CROP_WORDS | {'trading', 'mian', 'trader', 'crop', 'per', 'maund', 'man', 'kg', 'kilo'}
+    words = [w.title() for w in q_norm.split() if len(w) > 1 and w not in TRADING_STOP and not re.search(r'^\d+$', w)]
+    return ' '.join(words) if words else None
+
+
 def parse_vehicle_number(text):
     """Extracts vehicle plate numbers (e.g. L251, L-251, LES 1234, LES-1234, LEA-999, FD-123)."""
     text_norm = normalize_text_all_languages(text)
@@ -416,21 +492,30 @@ def fetch_available_invoices_for_party(query):
 def detect_intent(text):
     t_norm = normalize_str(text)
 
-    if any(k in t_norm for k in ['cancel', 'band kar', 'khatam kar', 'reject']):
+    def matches_any(keywords):
+        return any(re.search(rf'\b{re.escape(k)}\b', t_norm) for k in keywords)
+
+    if matches_any(['cancel', 'band kar', 'khatam kar', 'reject']):
         return 'CANCEL'
-    elif any(k in t_norm for k in ['haan', 'han', 'theek hai', 'approve', 'yes', 'save kar do', 'bilkul sahi', 'ok', 'confirm', 'sahi hai']):
-        return 'APPROVE'
-    elif any(k in t_norm for k in ['general cargo', 'manual gate pass', 'general gate pass']):
+    elif matches_any(['general cargo', 'manual gate pass', 'general gate pass']):
         return 'CREATE_MANUAL_GATEPASS'
-    elif any(k in t_norm for k in ['purchase', 'khareed', 'khareedna', 'khareedi', 'buy', 'khareedari']):
+    # Trading intents (check BEFORE regular purchase/sales so "trading sales" doesn't match "sales")
+    elif matches_any(['trading', 'mian traders', 'mian trader', 'crop trading', 'crop invoice']):
+        if matches_any(['purchase', 'khareed', 'khareedna', 'buy']):
+            return 'CREATE_TRADING_PURCHASE'
+        else:
+            return 'CREATE_TRADING_SALES'
+    elif matches_any(['purchase', 'khareed', 'khareedna', 'khareedi', 'buy', 'khareedari']):
         return 'CREATE_PURCHASE'
-    elif any(k in t_norm for k in ['sale', 'bechna', 'bech', 'bicho', 'sell', 'bikri', 'sales']):
+    elif matches_any(['sale', 'bechna', 'bech', 'bicho', 'sell', 'bikri', 'sales']):
         return 'CREATE_SALES'
-    elif any(k in t_norm for k in ['gate pass', 'gatepass', 'bhejni', 'bahar bhej', 'inward', 'outward', 'truck', 'print', 'nikal']):
+    elif matches_any(['gate pass', 'gatepass', 'bhejni', 'bahar bhej', 'inward', 'outward', 'truck', 'print', 'nikal']):
         return 'CREATE_GATEPASS'
-    elif any(k in t_norm for k in ['quantity', 'rate', 'price', 'supplier', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'nahi']):
+    elif matches_any(['haan', 'han', 'theek hai', 'approve', 'yes', 'save kar do', 'bilkul sahi', 'ok', 'confirm', 'sahi hai', 'save']):
+        return 'APPROVE'
+    elif matches_any(['quantity', 'rate', 'price', 'supplier', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'nahi']):
         return 'EDIT_DRAFT'
-    elif any(k in t_norm for k in ['invoice', 'document', 'banao', 'bana do', 'bana', 'bag', 'bags', 'wheat', 'rice', 'seed']):
+    elif matches_any(['invoice', 'document', 'banao', 'bana do', 'bana', 'bag', 'bags', 'wheat', 'rice', 'seed']):
         return 'UNCLEAR_DOC_TYPE'
     return 'UNKNOWN'
 
@@ -583,17 +668,37 @@ def process_voice_command(user, text, session_id=None):
         t_s_inv = None
         t_p_inv = None
 
-        if 'purchase' in text_norm or 'khareed' in text_norm or 'pur' in text_norm:
-            p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
-            t_p_inv = TradingPurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
-        elif 'sale' in text_norm or 'sales' in text_norm or 'bech' in text_norm:
-            s_inv = SalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
-            t_s_inv = TradingSalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
-        else:
-            s_inv = SalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
-            p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
-            t_s_inv = TradingSalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
-            t_p_inv = TradingPurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+        m_full = re.search(r'\b(tsl|tpr|inv|pur)[-\s]?0*(\d{1,5})\b', text_norm)
+        if m_full:
+            pfx = m_full.group(1).lower()
+            num = m_full.group(2)
+            if pfx == 'tsl':
+                t_s_inv = TradingSalesInvoice.objects.filter(invoice_number__icontains=num).first()
+            elif pfx == 'tpr':
+                t_p_inv = TradingPurchaseInvoice.objects.filter(invoice_number__icontains=num).first()
+            elif pfx == 'inv':
+                s_inv = SalesInvoice.objects.filter(invoice_number__icontains=num).first()
+            elif pfx == 'pur':
+                p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=num).first()
+
+        if not (s_inv or p_inv or t_s_inv or t_p_inv):
+            if 'tsl' in text_norm or ('trading' in text_norm and any(k in text_norm for k in ['sale', 'sales', 'bech'])):
+                t_s_inv = TradingSalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+            elif 'tpr' in text_norm or ('trading' in text_norm and any(k in text_norm for k in ['purchase', 'khareed', 'pur'])):
+                t_p_inv = TradingPurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+            elif 'purchase' in text_norm or 'khareed' in text_norm or 'pur' in text_norm:
+                p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+                if not p_inv:
+                    t_p_inv = TradingPurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+            elif 'sale' in text_norm or 'sales' in text_norm or 'bech' in text_norm or 'inv' in text_norm:
+                s_inv = SalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+                if not s_inv:
+                    t_s_inv = TradingSalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+            else:
+                t_s_inv = TradingSalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+                t_p_inv = TradingPurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+                s_inv = SalesInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
+                p_inv = PurchaseInvoice.objects.filter(invoice_number__icontains=inv_ref).first()
 
         found_inv = s_inv or p_inv or t_s_inv or t_p_inv
 
@@ -626,6 +731,7 @@ def process_voice_command(user, text, session_id=None):
         seed_obj = None
         qty = None
         party_name_str = ""
+        seed_name_str = ""
 
         if s_inv:
             linked_inv_no = s_inv.invoice_number
@@ -646,11 +752,13 @@ def process_voice_command(user, text, session_id=None):
         elif t_s_inv:
             linked_inv_no = t_s_inv.invoice_number
             party_name_str = t_s_inv.customer_name
-            qty = t_s_inv.quantity
+            seed_name_str = t_s_inv.crop_name or 'Agricultural Crop'
+            qty = int(t_s_inv.crop_weight / Decimal('50.0')) if t_s_inv.crop_weight else 50
         elif t_p_inv:
             linked_inv_no = t_p_inv.invoice_number
             party_name_str = t_p_inv.supplier_name
-            qty = t_p_inv.quantity
+            seed_name_str = t_p_inv.crop_name or 'Agricultural Crop'
+            qty = int(t_p_inv.crop_weight / Decimal('50.0')) if t_p_inv.crop_weight else 50
 
         v_num = parse_vehicle_number(text_clean)
         d_name = parse_driver_name(text_clean)
@@ -663,7 +771,7 @@ def process_voice_command(user, text, session_id=None):
             'party_company': getattr(party_obj, 'company_name', ''),
             'party_ambiguous': [],
             'seed_id': seed_obj.id if seed_obj else None,
-            'seed_name': seed_obj.name if seed_obj else 'Seed Item',
+            'seed_name': seed_obj.name if seed_obj else (seed_name_str or 'Seed Item'),
             'seed_variety': getattr(seed_obj, 'variety', ''),
             'seed_ambiguous': [],
             'quantity': qty or 50,
@@ -829,8 +937,9 @@ def process_voice_command(user, text, session_id=None):
         elif seed_res['status'] == 'ambiguous':
             draft['seed_ambiguous'] = seed_res['choices']
 
+        party_query = strip_seed_words_from_query(text_clean)
         if doc_type == 'PURCHASE_INVOICE':
-            supp_res = match_supplier(text_clean)
+            supp_res = match_supplier(party_query)
             if supp_res['status'] == 'high_confidence':
                 draft['party_id'] = supp_res['match'].id
                 draft['party_name'] = supp_res['match'].name
@@ -839,7 +948,7 @@ def process_voice_command(user, text, session_id=None):
             elif supp_res['status'] == 'ambiguous':
                 draft['party_ambiguous'] = supp_res['choices']
         elif doc_type == 'SALES_INVOICE':
-            cust_res = match_customer(text_clean)
+            cust_res = match_customer(party_query)
             if cust_res['status'] == 'high_confidence':
                 draft['party_id'] = cust_res['match'].id
                 draft['party_name'] = cust_res['match'].name
@@ -847,7 +956,24 @@ def process_voice_command(user, text, session_id=None):
                 draft['party_ambiguous'] = []
             elif cust_res['status'] == 'ambiguous':
                 draft['party_ambiguous'] = cust_res['choices']
-
+        elif doc_type in ('TRADING_SALES', 'TRADING_PURCHASE'):
+            # For trading, just take spoken name verbatim
+            t_party = parse_trading_party_name(text_clean)
+            if t_party:
+                draft['party_name'] = t_party
+            # Update trading-specific fields
+            crop_name, crop_weight, rate_40kg = parse_trading_fields(text_clean)
+            if crop_name:
+                draft['crop_name'] = crop_name
+            if crop_weight:
+                draft['crop_weight'] = crop_weight
+            if rate_40kg:
+                draft['rate_per_40kg'] = rate_40kg
+            # Recalculate total
+            cw = draft.get('crop_weight', 0) or 0
+            r40 = draft.get('rate_per_40kg', 0) or 0
+            if cw > 0 and r40 > 0:
+                draft['total_amount'] = float((cw / 40.0) * r40)
         qty, rate = parse_voice_numbers(text_clean)
         if qty and not draft.get('linked_invoice_number'):
             draft['quantity'] = qty
@@ -917,10 +1043,11 @@ def process_voice_command(user, text, session_id=None):
             doc_type = 'SALES_INVOICE'
 
         party_res = None
+        party_query = strip_seed_words_from_query(text_clean)
         if doc_type == 'PURCHASE_INVOICE':
-            party_res = match_supplier(text_clean)
+            party_res = match_supplier(party_query)
         elif doc_type == 'SALES_INVOICE':
-            party_res = match_customer(text_clean)
+            party_res = match_customer(party_query)
 
         seed_res = match_seed(text_clean)
         qty, rate = parse_voice_numbers(text_clean)
@@ -966,6 +1093,55 @@ def process_voice_command(user, text, session_id=None):
             avail_stock = sum(b.current_qty for b in batches)
             if qty and qty > avail_stock:
                 draft_data['stock_warning'] = f"Available stock ({avail_stock} bags) se zyada quantity select ki hai."
+
+        session = VoiceDraftSession.objects.create(
+            user=user,
+            doc_type=doc_type,
+            draft_data=draft_data,
+            transcript_history=[{'user': text_clean, 'time': str(timezone.now())}]
+        )
+
+        question = get_next_missing_question(draft_data)
+        if question:
+            return {
+                'session_id': session.id,
+                'status': 'DRAFT_PENDING',
+                'response_text': question,
+                'draft': draft_data
+            }
+
+        summary = build_draft_summary_response(draft_data)
+        return {
+            'session_id': session.id,
+            'status': 'DRAFT_PENDING',
+            'response_text': summary,
+            'draft': draft_data
+        }
+
+    # 8. TRADING (MIAN TRADERS) INVOICE CREATION
+    if intent in ['CREATE_TRADING_SALES', 'CREATE_TRADING_PURCHASE']:
+        doc_type = 'TRADING_SALES' if intent == 'CREATE_TRADING_SALES' else 'TRADING_PURCHASE'
+
+        # For trading, just take the spoken party name verbatim — NO DB lookup
+        party_name = parse_trading_party_name(text_clean)
+        crop_name, crop_weight, rate_40kg = parse_trading_fields(text_clean)
+
+        total_amt = 0.0
+        if crop_weight and rate_40kg:
+            total_amt = float((crop_weight / 40.0) * rate_40kg)
+
+        draft_data = {
+            'doc_type': doc_type,
+            'payment_status': 'Unpaid',
+            'party_name': party_name,
+            'party_company': 'Mian Traders',
+            'crop_name': crop_name,
+            'crop_weight': crop_weight,
+            'rate_per_40kg': rate_40kg,
+            'total_amount': total_amt,
+            'party_ambiguous': [],
+            'seed_ambiguous': [],
+        }
 
         session = VoiceDraftSession.objects.create(
             user=user,
@@ -1038,6 +1214,17 @@ def check_missing_required_fields(draft):
         if not draft.get('vehicle_no'):
             return "Vehicle number bata dein."
 
+    elif doc_type in ('TRADING_SALES', 'TRADING_PURCHASE'):
+        party_label = "Customer" if doc_type == 'TRADING_SALES' else "Supplier"
+        if not draft.get('party_name'):
+            return f"{party_label} ka naam bata dein."
+        if not draft.get('crop_name'):
+            return "Crop ka naam bata dein (wheat, rice, cotton etc)."
+        if not draft.get('crop_weight'):
+            return "Crop weight kitna hai (kg mein bata dein)?"
+        if not draft.get('rate_per_40kg'):
+            return "Rate per 40 kg (per maund) kya hai?"
+
     return None
 
 
@@ -1098,6 +1285,17 @@ def get_next_missing_question(draft):
         if not draft.get('vehicle_no'):
             return f"Driver {draft['driver_name']} ke gaari ka vehicle number bata dein."
 
+    elif doc_type in ('TRADING_SALES', 'TRADING_PURCHASE'):
+        party_label = "Customer" if doc_type == 'TRADING_SALES' else "Supplier"
+        if not draft.get('party_name'):
+            return f"{party_label} ka naam bata dein."
+        if not draft.get('crop_name'):
+            return f"{draft['party_name']} ke liye crop ka naam bata dein (wheat, rice, cotton etc)."
+        if not draft.get('crop_weight'):
+            return f"{draft['crop_name']} ka weight kitna hai? (kg mein bata dein)"
+        if not draft.get('rate_per_40kg'):
+            return f"{draft['crop_name']} ka rate per 40 kg (per maund) kya hai?"
+
     return None
 
 
@@ -1113,6 +1311,12 @@ def build_draft_summary_response(draft):
     elif doc_type == 'GATE_PASS':
         linked = f"Invoice #{draft['linked_invoice_number']} ka " if draft.get('linked_invoice_number') else ""
         return f"{linked}Outward Gate Pass draft ready hai. Approve karain?"
+    elif doc_type in ('TRADING_SALES', 'TRADING_PURCHASE'):
+        p_status = draft.get('payment_status', 'Unpaid')
+        t_label = "Trading Sales" if doc_type == 'TRADING_SALES' else "Trading Purchase"
+        crop = draft.get('crop_name', 'Crop')
+        weight = draft.get('crop_weight', 0)
+        return f"Mian Traders {t_label} Invoice - {crop} {weight} Kg ({p_status}) draft ready hai. Approve karain?"
 
     return "Draft ready hai. Approve karain?"
 
@@ -1265,9 +1469,9 @@ def finalize_voice_draft(session):
 
                 if is_manual or not linked_inv:
                     pass_type = 'MANUAL'
-                elif linked_inv.startswith('INV-'):
+                elif linked_inv.startswith('INV-') or linked_inv.startswith('TSL-'):
                     pass_type = 'SALES'
-                elif linked_inv.startswith('PUR-'):
+                elif linked_inv.startswith('PUR-') or linked_inv.startswith('TPR-'):
                     pass_type = 'PURCHASE'
                 else:
                     pass_type = 'MANUAL'
@@ -1291,6 +1495,50 @@ def finalize_voice_draft(session):
                 )
 
                 return gp.pass_number, f"/gatepass/{gp.pk}/print/", None
+
+            # 4. TRADING SALES INVOICE (MIAN TRADERS)
+            elif doc_type == 'TRADING_SALES':
+                party_name = draft.get('party_name') or 'Customer'
+                crop_name = draft.get('crop_name') or 'Wheat / Agricultural Crop'
+                crop_weight = Decimal(str(draft.get('crop_weight', 0) or 0))
+                rate_40kg = Decimal(str(draft.get('rate_per_40kg', 0) or 0))
+                pay_status_str = draft.get('payment_status', 'Unpaid')
+                is_paid = (pay_status_str == 'Paid')
+
+                inv = TradingSalesInvoice.objects.create(
+                    date=today,
+                    customer_name=party_name,
+                    crop_name=crop_name,
+                    crop_weight=crop_weight,
+                    rate_per_40kg=rate_40kg,
+                    paid_amount=(crop_weight / Decimal('40.0') * rate_40kg) if is_paid and crop_weight > 0 and rate_40kg > 0 else Decimal('0.00'),
+                    remarks='Created via AI Voice Assistant (Mian Traders)',
+                    created_by=user
+                )
+
+                return inv.invoice_number, f"/trading/sales/{inv.pk}/", None
+
+            # 5. TRADING PURCHASE INVOICE (MIAN TRADERS)
+            elif doc_type == 'TRADING_PURCHASE':
+                party_name = draft.get('party_name') or 'Supplier'
+                crop_name = draft.get('crop_name') or 'Wheat / Agricultural Crop'
+                crop_weight = Decimal(str(draft.get('crop_weight', 0) or 0))
+                rate_40kg = Decimal(str(draft.get('rate_per_40kg', 0) or 0))
+                pay_status_str = draft.get('payment_status', 'Unpaid')
+                is_paid = (pay_status_str == 'Paid')
+
+                inv = TradingPurchaseInvoice.objects.create(
+                    date=today,
+                    supplier_name=party_name,
+                    crop_name=crop_name,
+                    crop_weight=crop_weight,
+                    rate_per_40kg=rate_40kg,
+                    paid_amount=(crop_weight / Decimal('40.0') * rate_40kg) if is_paid and crop_weight > 0 and rate_40kg > 0 else Decimal('0.00'),
+                    remarks='Created via AI Voice Assistant (Mian Traders)',
+                    created_by=user
+                )
+
+                return inv.invoice_number, f"/trading/purchases/{inv.pk}/", None
 
     except Exception as e:
         import traceback

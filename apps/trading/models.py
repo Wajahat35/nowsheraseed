@@ -269,6 +269,22 @@ class TradingSalesInvoice(models.Model):
 
         super().save(*args, **kwargs)
 
+    def get_qr_data_uri(self):
+        """Returns inline base64 PNG data URI for QR code pointing to invoice detail."""
+        import qrcode
+        import io
+        import base64
+        base_url = 'https://nowsheraseed.onrender.com'
+        verify_url = f"{base_url}/trading/sales/{self.pk}/"
+        qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=3)
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="#0f172a", back_color="white")
+        buffer = io.BytesIO()
+        qr_img.save(buffer, format='PNG')
+        b64 = base64.b64encode(buffer.getvalue()).decode('ascii')
+        return f"data:image/png;base64,{b64}"
+
     def __str__(self):
         return f"{self.invoice_number} - {self.customer_name} (Mian Traders - PKR {self.total_amount})"
 
@@ -363,6 +379,22 @@ class TradingPurchaseInvoice(models.Model):
             self.payment_status = 'Unpaid'
 
         super().save(*args, **kwargs)
+
+    def get_qr_data_uri(self):
+        """Returns inline base64 PNG data URI for QR code pointing to invoice detail."""
+        import qrcode
+        import io
+        import base64
+        base_url = 'https://nowsheraseed.onrender.com'
+        verify_url = f"{base_url}/trading/purchases/{self.pk}/"
+        qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=3)
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="#0f172a", back_color="white")
+        buffer = io.BytesIO()
+        qr_img.save(buffer, format='PNG')
+        b64 = base64.b64encode(buffer.getvalue()).decode('ascii')
+        return f"data:image/png;base64,{b64}"
 
     def __str__(self):
         return f"{self.invoice_number} - {self.supplier_name} (Mian Traders - PKR {self.total_amount})"

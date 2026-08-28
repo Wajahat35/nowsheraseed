@@ -134,17 +134,10 @@
         </div>
     {% endif %}
 
-    <!-- Signature Authorization Block -->
-    <div class="row text-center mt-5 pt-4 border-top">
-        <div class="col-4">
-            <div class="border-top pt-1 fw-semibold small">Supplier Signature</div>
-        </div>
-        <div class="col-4">
-            <div class="border-top pt-1 fw-semibold small">Purchased By (Mian Traders)</div>
-        </div>
-        <div class="col-4">
-            <div class="border-top pt-1 fw-semibold small">Authorized Stamp & Sign</div>
-        </div>
+    <!-- QR Code Verification -->
+    <div class="text-center mt-4 pt-3 border-top">
+        <img src="{{ invoice.get_qr_data_uri }}" width="120" style="display:inline-block; border-radius:6px; border: 1px solid #dee2e6; padding: 4px;" alt="Invoice QR Code">
+        <div class="small text-muted mt-1">Scan QR Code to Verify Invoice Online</div>
     </div>
 
 </div>
