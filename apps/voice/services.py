@@ -89,6 +89,36 @@ SEED_CROP_WORDS = set([
     'barley', 'millet', 'sorghum', 'gram', 'chana', 'masoor', 'moong', 'daal',
 ])
 
+PHONETIC_VARIANTS = {
+    'chaudry': 'chaudhry',
+    'chaudhary': 'chaudhry',
+    'chaudri': 'chaudhry',
+    'choudhry': 'chaudhry',
+    'choudhary': 'chaudhry',
+    'choudry': 'chaudhry',
+    'rehman': 'rahman',
+    'alrehman': 'rahman',
+    'al-rehman': 'rahman',
+    'al rehman': 'rahman',
+    'psc': 'punjab',
+}
+
+def normalize_party_token(w):
+    w_low = w.lower().strip()
+    return PHONETIC_VARIANTS.get(w_low, w_low)
+
+def party_tokens_match(w1, w2):
+    t1 = normalize_party_token(w1)
+    t2 = normalize_party_token(w2)
+    if t1 == t2:
+        return True
+    if len(t1) >= 4 and len(t2) >= 4:
+        if t1 in t2 or t2 in t1:
+            return True
+        if difflib.SequenceMatcher(None, t1, t2).ratio() >= 0.75:
+            return True
+    return False
+
 def extract_clean_party_name(query):
     if not query:
         return ""
@@ -112,47 +142,54 @@ def match_supplier(query):
         clean_p_name = extract_clean_party_name(query)
         return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
 
-    matches = []
-    q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+    q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS and w not in SEED_CROP_WORDS)
+    if not q_words:
+        return {'status': 'not_found', 'match': None, 'choices': []}
+
     q_distinct = q_words - GENERIC_PARTY_WORDS
+    matches = []
 
     for s in suppliers:
         name_norm = normalize_str(s.name)
         comp_norm = normalize_str(s.company_name or "")
         full_norm = f"{name_norm} {comp_norm}"
         
-        if q_norm and (q_norm == name_norm or q_norm == comp_norm or q_norm == full_norm):
+        # Substring / Exact match
+        if q_norm and (q_norm == name_norm or q_norm == comp_norm or q_norm in full_norm or name_norm in q_norm):
             return {'status': 'high_confidence', 'match': s, 'choices': []}
 
         s_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
         s_distinct = s_words - GENERIC_PARTY_WORDS
 
-        common_distinct = q_distinct.intersection(s_distinct)
-        if q_distinct and not common_distinct:
-            score = 0.10
-        elif common_distinct:
-            score = 0.80 + (0.10 * len(common_distinct))
+        distinct_matches = sum(1 for qw in q_distinct if any(party_tokens_match(qw, sw) for sw in s_distinct))
+        all_matches = sum(1 for qw in q_words if any(party_tokens_match(qw, sw) for sw in s_words))
+
+        if q_distinct:
+            if distinct_matches > 0:
+                score = 0.80 + (0.10 * distinct_matches) + (0.05 * all_matches)
+            else:
+                score = 0.15 if all_matches > 0 else 0.0
         else:
-            ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
-            ratio_full = difflib.SequenceMatcher(None, q_norm, full_norm).ratio()
-            score = max(ratio_name, ratio_full)
+            score = 0.40 + (0.10 * all_matches) if all_matches > 0 else 0.0
 
         matches.append((score, s))
 
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_supplier = matches[0]
 
-    if best_score >= 0.60:
-        if len(matches) > 1 and matches[1][0] >= 0.60 and (best_score - matches[1][0]) < 0.10:
+    if best_score >= 0.70:
+        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.05:
             candidates = [m[1] for m in matches if m[0] >= 0.40][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_supplier, 'choices': []}
-    elif best_score >= 0.35:
+    elif best_score >= 0.40:
         candidates = [m[1] for m in matches if m[0] >= 0.25][:4]
         return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
     
-    clean_p_name = extract_clean_party_name(query)
-    return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
+    if q_distinct:
+        clean_p_name = extract_clean_party_name(query)
+        return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
+    return {'status': 'not_found', 'match': None, 'choices': []}
 
 
 def match_customer(query):
@@ -165,47 +202,54 @@ def match_customer(query):
         clean_p_name = extract_clean_party_name(query)
         return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
 
-    matches = []
-    q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+    q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS and w not in SEED_CROP_WORDS)
+    if not q_words:
+        return {'status': 'not_found', 'match': None, 'choices': []}
+
     q_distinct = q_words - GENERIC_PARTY_WORDS
+    matches = []
 
     for c in customers:
         name_norm = normalize_str(c.name)
         comp_norm = normalize_str(c.company_name or "")
         full_norm = f"{name_norm} {comp_norm}"
 
-        if q_norm and (q_norm == name_norm or q_norm == comp_norm or q_norm == full_norm):
+        # Substring / Exact match
+        if q_norm and (q_norm == name_norm or q_norm == comp_norm or q_norm in full_norm or name_norm in q_norm):
             return {'status': 'high_confidence', 'match': c, 'choices': []}
 
         c_words = set(w for w in full_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
         c_distinct = c_words - GENERIC_PARTY_WORDS
 
-        common_distinct = q_distinct.intersection(c_distinct)
-        if q_distinct and not common_distinct:
-            score = 0.10
-        elif common_distinct:
-            score = 0.80 + (0.10 * len(common_distinct))
+        distinct_matches = sum(1 for qw in q_distinct if any(party_tokens_match(qw, sw) for sw in c_distinct))
+        all_matches = sum(1 for qw in q_words if any(party_tokens_match(qw, sw) for sw in c_words))
+
+        if q_distinct:
+            if distinct_matches > 0:
+                score = 0.80 + (0.10 * distinct_matches) + (0.05 * all_matches)
+            else:
+                score = 0.15 if all_matches > 0 else 0.0
         else:
-            ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
-            ratio_full = difflib.SequenceMatcher(None, q_norm, full_norm).ratio()
-            score = max(ratio_name, ratio_full)
+            score = 0.40 + (0.10 * all_matches) if all_matches > 0 else 0.0
 
         matches.append((score, c))
 
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_cust = matches[0]
 
-    if best_score >= 0.60:
-        if len(matches) > 1 and matches[1][0] >= 0.60 and (best_score - matches[1][0]) < 0.10:
+    if best_score >= 0.70:
+        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.05:
             candidates = [m[1] for m in matches if m[0] >= 0.40][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_cust, 'choices': []}
-    elif best_score >= 0.35:
+    elif best_score >= 0.40:
         candidates = [m[1] for m in matches if m[0] >= 0.25][:4]
         return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
     
-    clean_p_name = extract_clean_party_name(query)
-    return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
+    if q_distinct:
+        clean_p_name = extract_clean_party_name(query)
+        return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
+    return {'status': 'not_found', 'match': None, 'choices': []}
 
 
 def match_seed(query):
@@ -217,6 +261,7 @@ def match_seed(query):
     if not seeds.exists():
         return {'status': 'not_found', 'match': None, 'choices': []}
 
+    # 1. Direct explicit keyword shortcuts
     if any(k in q_norm for k in ['faisalabad', 'wheat', 'gandum', 'fsd']):
         s_match = seeds.filter(name__icontains='wheat').first() or seeds.filter(name__icontains='faisalabad').first()
         if s_match:
@@ -237,9 +282,11 @@ def match_seed(query):
         if s_match:
             return {'status': 'high_confidence', 'match': s_match, 'choices': []}
 
-    matches = []
+    # 2. Check token intersection
     q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS)
+    has_seed_token = bool(q_words.intersection(SEED_CROP_WORDS))
 
+    matches = []
     for s in seeds:
         name_norm = normalize_str(s.name)
         var_norm = normalize_str(s.variety or "")
@@ -253,10 +300,12 @@ def match_seed(query):
         if common:
             score = 0.80 + (0.10 * len(common))
             matches.append((score, s))
-        else:
+        elif has_seed_token:
             ratio_full = difflib.SequenceMatcher(None, q_norm, full_norm).ratio()
             ratio_name = difflib.SequenceMatcher(None, q_norm, name_norm).ratio()
-            matches.append((max(ratio_full, ratio_name), s))
+            best_r = max(ratio_full, ratio_name)
+            if best_r >= 0.50:
+                matches.append((best_r, s))
 
     if not matches:
         return {'status': 'not_found', 'match': None, 'choices': []}
@@ -264,13 +313,13 @@ def match_seed(query):
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_seed = matches[0]
 
-    if best_score >= 0.50:
-        if len(matches) > 1 and matches[1][0] >= 0.50 and (best_score - matches[1][0]) < 0.10:
-            candidates = [m[1] for m in matches if m[0] >= 0.35][:4]
+    if best_score >= 0.70:
+        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.05:
+            candidates = [m[1] for m in matches if m[0] >= 0.40][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'variety': c.variety or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_seed, 'choices': []}
-    elif best_score >= 0.25:
-        candidates = [m[1] for m in matches if m[0] >= 0.20][:4]
+    elif best_score >= 0.40:
+        candidates = [m[1] for m in matches if m[0] >= 0.30][:4]
         return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'variety': c.variety or ''} for c in candidates]}
     
     return {'status': 'not_found', 'match': None, 'choices': []}
@@ -945,8 +994,15 @@ def process_voice_command(user, text, session_id=None):
                 draft['party_name'] = supp_res['match'].name
                 draft['party_company'] = supp_res['match'].company_name or ''
                 draft['party_ambiguous'] = []
-            elif supp_res['status'] == 'ambiguous':
+                draft['is_new_party'] = False
+            elif supp_res['status'] == 'ambiguous' and not draft.get('party_id'):
                 draft['party_ambiguous'] = supp_res['choices']
+            elif supp_res['status'] == 'new_entity' and not draft.get('party_id'):
+                draft['party_id'] = None
+                draft['party_name'] = supp_res['new_name']
+                draft['party_company'] = f"{supp_res['new_name']} (New Supplier)"
+                draft['party_ambiguous'] = []
+                draft['is_new_party'] = True
         elif doc_type == 'SALES_INVOICE':
             cust_res = match_customer(party_query)
             if cust_res['status'] == 'high_confidence':
@@ -954,8 +1010,15 @@ def process_voice_command(user, text, session_id=None):
                 draft['party_name'] = cust_res['match'].name
                 draft['party_company'] = cust_res['match'].company_name or ''
                 draft['party_ambiguous'] = []
-            elif cust_res['status'] == 'ambiguous':
+                draft['is_new_party'] = False
+            elif cust_res['status'] == 'ambiguous' and not draft.get('party_id'):
                 draft['party_ambiguous'] = cust_res['choices']
+            elif cust_res['status'] == 'new_entity' and not draft.get('party_id'):
+                draft['party_id'] = None
+                draft['party_name'] = cust_res['new_name']
+                draft['party_company'] = f"{cust_res['new_name']} (New Customer)"
+                draft['party_ambiguous'] = []
+                draft['is_new_party'] = True
         elif doc_type in ('TRADING_SALES', 'TRADING_PURCHASE'):
             # For trading, just take spoken name verbatim
             t_party = parse_trading_party_name(text_clean)
@@ -1009,6 +1072,18 @@ def process_voice_command(user, text, session_id=None):
             else:
                 draft['stock_warning'] = None
 
+        print("\n" + "="*50)
+        print("VOICE ASSISTANT (CONVERSATIONAL UPDATE) DEBUG LOG")
+        print(f"Raw transcript: {text_clean}")
+        print(f"Party ID: {draft.get('party_id')}")
+        print(f"Party Name: {draft.get('party_name')}")
+        print(f"Seed ID: {draft.get('seed_id')}")
+        print(f"Seed Name: {draft.get('seed_name')}")
+        print(f"Quantity: {draft.get('quantity')}")
+        print(f"Rate: {draft.get('rate')}")
+        print(f"Total: {draft.get('total_amount')}")
+        print("="*50 + "\n")
+
         session.draft_data = draft
         session.transcript_history.append({'user': text_clean, 'time': str(timezone.now())})
         session.save()
@@ -1056,6 +1131,7 @@ def process_voice_command(user, text, session_id=None):
 
         party_obj = party_res['match'] if party_res and party_res['status'] == 'high_confidence' else None
         new_party_name = party_res.get('new_name') if party_res and party_res['status'] == 'new_entity' else None
+        is_new = bool(party_res and party_res['status'] == 'new_entity')
         seed_obj = seed_res['match'] if seed_res and seed_res['status'] == 'high_confidence' else None
 
         party_name_val = party_obj.name if party_obj else (new_party_name if new_party_name else None)
@@ -1074,7 +1150,7 @@ def process_voice_command(user, text, session_id=None):
             'party_id': party_obj.id if party_obj else None,
             'party_name': party_name_val,
             'party_company': party_comp_val,
-            'is_new_party': True if new_party_name else False,
+            'is_new_party': is_new,
             'party_ambiguous': party_res['choices'] if party_res and party_res['status'] == 'ambiguous' else [],
             'seed_id': seed_obj.id if seed_obj else None,
             'seed_name': seed_obj.name if seed_obj else None,
@@ -1087,6 +1163,18 @@ def process_voice_command(user, text, session_id=None):
             'driver_name': d_name,
             'stock_warning': None,
         }
+
+        print("\n" + "="*50)
+        print("VOICE ASSISTANT (NEW DRAFT) DEBUG LOG")
+        print(f"Raw transcript: {text_clean}")
+        print(f"Detected customer/supplier query: {party_query}")
+        print(f"Matched entity: {party_obj.name if party_obj else (new_party_name or 'None')}")
+        print(f"Customer/Supplier DB ID: {party_obj.id if party_obj else 'None'}")
+        print(f"Doc Type: {doc_type}")
+        print(f"Seed: {seed_obj.name if seed_obj else 'None'}")
+        print(f"Quantity: {qty}")
+        print(f"Rate: {rate}")
+        print("="*50 + "\n")
 
         if doc_type == 'SALES_INVOICE' and seed_obj:
             batches = SeedBatch.objects.filter(seed=seed_obj)
@@ -1345,8 +1433,15 @@ def finalize_voice_draft(session):
                 qty = int(draft.get('quantity', 0) or 0)
                 rate = Decimal(str(draft.get('rate', 0) or 0))
 
-                supplier = Supplier.objects.filter(id=supp_id).first() if supp_id else (Supplier.objects.filter(name__icontains=draft.get('party_name', '')).first() if draft.get('party_name') else None)
+                supplier = None
+                if supp_id:
+                    supplier = Supplier.objects.filter(id=supp_id).first()
                 if not supplier and draft.get('party_name'):
+                    p_name = draft['party_name'].strip()
+                    supplier = Supplier.objects.filter(name__iexact=p_name).first() or \
+                               Supplier.objects.filter(company_name__iexact=p_name).first() or \
+                               Supplier.objects.filter(name__icontains=p_name).first()
+                if not supplier and draft.get('party_name') and draft.get('is_new_party'):
                     raw_p_name = str(draft['party_name']).strip().title()
                     supplier = Supplier.objects.create(
                         name=raw_p_name,
@@ -1373,6 +1468,16 @@ def finalize_voice_draft(session):
                     notes='Created via AI Voice Assistant',
                     created_by=user
                 )
+
+                print("\n" + "="*50)
+                print("FINALIZE PURCHASE INVOICE DEBUG LOG")
+                print(f"Raw transcript: {session.transcript_history[-1]['user'] if session.transcript_history else 'N/A'}")
+                print(f"Detected supplier: {draft.get('party_name')}")
+                print(f"Matched supplier: {supplier.name}")
+                print(f"Supplier ID: {supplier.id}")
+                print(f"Invoice supplier ID: {inv.supplier_id}")
+                print(f"Invoice supplier name: {inv.supplier.name}")
+                print("="*50 + "\n")
 
                 batch = SeedBatch.objects.filter(seed=seed).order_by('-id').first()
                 if not batch:
@@ -1409,8 +1514,15 @@ def finalize_voice_draft(session):
                 qty = int(draft.get('quantity', 0) or 0)
                 rate = Decimal(str(draft.get('rate', 0) or 0))
 
-                customer = Customer.objects.filter(id=cust_id).first() if cust_id else (Customer.objects.filter(name__icontains=draft.get('party_name', '')).first() if draft.get('party_name') else None)
+                customer = None
+                if cust_id:
+                    customer = Customer.objects.filter(id=cust_id).first()
                 if not customer and draft.get('party_name'):
+                    p_name = draft['party_name'].strip()
+                    customer = Customer.objects.filter(name__iexact=p_name).first() or \
+                               Customer.objects.filter(company_name__iexact=p_name).first() or \
+                               Customer.objects.filter(name__icontains=p_name).first()
+                if not customer and draft.get('party_name') and draft.get('is_new_party'):
                     raw_p_name = str(draft['party_name']).strip().title()
                     customer = Customer.objects.create(
                         name=raw_p_name,
@@ -1437,6 +1549,16 @@ def finalize_voice_draft(session):
                     notes='Created via AI Voice Assistant',
                     created_by=user
                 )
+
+                print("\n" + "="*50)
+                print("FINALIZE SALES INVOICE DEBUG LOG")
+                print(f"Raw transcript: {session.transcript_history[-1]['user'] if session.transcript_history else 'N/A'}")
+                print(f"Detected customer: {draft.get('party_name')}")
+                print(f"Matched customer: {customer.name}")
+                print(f"Customer ID: {customer.id}")
+                print(f"Invoice customer ID: {inv.customer_id}")
+                print(f"Invoice customer name: {inv.customer.name}")
+                print("="*50 + "\n")
 
                 batch = SeedBatch.objects.filter(seed=seed, current_qty__gt=0).order_by('-id').first()
                 if not batch:
