@@ -174,7 +174,7 @@ def match_supplier(query):
     suppliers = Supplier.objects.all()
     if not suppliers.exists():
         clean_p_name = extract_clean_party_name(query)
-        return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
+        return {'status': 'not_found', 'match': None, 'unrecognized': clean_p_name, 'choices': []}
 
     q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS and w not in SEED_CROP_WORDS)
     if not q_words:
@@ -211,8 +211,8 @@ def match_supplier(query):
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_supplier = matches[0]
 
-    if best_score >= 0.70:
-        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.05:
+    if best_score >= 0.60:
+        if len(matches) > 1 and matches[1][0] >= 0.60 and (best_score - matches[1][0]) < 0.05:
             candidates = [m[1] for m in matches if m[0] >= 0.40][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_supplier, 'choices': []}
@@ -220,10 +220,8 @@ def match_supplier(query):
         candidates = [m[1] for m in matches if m[0] >= 0.25][:4]
         return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
     
-    if q_distinct:
-        clean_p_name = extract_clean_party_name(query)
-        return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
-    return {'status': 'not_found', 'match': None, 'choices': []}
+    clean_p_name = extract_clean_party_name(query) if q_distinct else None
+    return {'status': 'not_found', 'match': None, 'unrecognized': clean_p_name, 'choices': []}
 
 
 def match_customer(query):
@@ -234,7 +232,7 @@ def match_customer(query):
     customers = Customer.objects.all()
     if not customers.exists():
         clean_p_name = extract_clean_party_name(query)
-        return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
+        return {'status': 'not_found', 'match': None, 'unrecognized': clean_p_name, 'choices': []}
 
     q_words = set(w for w in q_norm.split() if len(w) > 2 and w not in COMMON_STOP_WORDS and w not in SEED_CROP_WORDS)
     if not q_words:
@@ -271,8 +269,8 @@ def match_customer(query):
     matches.sort(key=lambda x: x[0], reverse=True)
     best_score, best_cust = matches[0]
 
-    if best_score >= 0.70:
-        if len(matches) > 1 and matches[1][0] >= 0.70 and (best_score - matches[1][0]) < 0.05:
+    if best_score >= 0.60:
+        if len(matches) > 1 and matches[1][0] >= 0.60 and (best_score - matches[1][0]) < 0.05:
             candidates = [m[1] for m in matches if m[0] >= 0.40][:4]
             return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
         return {'status': 'high_confidence', 'match': best_cust, 'choices': []}
@@ -280,10 +278,8 @@ def match_customer(query):
         candidates = [m[1] for m in matches if m[0] >= 0.25][:4]
         return {'status': 'ambiguous', 'match': None, 'choices': [{'id': c.id, 'name': c.name, 'company': c.company_name or ''} for c in candidates]}
     
-    if q_distinct:
-        clean_p_name = extract_clean_party_name(query)
-        return {'status': 'new_entity', 'match': None, 'new_name': clean_p_name, 'choices': []}
-    return {'status': 'not_found', 'match': None, 'choices': []}
+    clean_p_name = extract_clean_party_name(query) if q_distinct else None
+    return {'status': 'not_found', 'match': None, 'unrecognized': clean_p_name, 'choices': []}
 
 
 def match_seed(query):
@@ -1021,6 +1017,7 @@ def process_voice_command(user, text, session_id=None):
             draft['seed_ambiguous'] = seed_res['choices']
 
         party_query = strip_seed_words_from_query(text_clean)
+        party_query = strip_seed_words_from_query(text_clean)
         if doc_type == 'PURCHASE_INVOICE':
             supp_res = match_supplier(party_query)
             if supp_res['status'] == 'high_confidence':
@@ -1028,15 +1025,14 @@ def process_voice_command(user, text, session_id=None):
                 draft['party_name'] = supp_res['match'].name
                 draft['party_company'] = supp_res['match'].company_name or ''
                 draft['party_ambiguous'] = []
-                draft['is_new_party'] = False
+                draft['party_not_found_query'] = None
             elif supp_res['status'] == 'ambiguous' and not draft.get('party_id'):
                 draft['party_ambiguous'] = supp_res['choices']
-            elif supp_res['status'] == 'new_entity' and not draft.get('party_id'):
+            elif supp_res.get('unrecognized') and not draft.get('party_id'):
                 draft['party_id'] = None
-                draft['party_name'] = supp_res['new_name']
-                draft['party_company'] = f"{supp_res['new_name']} (New Supplier)"
-                draft['party_ambiguous'] = []
-                draft['is_new_party'] = True
+                draft['party_name'] = None
+                draft['party_company'] = ''
+                draft['party_not_found_query'] = supp_res['unrecognized']
         elif doc_type == 'SALES_INVOICE':
             cust_res = match_customer(party_query)
             if cust_res['status'] == 'high_confidence':
@@ -1044,15 +1040,14 @@ def process_voice_command(user, text, session_id=None):
                 draft['party_name'] = cust_res['match'].name
                 draft['party_company'] = cust_res['match'].company_name or ''
                 draft['party_ambiguous'] = []
-                draft['is_new_party'] = False
+                draft['party_not_found_query'] = None
             elif cust_res['status'] == 'ambiguous' and not draft.get('party_id'):
                 draft['party_ambiguous'] = cust_res['choices']
-            elif cust_res['status'] == 'new_entity' and not draft.get('party_id'):
+            elif cust_res.get('unrecognized') and not draft.get('party_id'):
                 draft['party_id'] = None
-                draft['party_name'] = cust_res['new_name']
-                draft['party_company'] = f"{cust_res['new_name']} (New Customer)"
-                draft['party_ambiguous'] = []
-                draft['is_new_party'] = True
+                draft['party_name'] = None
+                draft['party_company'] = ''
+                draft['party_not_found_query'] = cust_res['unrecognized']
         elif doc_type in ('TRADING_SALES', 'TRADING_PURCHASE'):
             # For trading, just take spoken name verbatim
             t_party = parse_trading_party_name(text_clean)
@@ -1164,12 +1159,11 @@ def process_voice_command(user, text, session_id=None):
         d_name = parse_driver_name(text_clean)
 
         party_obj = party_res['match'] if party_res and party_res['status'] == 'high_confidence' else None
-        new_party_name = party_res.get('new_name') if party_res and party_res['status'] == 'new_entity' else None
-        is_new = bool(party_res and party_res['status'] == 'new_entity')
+        unrecognized_p = party_res.get('unrecognized') if party_res and party_res['status'] == 'not_found' else None
         seed_obj = seed_res['match'] if seed_res and seed_res['status'] == 'high_confidence' else None
 
-        party_name_val = party_obj.name if party_obj else (new_party_name if new_party_name else None)
-        party_comp_val = (party_obj.company_name or '') if party_obj else (f"{new_party_name} (New Party)" if new_party_name else '')
+        party_name_val = party_obj.name if party_obj else None
+        party_comp_val = (party_obj.company_name or '') if party_obj else ''
 
         if not rate and seed_obj:
             if doc_type == 'SALES_INVOICE':
@@ -1184,7 +1178,7 @@ def process_voice_command(user, text, session_id=None):
             'party_id': party_obj.id if party_obj else None,
             'party_name': party_name_val,
             'party_company': party_comp_val,
-            'is_new_party': is_new,
+            'party_not_found_query': unrecognized_p,
             'party_ambiguous': party_res['choices'] if party_res and party_res['status'] == 'ambiguous' else [],
             'seed_id': seed_obj.id if seed_obj else None,
             'seed_name': seed_obj.name if seed_obj else None,
@@ -1202,7 +1196,7 @@ def process_voice_command(user, text, session_id=None):
         print("VOICE ASSISTANT (NEW DRAFT) DEBUG LOG")
         print(f"Raw transcript: {text_clean}")
         print(f"Detected customer/supplier query: {party_query}")
-        print(f"Matched entity: {party_obj.name if party_obj else (new_party_name or 'None')}")
+        print(f"Matched entity: {party_obj.name if party_obj else 'None'}")
         print(f"Customer/Supplier DB ID: {party_obj.id if party_obj else 'None'}")
         print(f"Doc Type: {doc_type}")
         print(f"Seed: {seed_obj.name if seed_obj else 'None'}")
@@ -1359,14 +1353,17 @@ def get_next_missing_question(draft):
     if doc_type == 'PURCHASE_INVOICE':
         if draft.get('party_ambiguous'):
             names = ", ".join([c['name'] for c in draft['party_ambiguous']])
-            return f"Multiple suppliers milay hain: {names}. Select karein."
-        if not draft.get('party_name'):
-            return "Supplier ka naam bata dein."
+            return f"Multiple suppliers milay hain: {names}. Baraye meharbani select karein."
+        if draft.get('party_not_found_query'):
+            known = ", ".join([s.name for s in Supplier.objects.all()[:3]])
+            return f"Supplier '{draft['party_not_found_query']}' database mein mojood nahi hai. Mojooda suppliers: {known}. Baraye meharbani registered supplier ka naam batayein."
+        if not draft.get('party_id') or not draft.get('party_name'):
+            return "Supplier ka naam bata dein jo database mein registered hai."
         if draft.get('seed_ambiguous'):
             seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
-            return f"Multiple seeds milay hain: {seeds}. Select karein."
+            return f"Multiple seeds milay hain: {seeds}. Baraye meharbani select karein."
         if not draft.get('seed_name'):
-            return f"{draft['party_name']} ke liye seed product name bata dein."
+            return f"{draft['party_name']} se kaunsa registered seed purchase karna hai?"
         if not draft.get('quantity'):
             return f"Kitnay bags {draft['seed_name']} purchase karne hain?"
         if not draft.get('rate'):
@@ -1375,14 +1372,17 @@ def get_next_missing_question(draft):
     elif doc_type == 'SALES_INVOICE':
         if draft.get('party_ambiguous'):
             names = ", ".join([c['name'] for c in draft['party_ambiguous']])
-            return f"Multiple customers milay hain: {names}. Select karein."
-        if not draft.get('party_name'):
-            return "Customer ka naam bata dein."
+            return f"Multiple customers milay hain: {names}. Baraye meharbani select karein."
+        if draft.get('party_not_found_query'):
+            known = ", ".join([c.name for c in Customer.objects.all()[:3]])
+            return f"Customer '{draft['party_not_found_query']}' database mein mojood nahi hai. Mojooda customers: {known}. Baraye meharbani registered customer ka naam batayein."
+        if not draft.get('party_id') or not draft.get('party_name'):
+            return "Customer ka naam bata dein jo database mein registered hai."
         if draft.get('seed_ambiguous'):
             seeds = ", ".join([c['name'] for c in draft['seed_ambiguous']])
-            return f"Multiple seeds milay hain: {seeds}. Select karein."
+            return f"Multiple seeds milay hain: {seeds}. Baraye meharbani select karein."
         if not draft.get('seed_name'):
-            return f"{draft['party_name']} ko kaunsa seed sale karna hai?"
+            return f"{draft['party_name']} ko kaunsa registered seed sale karna hai?"
         if not draft.get('quantity'):
             return f"Kitnay bags {draft['seed_name']} sale karne hain?"
         if not draft.get('rate'):
@@ -1473,21 +1473,14 @@ def finalize_voice_draft(session):
                 if not supplier and draft.get('party_name'):
                     p_name = draft['party_name'].strip()
                     supplier = Supplier.objects.filter(name__iexact=p_name).first() or \
-                               Supplier.objects.filter(company_name__iexact=p_name).first() or \
-                               Supplier.objects.filter(name__icontains=p_name).first()
-                if not supplier and draft.get('party_name') and draft.get('is_new_party'):
-                    raw_p_name = str(draft['party_name']).strip().title()
-                    supplier = Supplier.objects.create(
-                        name=raw_p_name,
-                        company_name=raw_p_name,
-                        phone='0300-0000000'
-                    )
-                if not supplier:
-                    supplier = Supplier.objects.first()
+                               Supplier.objects.filter(company_name__iexact=p_name).first()
 
-                seed = Seed.objects.filter(id=seed_id).first() if seed_id else (Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first() if draft.get('seed_name') else Seed.objects.first())
+                if not supplier:
+                    return None, None, "Supplier database mein mojood nahi hai. Purchase invoice create nahi ho sakti."
+
+                seed = Seed.objects.filter(id=seed_id).first() if seed_id else (Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first() if draft.get('seed_name') else None)
                 if not seed:
-                    seed = Seed.objects.first()
+                    return None, None, "Seed item database mein mojood nahi hai."
 
                 tot = Decimal(str(qty)) * rate
                 paid_amt = tot if is_paid else Decimal('0.00')
@@ -1554,21 +1547,14 @@ def finalize_voice_draft(session):
                 if not customer and draft.get('party_name'):
                     p_name = draft['party_name'].strip()
                     customer = Customer.objects.filter(name__iexact=p_name).first() or \
-                               Customer.objects.filter(company_name__iexact=p_name).first() or \
-                               Customer.objects.filter(name__icontains=p_name).first()
-                if not customer and draft.get('party_name') and draft.get('is_new_party'):
-                    raw_p_name = str(draft['party_name']).strip().title()
-                    customer = Customer.objects.create(
-                        name=raw_p_name,
-                        company_name=raw_p_name,
-                        phone='0300-0000000'
-                    )
-                if not customer:
-                    customer = Customer.objects.first()
+                               Customer.objects.filter(company_name__iexact=p_name).first()
 
-                seed = Seed.objects.filter(id=seed_id).first() if seed_id else (Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first() if draft.get('seed_name') else Seed.objects.first())
+                if not customer:
+                    return None, None, "Customer database mein mojood nahi hai. Sales invoice create nahi ho sakti."
+
+                seed = Seed.objects.filter(id=seed_id).first() if seed_id else (Seed.objects.filter(name__icontains=draft.get('seed_name', '')).first() if draft.get('seed_name') else None)
                 if not seed:
-                    seed = Seed.objects.first()
+                    return None, None, "Seed item database mein mojood nahi hai."
 
                 tot = Decimal(str(qty)) * rate
                 paid_amt = tot if is_paid else Decimal('0.00')

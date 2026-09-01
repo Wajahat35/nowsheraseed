@@ -747,20 +747,62 @@ document.addEventListener('DOMContentLoaded', function() {
         approveDraftBtn.innerHTML = `<i class="fas fa-check-circle me-1"></i> Approve & Save Document`;
     }
 
-    // Enhanced Natural Text to Speech Synthesis with Voice Priority Selector
+    // Preload speech synthesis voices
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = function() {
+            window.speechSynthesis.getVoices();
+        };
+    }
+
+    // Enhanced Natural Text to Speech Synthesis - Strictly Female Voice Selector
+    function getFemaleVoice() {
+        if (!('speechSynthesis' in window)) return null;
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices || voices.length === 0) return null;
+
+        const maleNames = ['david', 'george', 'mark', 'asad', 'hemant', 'ravi', 'guy', 'stefan', 'male', 'richard', 'sean', 'paul'];
+        const isNotMale = (v) => !maleNames.some(m => v.name.toLowerCase().includes(m));
+
+        // 1. First priority: Female Urdu / Hindi / South Asian English voices
+        let female = voices.find(v => isNotMale(v) && (
+            v.name.toLowerCase().includes('fatima') ||
+            v.name.toLowerCase().includes('heera') ||
+            v.name.toLowerCase().includes('swara') ||
+            v.name.toLowerCase().includes('sonia') ||
+            v.name.toLowerCase().includes('zara') ||
+            v.name.toLowerCase().includes('kavya') ||
+            v.name.toLowerCase().includes('veena') ||
+            ((v.lang.includes('ur') || v.lang.includes('hi') || v.lang.includes('en-IN')) && (v.name.toLowerCase().includes('female') || isNotMale(v)))
+        ));
+        if (female) return female;
+
+        // 2. Second priority: Standard Windows & Browser Female voices (Microsoft Zira, Hazel, Samantha, Susan, Google Female)
+        female = voices.find(v => isNotMale(v) && (
+            v.name.toLowerCase().includes('zira') ||
+            v.name.toLowerCase().includes('samantha') ||
+            v.name.toLowerCase().includes('hazel') ||
+            v.name.toLowerCase().includes('susan') ||
+            v.name.toLowerCase().includes('female') ||
+            v.name.toLowerCase().includes('catherine') ||
+            v.name.toLowerCase().includes('lisa')
+        ));
+        if (female) return female;
+
+        // 3. Third priority: Any non-male voice in en / ur / hi
+        female = voices.find(v => isNotMale(v) && (v.lang.startsWith('en') || v.lang.startsWith('ur') || v.lang.startsWith('hi')));
+        return female || null;
+    }
+
     function speakText(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 0.95;
-            utterance.pitch = 1.0;
-            
-            const voices = window.speechSynthesis.getVoices();
-            const naturalVoice = voices.find(v => 
-                v.lang.includes('ur') || v.lang.includes('hi') || v.name.toLowerCase().includes('urdu') || v.name.toLowerCase().includes('hindi') || v.name.toLowerCase().includes('asad') || v.name.toLowerCase().includes('hemant')
-            );
-            if (naturalVoice) {
-                utterance.voice = naturalVoice;
+            utterance.pitch = 1.08; // Pleasant natural female tone
+
+            const femaleVoice = getFemaleVoice();
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
             } else {
                 utterance.lang = 'ur-PK';
             }
