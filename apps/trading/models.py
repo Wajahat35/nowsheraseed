@@ -269,13 +269,26 @@ class TradingSalesInvoice(models.Model):
 
         super().save(*args, **kwargs)
 
-    def get_qr_data_uri(self):
-        """Returns inline base64 PNG data URI for QR code pointing to invoice detail."""
+    def get_qr_data_uri(self, request=None):
+        """Returns inline base64 PNG data URI for QR code pointing to public invoice verification."""
         import qrcode
         import io
         import base64
-        base_url = 'https://nowsheraseed.onrender.com'
-        verify_url = f"{base_url}/trading/sales/{self.pk}/"
+        from django.conf import settings
+        from apps.settings_app.models import CompanyProfile
+
+        company = CompanyProfile.get_instance()
+
+        if request:
+            base_url = f"{request.scheme}://{request.get_host()}"
+        elif company and company.erp_base_url and '127.0.0.1' not in company.erp_base_url and 'localhost' not in company.erp_base_url:
+            base_url = company.erp_base_url.rstrip('/')
+        elif not settings.DEBUG:
+            base_url = 'https://nowsheraseed.onrender.com'
+        else:
+            base_url = (company.erp_base_url if company and company.erp_base_url else 'http://127.0.0.1:8000').rstrip('/')
+
+        verify_url = f"{base_url}/trading/verify/{self.invoice_number}/"
         qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=3)
         qr.add_data(verify_url)
         qr.make(fit=True)
@@ -380,13 +393,26 @@ class TradingPurchaseInvoice(models.Model):
 
         super().save(*args, **kwargs)
 
-    def get_qr_data_uri(self):
-        """Returns inline base64 PNG data URI for QR code pointing to invoice detail."""
+    def get_qr_data_uri(self, request=None):
+        """Returns inline base64 PNG data URI for QR code pointing to public invoice verification."""
         import qrcode
         import io
         import base64
-        base_url = 'https://nowsheraseed.onrender.com'
-        verify_url = f"{base_url}/trading/purchases/{self.pk}/"
+        from django.conf import settings
+        from apps.settings_app.models import CompanyProfile
+
+        company = CompanyProfile.get_instance()
+
+        if request:
+            base_url = f"{request.scheme}://{request.get_host()}"
+        elif company and company.erp_base_url and '127.0.0.1' not in company.erp_base_url and 'localhost' not in company.erp_base_url:
+            base_url = company.erp_base_url.rstrip('/')
+        elif not settings.DEBUG:
+            base_url = 'https://nowsheraseed.onrender.com'
+        else:
+            base_url = (company.erp_base_url if company and company.erp_base_url else 'http://127.0.0.1:8000').rstrip('/')
+
+        verify_url = f"{base_url}/trading/verify/{self.invoice_number}/"
         qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=3)
         qr.add_data(verify_url)
         qr.make(fit=True)

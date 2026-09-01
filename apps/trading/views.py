@@ -688,3 +688,30 @@ class ExportTradingPDFView(LoginRequiredMixin, TradingAccessRequiredMixin, View)
             ])
         log_activity(request.user, 'EXPORT', 'Trading', 'Exported Trading Performance Report to PDF', request)
         return render_to_pdf('trading_performance_report.pdf', 'Trading Performance Report', headers, rows)
+
+
+class TradingInvoiceQRVerifyView(View):
+    """Public QR scan verification page for Mian Traders invoices — no login required."""
+    def get(self, request, invoice_number):
+        from django.http import Http404
+        s_inv = TradingSalesInvoice.objects.filter(invoice_number=invoice_number).first()
+        p_inv = TradingPurchaseInvoice.objects.filter(invoice_number=invoice_number).first() if not s_inv else None
+        invoice = s_inv or p_inv
+        if not invoice:
+            raise Http404(f"Trading Invoice '{invoice_number}' not found.")
+
+        is_sales = bool(s_inv)
+        party_label = 'Billed To Customer / Buyer' if is_sales else 'Supplier / Grower Details'
+        party_name = invoice.customer_name if is_sales else invoice.supplier_name
+        doc_badge = 'OFFICIAL CROP SALES INVOICE' if is_sales else 'OFFICIAL CROP PURCHASE INVOICE'
+        doc_type_title = 'Sales Invoice' if is_sales else 'Purchase Invoice'
+
+        return render(request, 'trading/invoice_qr_verify.html', {
+            'invoice': invoice,
+            'is_sales': is_sales,
+            'party_label': party_label,
+            'party_name': party_name,
+            'doc_badge': doc_badge,
+            'doc_type_title': doc_type_title,
+        })
+

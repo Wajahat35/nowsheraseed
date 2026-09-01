@@ -53,17 +53,18 @@
         </div>
     </div>
 
-    <!-- Supplier & Payment Status Info Box -->
-    <div class="row mb-4">
-        <div class="col-6">
-            <div class="p-3 bg-light rounded border">
+    <!-- Supplier, Payment Status & QR Verification Box -->
+    <div class="row mb-4 align-items-stretch">
+        <div class="col-md-5 mb-2 mb-md-0">
+            <div class="p-3 bg-light rounded border h-100">
                 <small class="text-muted fw-bold d-block text-uppercase mb-1">SUPPLIER / GROWER DETAILS:</small>
                 <h5 class="fw-bold text-dark mb-1">{{ invoice.supplier_name }}</h5>
                 <div class="small text-muted"><i class="fas fa-phone me-1"></i> Contact: {{ invoice.phone|default:"N/A" }}</div>
+                <div class="small text-muted mt-2"><i class="fas fa-calendar-alt me-1"></i> Issued Date: {{ invoice.date }}</div>
             </div>
         </div>
-        <div class="col-6 text-end">
-            <div class="p-3 bg-light rounded border d-inline-block text-start" style="min-width: 260px;">
+        <div class="col-md-4 mb-2 mb-md-0">
+            <div class="p-3 bg-light rounded border h-100">
                 <div class="d-flex justify-content-between mb-1">
                     <span class="text-muted small">Payment Status:</span>
                     {% if invoice.payment_status == 'Paid' %}
@@ -86,6 +87,16 @@
                     <span class="fw-bold small">Balance Payable:</span>
                     <strong class="font-monospace text-danger fs-6">PKR {{ invoice.balance_amount|intcomma }}</strong>
                 </div>
+            </div>
+        </div>
+        <div class="col-md-3 text-end d-flex flex-column align-items-end justify-content-center">
+            <div style="display:inline-block; background:#0f172a; padding:8px; border-radius:10px; text-align:center;">
+                <img src="{{ invoice.get_qr_data_uri }}" width="105" style="display:block; border-radius:4px;" alt="Invoice QR Code">
+                <div style="color:#10b981; font-size:9px; font-weight:700; margin-top:4px; letter-spacing:0.5px;">SCAN TO VERIFY</div>
+            </div>
+            <div class="small text-muted mt-1 text-end" style="font-size:10px;">
+                Invoice # {{ invoice.invoice_number }}<br>
+                Authentic Mian Traders Document
             </div>
         </div>
     </div>
@@ -133,12 +144,6 @@
             <strong>Remarks / Notes:</strong> {{ invoice.remarks }}
         </div>
     {% endif %}
-
-    <!-- QR Code Verification -->
-    <div class="text-center mt-4 pt-3 border-top">
-        <img src="{{ invoice.get_qr_data_uri }}" width="120" style="display:inline-block; border-radius:6px; border: 1px solid #dee2e6; padding: 4px;" alt="Invoice QR Code">
-        <div class="small text-muted mt-1">Scan QR Code to Verify Invoice Online</div>
-    </div>
 
 </div>
 {% endblock %}

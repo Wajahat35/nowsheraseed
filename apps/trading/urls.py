@@ -14,6 +14,9 @@ urlpatterns = [
     path('sales/<int:pk>/edit/', views.TradingSalesUpdateView.as_view(), name='sales_edit'),
     path('sales/<int:pk>/delete/', views.TradingSalesDeleteView.as_view(), name='sales_delete'),
 
+    # Public QR Code Verification for Mian Traders Invoices
+    path('verify/<str:invoice_number>/', views.TradingInvoiceQRVerifyView.as_view(), name='invoice_verify'),
+
     # Seed Trading Purchase Invoices
     path('purchases/', views.TradingPurchaseListView.as_view(), name='purchase_list'),
     path('purchases/add/', views.TradingPurchaseCreateView.as_view(), name='purchase_create'),

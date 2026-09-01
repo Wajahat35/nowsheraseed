@@ -1,0 +1,260 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Mian Traders Invoice {{ invoice.invoice_number }} — Official Verification</title>
+    <style>
+        /* Self-contained — fast loading on mobile, works on LAN & public web */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 16px;
+            color: #1e293b;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 450px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            margin: 0 auto;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%);
+            padding: 22px 20px;
+            color: #fff;
+            position: relative;
+        }
+        .verified-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.22);
+            border: 1px solid rgba(255,255,255,0.45);
+            border-radius: 50px;
+            padding: 4px 14px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+        .check-icon {
+            width: 15px; height: 15px;
+            background: #fff;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #059669;
+            font-size: 10px;
+            font-weight: 900;
+        }
+        .header h1 { font-size: 22px; font-weight: 800; margin-bottom: 3px; letter-spacing: 0.5px; }
+        .header p  { font-size: 12px; opacity: 0.9; }
+
+        /* ── Body ── */
+        .body { padding: 20px; }
+
+        .inv-badge-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .inv-number { font-size: 26px; font-weight: 900; color: #0f172a; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .inv-label  { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #059669; font-weight: 800; margin-top: 2px; }
+
+        /* 2-col grid */
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+        .info-box { background: #f8fafc; padding: 10px 12px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .info-box label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: #64748b; font-weight: 700; margin-bottom: 4px; }
+        .info-box .val  { font-size: 13px; font-weight: 700; color: #0f172a; word-break: break-word; }
+
+        /* Status badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .badge-paid    { background: #dcfce7; color: #15803d; }
+        .badge-partial { background: #fef9c3; color: #92400e; }
+        .badge-unpaid  { background: #fee2e2; color: #b91c1c; }
+
+        hr { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
+
+        /* Crop Details Box */
+        .crop-card {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+        .crop-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #166534; margin-bottom: 8px; }
+        .crop-name  { font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+        .crop-stats {
+            display: flex;
+            justify-content: space-between;
+            background: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #dcfce7;
+            font-size: 12px;
+        }
+        .crop-stats div span { display: block; font-size: 9px; color: #64748b; text-transform: uppercase; font-weight: 700; }
+        .crop-stats div strong { font-size: 13px; color: #0f172a; font-family: ui-monospace, monospace; }
+
+        /* Total box */
+        .total-box {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 14px 0;
+        }
+        .total-box .tl { color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+        .total-box .tr { color: #10b981; font-size: 22px; font-weight: 900; font-family: ui-monospace, monospace; }
+
+        /* Paid / due row */
+        .money-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+        .money-row:last-child { border-bottom: none; }
+        .money-label { color: #64748b; font-weight: 600; }
+        .money-val   { font-weight: 800; font-family: ui-monospace, monospace; }
+        .green { color: #16a34a; }
+        .red   { color: #dc2626; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            background: #f8fafc;
+            border-top: 1px solid #f1f5f9;
+            padding: 14px 20px;
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+        .brand { color: #059669; font-weight: 800; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="verified-pill">
+            <span class="check-icon">✓</span>
+            Authentic Mian Traders Document
+        </div>
+        <h1>🌾 MIAN TRADERS</h1>
+        <p>Commission Agent & Seed Trading Merchant</p>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+        <div class="inv-badge-row">
+            <div>
+                <div class="inv-number">{{ invoice.invoice_number }}</div>
+                <div class="inv-label">{{ doc_badge }}</div>
+            </div>
+            <div>
+                <span class="badge {% if invoice.payment_status == 'Paid' %}badge-paid{% elif invoice.payment_status == 'Partial' %}badge-partial{% else %}badge-unpaid{% endif %}">
+                    {{ invoice.payment_status }}
+                </span>
+            </div>
+        </div>
+
+        <div class="grid2">
+            <div class="info-box">
+                <label>Issued Date</label>
+                <div class="val">{{ invoice.date }}</div>
+            </div>
+            <div class="info-box">
+                <label>Company</label>
+                <div class="val">Mian Traders</div>
+            </div>
+            <div class="info-box" style="grid-column: span 2;">
+                <label>{{ party_label }}</label>
+                <div class="val" style="font-size: 14px;">{{ party_name }}</div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Phone: {{ invoice.phone|default:"N/A" }}</div>
+            </div>
+        </div>
+
+        <!-- Crop Particulars -->
+        <div class="crop-card">
+            <div class="crop-title">Crop Trading Particulars</div>
+            <div class="crop-name">{{ invoice.crop_name|default:"Wheat / Agricultural Commodity" }}</div>
+            <div class="crop-stats">
+                <div>
+                    <span>Weight</span>
+                    <strong>{{ invoice.crop_weight|intcomma }} Kg</strong>
+                </div>
+                <div>
+                    <span>Maunds (40 Kg)</span>
+                    <strong>
+                        {% if invoice.crop_weight %}
+                            {% widthratio invoice.crop_weight 40 1 %} Maunds
+                        {% else %}
+                            -
+                        {% endif %}
+                    </strong>
+                </div>
+                <div>
+                    <span>Rate / 40 Kg</span>
+                    <strong>PKR {{ invoice.rate_per_40kg|intcomma }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grand Total -->
+        <div class="total-box">
+            <span class="tl">Total Amount</span>
+            <span class="tr">PKR {{ invoice.total_amount|intcomma }}</span>
+        </div>
+
+        <!-- Paid / Due -->
+        <div class="money-row">
+            <span class="money-label">Amount Paid:</span>
+            <span class="money-val green">PKR {{ invoice.paid_amount|intcomma }}</span>
+        </div>
+        <div class="money-row">
+            <span class="money-label">Balance Payable / Due:</span>
+            <span class="money-val {% if invoice.balance_amount > 0 %}red{% else %}green{% endif %}">
+                PKR {{ invoice.balance_amount|intcomma }}
+            </span>
+        </div>
+
+        {% if invoice.remarks %}
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; margin-top: 12px; font-size: 12px; color: #475569;">
+            <strong style="color: #1e293b;">Remarks:</strong> {{ invoice.remarks }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <span class="brand">MIAN TRADERS</span> &bull; Verified Official Trading Document<br>
+        Grain Market, Punjab, Pakistan &bull; Invoice {{ invoice.invoice_number }}
+    </div>
+</div>
+
+</body>
+</html>
