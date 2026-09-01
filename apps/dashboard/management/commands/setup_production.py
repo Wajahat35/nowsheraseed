@@ -10,15 +10,23 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Checking database content...")
         
-        # 1. Load data from data_backup.json if fixture exists
+        # 1. Only load data from data_backup.json if database is brand new / empty
+        from apps.customers.models import Customer
+        from apps.inventory.models import Seed
+        from apps.trading.models import TradingSalesInvoice
+
+        has_existing_data = Customer.objects.exists() or Seed.objects.exists() or TradingSalesInvoice.objects.exists()
         fixture_path = 'data_backup.json'
-        if os.path.exists(fixture_path):
+
+        if not has_existing_data and os.path.exists(fixture_path):
             try:
-                self.stdout.write("Loading data_backup.json...")
+                self.stdout.write("Database is empty. Loading initial data from data_backup.json...")
                 call_command('loaddata', fixture_path)
-                self.stdout.write(self.style.SUCCESS("Successfully imported data_backup.json"))
+                self.stdout.write(self.style.SUCCESS("Successfully imported initial data_backup.json"))
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"loaddata notice: {e}"))
+        else:
+            self.stdout.write("Existing database records found. Skipping loaddata to preserve live user data.")
 
         # 2. Ensure Role exists
         admin_role, _ = Role.objects.get_or_create(
