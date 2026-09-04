@@ -8,6 +8,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import models
+from django.utils.dateparse import parse_date
 
 from .models import (
     TradingAccount, Deposit, Withdrawal, Trade,
@@ -357,6 +358,7 @@ class TradeDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView
 
 
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # SEEDS TRADING SALES INVOICES VIEWS
 # ---------------------------------------------------------------------------
 class TradingSalesListView(LoginRequiredMixin, TradingAccessRequiredMixin, ListView):
@@ -368,12 +370,100 @@ class TradingSalesListView(LoginRequiredMixin, TradingAccessRequiredMixin, ListV
     def get_queryset(self):
         qs = TradingSalesInvoice.objects.all()
         q = self.request.GET.get('q')
+        customer = self.request.GET.get('customer')
+        crop = self.request.GET.get('crop')
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
         status = self.request.GET.get('status')
+
         if q:
-            qs = qs.filter(models.Q(invoice_number__icontains=q) | models.Q(customer_name__icontains=q) | models.Q(phone__icontains=q))
+            qs = qs.filter(
+                models.Q(invoice_number__icontains=q) |
+                models.Q(customer_name__icontains=q) |
+                models.Q(phone__icontains=q) |
+                models.Q(crop_name__icontains=q)
+            )
+        if customer:
+            qs = qs.filter(customer_name__icontains=customer)
+        if crop:
+            qs = qs.filter(crop_name__icontains=crop)
+        if start_date:
+            s_date = parse_date(start_date)
+            if s_date:
+                qs = qs.filter(date__gte=s_date)
+        if end_date:
+            e_date = parse_date(end_date)
+            if e_date:
+                qs = qs.filter(date__lte=e_date)
         if status:
             qs = qs.filter(payment_status=status)
+
         return qs.order_by('-date', '-id')
+
+    def get(self, request, *args, **kwargs):
+        export_fmt = request.GET.get('export')
+        if export_fmt in ('excel', 'pdf'):
+            invoices = self.get_queryset()
+            if export_fmt == 'excel':
+                headers = ['Invoice #', 'Date', 'Customer / Buyer Party', 'Phone', 'Crop Particulars', 'Weight (Kg)', 'Rate / 40 Kg (PKR)', 'Total Amount (PKR)', 'Paid (PKR)', 'Balance (PKR)', 'Status']
+                rows = [
+                    [
+                        s.invoice_number,
+                        str(s.date),
+                        s.customer_name,
+                        s.phone or '-',
+                        s.crop_name or 'Agricultural Crop',
+                        float(s.crop_weight or 0),
+                        float(s.rate_per_40kg or 0),
+                        float(s.total_amount),
+                        float(s.paid_amount),
+                        float(s.balance_amount),
+                        s.payment_status
+                    ]
+                    for s in invoices
+                ]
+                return render_to_excel("trading_sales_invoices.xlsx", "TradingSales", headers, rows)
+            elif export_fmt == 'pdf':
+                headers = ['Invoice #', 'Date', 'Customer', 'Crop', 'Total (PKR)', 'Paid (PKR)', 'Status']
+                rows = [
+                    [
+                        s.invoice_number,
+                        str(s.date),
+                        s.customer_name[:18],
+                        (s.crop_name or 'Crop')[:15],
+                        f"PKR {s.total_amount:,.0f}",
+                        f"PKR {s.paid_amount:,.0f}",
+                        s.payment_status
+                    ]
+                    for s in invoices
+                ]
+                return render_to_pdf("trading_sales_invoices.pdf", "Mian Traders - Crop Sales Invoices", headers, rows)
+
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['customers'] = (
+            TradingSalesInvoice.objects.exclude(customer_name__isnull=True)
+            .exclude(customer_name='')
+            .values_list('customer_name', flat=True)
+            .distinct()
+            .order_by('customer_name')
+        )
+        context['crops'] = (
+            TradingSalesInvoice.objects.exclude(crop_name__isnull=True)
+            .exclude(crop_name='')
+            .values_list('crop_name', flat=True)
+            .distinct()
+            .order_by('crop_name')
+        )
+        context['selected_customer'] = self.request.GET.get('customer', '')
+        context['selected_crop'] = self.request.GET.get('crop', '')
+        context['start_date'] = self.request.GET.get('start_date', '')
+        context['end_date'] = self.request.GET.get('end_date', '')
+        context['status'] = self.request.GET.get('status', '')
+        context['q'] = self.request.GET.get('q', '')
+        return context
 
 
 class TradingSalesCreateView(LoginRequiredMixin, TradingAccessRequiredMixin, CreateView):
@@ -433,12 +523,100 @@ class TradingPurchaseListView(LoginRequiredMixin, TradingAccessRequiredMixin, Li
     def get_queryset(self):
         qs = TradingPurchaseInvoice.objects.all()
         q = self.request.GET.get('q')
+        supplier = self.request.GET.get('supplier')
+        crop = self.request.GET.get('crop')
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
         status = self.request.GET.get('status')
+
         if q:
-            qs = qs.filter(models.Q(invoice_number__icontains=q) | models.Q(supplier_name__icontains=q) | models.Q(phone__icontains=q))
+            qs = qs.filter(
+                models.Q(invoice_number__icontains=q) |
+                models.Q(supplier_name__icontains=q) |
+                models.Q(phone__icontains=q) |
+                models.Q(crop_name__icontains=q)
+            )
+        if supplier:
+            qs = qs.filter(supplier_name__icontains=supplier)
+        if crop:
+            qs = qs.filter(crop_name__icontains=crop)
+        if start_date:
+            s_date = parse_date(start_date)
+            if s_date:
+                qs = qs.filter(date__gte=s_date)
+        if end_date:
+            e_date = parse_date(end_date)
+            if e_date:
+                qs = qs.filter(date__lte=e_date)
         if status:
             qs = qs.filter(payment_status=status)
+
         return qs.order_by('-date', '-id')
+
+    def get(self, request, *args, **kwargs):
+        export_fmt = request.GET.get('export')
+        if export_fmt in ('excel', 'pdf'):
+            invoices = self.get_queryset()
+            if export_fmt == 'excel':
+                headers = ['Invoice #', 'Date', 'Supplier / Grower Party', 'Phone', 'Crop Particulars', 'Weight (Kg)', 'Rate / 40 Kg (PKR)', 'Total Amount (PKR)', 'Paid (PKR)', 'Balance (PKR)', 'Status']
+                rows = [
+                    [
+                        p.invoice_number,
+                        str(p.date),
+                        p.supplier_name,
+                        p.phone or '-',
+                        p.crop_name or 'Agricultural Crop',
+                        float(p.crop_weight or 0),
+                        float(p.rate_per_40kg or 0),
+                        float(p.total_amount),
+                        float(p.paid_amount),
+                        float(p.balance_amount),
+                        p.payment_status
+                    ]
+                    for p in invoices
+                ]
+                return render_to_excel("trading_purchase_invoices.xlsx", "TradingPurchases", headers, rows)
+            elif export_fmt == 'pdf':
+                headers = ['Invoice #', 'Date', 'Supplier', 'Crop', 'Total (PKR)', 'Paid (PKR)', 'Status']
+                rows = [
+                    [
+                        p.invoice_number,
+                        str(p.date),
+                        p.supplier_name[:18],
+                        (p.crop_name or 'Crop')[:15],
+                        f"PKR {p.total_amount:,.0f}",
+                        f"PKR {p.paid_amount:,.0f}",
+                        p.payment_status
+                    ]
+                    for p in invoices
+                ]
+                return render_to_pdf("trading_purchase_invoices.pdf", "Mian Traders - Crop Purchase Invoices", headers, rows)
+
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['suppliers'] = (
+            TradingPurchaseInvoice.objects.exclude(supplier_name__isnull=True)
+            .exclude(supplier_name='')
+            .values_list('supplier_name', flat=True)
+            .distinct()
+            .order_by('supplier_name')
+        )
+        context['crops'] = (
+            TradingPurchaseInvoice.objects.exclude(crop_name__isnull=True)
+            .exclude(crop_name='')
+            .values_list('crop_name', flat=True)
+            .distinct()
+            .order_by('crop_name')
+        )
+        context['selected_supplier'] = self.request.GET.get('supplier', '')
+        context['selected_crop'] = self.request.GET.get('crop', '')
+        context['start_date'] = self.request.GET.get('start_date', '')
+        context['end_date'] = self.request.GET.get('end_date', '')
+        context['status'] = self.request.GET.get('status', '')
+        context['q'] = self.request.GET.get('q', '')
+        return context
 
 
 class TradingPurchaseCreateView(LoginRequiredMixin, TradingAccessRequiredMixin, CreateView):

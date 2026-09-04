@@ -19,6 +19,60 @@
     </div>
 </div>
 
+<div class="card-custom p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
+        <div class="fw-bold text-dark"><i class="fas fa-filter text-emerald me-1" style="color: #10b981;"></i> Filter Invoices</div>
+        <div class="btn-group">
+            <a href="?{% if selected_customer %}customer={{ selected_customer }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if stype %}stype={{ stype }}&{% endif %}{% if pstatus %}pstatus={{ pstatus }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=excel" class="btn btn-sm btn-outline-success fw-semibold">
+                <i class="fas fa-file-excel me-1"></i> Download Excel
+            </a>
+            <a href="?{% if selected_customer %}customer={{ selected_customer }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if stype %}stype={{ stype }}&{% endif %}{% if pstatus %}pstatus={{ pstatus }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=pdf" class="btn btn-sm btn-outline-danger fw-semibold" target="_blank">
+                <i class="fas fa-file-pdf me-1"></i> Download PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="GET" class="row g-2">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Customer</label>
+            <select name="customer" class="form-select form-select-sm">
+                <option value="">All Customers</option>
+                {% for c in customers %}
+                    <option value="{{ c.id }}" {% if selected_customer|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Payment Status</label>
+            <select name="pstatus" class="form-select form-select-sm">
+                <option value="">All Statuses</option>
+                <option value="Unpaid" {% if pstatus == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+                <option value="Partial" {% if pstatus == 'Partial' %}selected{% endif %}>Partially Paid</option>
+                <option value="Paid" {% if pstatus == 'Paid' %}selected{% endif %}>Paid</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Keyword</label>
+            <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Invoice #, Customer, Phone...">
+        </div>
+        <div class="col-12 text-end mt-3">
+            <button type="submit" class="btn btn-sm btn-emerald text-white px-3 fw-semibold" style="background-color: #10b981;">
+                <i class="fas fa-filter me-1"></i> Apply Filter
+            </button>
+            <a href="{% url 'sales:sales_list' %}" class="btn btn-sm btn-light border px-3">Clear</a>
+        </div>
+    </form>
+</div>
+
 <div class="card-custom p-4">
     <div class="table-responsive">
         <table class="table table-custom table-hover" id="salesTable">

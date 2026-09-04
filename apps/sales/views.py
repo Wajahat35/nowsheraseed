@@ -6,11 +6,15 @@ from django.views.generic import ListView, DetailView, View
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Q
+from django.utils.dateparse import parse_date
 from .models import SalesInvoice, SalesItem, Quotation, QuotationItem
 from .forms import SalesInvoiceForm, QuotationForm
 from apps.seeds.models import Seed, SeedBatch
 from apps.customers.models import Customer
 from apps.accounts.views import log_activity
+from apps.reports.pdf_generator import render_to_pdf
+from apps.reports.excel_generator import render_to_excel
 
 class SalesListView(LoginRequiredMixin, ListView):
     model = SalesInvoice
@@ -21,15 +25,85 @@ class SalesListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = SalesInvoice.objects.select_related('customer').all()
         q = self.request.GET.get('q')
+        customer_id = self.request.GET.get('customer')
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
         stype = self.request.GET.get('stype')
         pstatus = self.request.GET.get('pstatus')
+
         if q:
-            qs = qs.filter(invoice_number__icontains=q) | qs.filter(customer__name__icontains=q)
+            qs = qs.filter(
+                Q(invoice_number__icontains=q) |
+                Q(customer__name__icontains=q) |
+                Q(customer__company_name__icontains=q) |
+                Q(customer__phone__icontains=q)
+            )
+        if customer_id:
+            qs = qs.filter(customer_id=customer_id)
+        if start_date:
+            s_date = parse_date(start_date)
+            if s_date:
+                qs = qs.filter(date__gte=s_date)
+        if end_date:
+            e_date = parse_date(end_date)
+            if e_date:
+                qs = qs.filter(date__lte=e_date)
         if stype:
             qs = qs.filter(sales_type=stype)
         if pstatus:
             qs = qs.filter(payment_status=pstatus)
-        return qs.order_by('-id')
+
+        return qs.order_by('-date', '-id')
+
+    def get(self, request, *args, **kwargs):
+        export_fmt = request.GET.get('export')
+        if export_fmt in ('excel', 'pdf'):
+            invoices = self.get_queryset()
+            if export_fmt == 'excel':
+                headers = ['Invoice #', 'Customer', 'Date', 'Type', 'Grand Total (PKR)', 'Paid (PKR)', 'Balance (PKR)', 'Payment Method', 'Status']
+                rows = [
+                    [
+                        inv.invoice_number,
+                        inv.customer.name if inv.customer else 'N/A',
+                        str(inv.date),
+                        inv.get_sales_type_display(),
+                        float(inv.grand_total),
+                        float(inv.paid_amount),
+                        float(inv.due_amount),
+                        inv.payment_method,
+                        inv.payment_status
+                    ]
+                    for inv in invoices
+                ]
+                return render_to_excel("sales_invoices.xlsx", "SalesInvoices", headers, rows)
+            elif export_fmt == 'pdf':
+                headers = ['Invoice #', 'Customer', 'Date', 'Type', 'Grand Total', 'Paid', 'Status']
+                rows = [
+                    [
+                        inv.invoice_number,
+                        (inv.customer.name[:22] if inv.customer else 'N/A'),
+                        str(inv.date),
+                        inv.sales_type,
+                        f"PKR {inv.grand_total:,.0f}",
+                        f"PKR {inv.paid_amount:,.0f}",
+                        inv.payment_status
+                    ]
+                    for inv in invoices
+                ]
+                return render_to_pdf("sales_invoices.pdf", "Sales Invoices Report", headers, rows)
+
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['customers'] = Customer.objects.all().order_by('name')
+        context['selected_customer'] = self.request.GET.get('customer', '')
+        context['start_date'] = self.request.GET.get('start_date', '')
+        context['end_date'] = self.request.GET.get('end_date', '')
+        context['stype'] = self.request.GET.get('stype', '')
+        context['pstatus'] = self.request.GET.get('pstatus', '')
+        context['q'] = self.request.GET.get('q', '')
+        return context
 
 class SalesCreateView(LoginRequiredMixin, View):
     template_name = 'sales/sales_form.html'

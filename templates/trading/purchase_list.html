@@ -14,6 +14,68 @@
     </a>
 </div>
 
+<div class="card border-0 shadow-sm rounded-3 p-4 bg-white mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
+        <div class="fw-bold text-dark"><i class="fas fa-filter text-primary me-1"></i> Filter Crop Purchase Invoices</div>
+        <div class="btn-group">
+            <a href="?{% if selected_supplier %}supplier={{ selected_supplier }}&{% endif %}{% if selected_crop %}crop={{ selected_crop }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=excel" class="btn btn-sm btn-outline-success fw-semibold">
+                <i class="fas fa-file-excel me-1"></i> Download Excel
+            </a>
+            <a href="?{% if selected_supplier %}supplier={{ selected_supplier }}&{% endif %}{% if selected_crop %}crop={{ selected_crop }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=pdf" class="btn btn-sm btn-outline-danger fw-semibold" target="_blank">
+                <i class="fas fa-file-pdf me-1"></i> Download PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="GET" class="row g-2">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Supplier / Grower</label>
+            <select name="supplier" class="form-select form-select-sm">
+                <option value="">All Suppliers</option>
+                {% for s in suppliers %}
+                    <option value="{{ s }}" {% if selected_supplier == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Crop</label>
+            <select name="crop" class="form-select form-select-sm">
+                <option value="">All Crops</option>
+                {% for cr in crops %}
+                    <option value="{{ cr }}" {% if selected_crop == cr %}selected{% endif %}>{{ cr }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Payment Status</label>
+            <select name="status" class="form-select form-select-sm">
+                <option value="">All Statuses</option>
+                <option value="Unpaid" {% if status == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+                <option value="Partial" {% if status == 'Partial' %}selected{% endif %}>Partially Paid</option>
+                <option value="Paid" {% if status == 'Paid' %}selected{% endif %}>Paid</option>
+            </select>
+        </div>
+        <div class="col-md-8 mt-2">
+            <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Search by Invoice #, Supplier Name, Phone, Crop...">
+        </div>
+        <div class="col-md-4 text-end mt-2">
+            <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold">
+                <i class="fas fa-filter me-1"></i> Apply Filter
+            </button>
+            <a href="{% url 'trading:purchase_list' %}" class="btn btn-sm btn-light border px-3">Clear</a>
+        </div>
+    </form>
+</div>
+
 <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
     <div class="table-responsive">
         <table class="table table-hover align-middle">

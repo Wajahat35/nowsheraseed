@@ -6,11 +6,15 @@ from django.views.generic import ListView, DetailView, View
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Q
+from django.utils.dateparse import parse_date
 from .models import PurchaseInvoice, PurchaseItem
 from .forms import PurchaseInvoiceForm
 from apps.seeds.models import Seed, SeedBatch
 from apps.suppliers.models import Supplier
 from apps.accounts.views import log_activity
+from apps.reports.pdf_generator import render_to_pdf
+from apps.reports.excel_generator import render_to_excel
 
 
 class PurchaseListView(LoginRequiredMixin, ListView):
@@ -22,12 +26,81 @@ class PurchaseListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = PurchaseInvoice.objects.select_related('supplier').all()
         q = self.request.GET.get('q')
+        supplier_id = self.request.GET.get('supplier')
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
         pstatus = self.request.GET.get('pstatus')
+
         if q:
-            qs = qs.filter(invoice_number__icontains=q) | qs.filter(supplier__name__icontains=q) | qs.filter(supplier_bill_no__icontains=q)
+            qs = qs.filter(
+                Q(invoice_number__icontains=q) |
+                Q(supplier__name__icontains=q) |
+                Q(supplier__company_name__icontains=q) |
+                Q(supplier__phone__icontains=q) |
+                Q(supplier_bill_no__icontains=q)
+            )
+        if supplier_id:
+            qs = qs.filter(supplier_id=supplier_id)
+        if start_date:
+            s_date = parse_date(start_date)
+            if s_date:
+                qs = qs.filter(date__gte=s_date)
+        if end_date:
+            e_date = parse_date(end_date)
+            if e_date:
+                qs = qs.filter(date__lte=e_date)
         if pstatus:
             qs = qs.filter(payment_status=pstatus)
-        return qs.order_by('-id')
+
+        return qs.order_by('-date', '-id')
+
+    def get(self, request, *args, **kwargs):
+        export_fmt = request.GET.get('export')
+        if export_fmt in ('excel', 'pdf'):
+            invoices = self.get_queryset()
+            if export_fmt == 'excel':
+                headers = ['Bill #', 'Supplier', 'Supplier Bill #', 'Date', 'Grand Total (PKR)', 'Paid (PKR)', 'Balance Due (PKR)', 'Payment Method', 'Status']
+                rows = [
+                    [
+                        inv.invoice_number,
+                        inv.supplier.name if inv.supplier else 'N/A',
+                        inv.supplier_bill_no or '-',
+                        str(inv.date),
+                        float(inv.grand_total),
+                        float(inv.paid_amount),
+                        float(inv.due_amount),
+                        inv.payment_method,
+                        inv.payment_status
+                    ]
+                    for inv in invoices
+                ]
+                return render_to_excel("purchase_invoices.xlsx", "PurchaseInvoices", headers, rows)
+            elif export_fmt == 'pdf':
+                headers = ['Bill #', 'Supplier', 'Date', 'Grand Total', 'Paid', 'Status']
+                rows = [
+                    [
+                        inv.invoice_number,
+                        (inv.supplier.name[:22] if inv.supplier else 'N/A'),
+                        str(inv.date),
+                        f"PKR {inv.grand_total:,.0f}",
+                        f"PKR {inv.paid_amount:,.0f}",
+                        inv.payment_status
+                    ]
+                    for inv in invoices
+                ]
+                return render_to_pdf("purchase_invoices.pdf", "Purchase Bills & Invoices Report", headers, rows)
+
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['suppliers'] = Supplier.objects.all().order_by('name')
+        context['selected_supplier'] = self.request.GET.get('supplier', '')
+        context['start_date'] = self.request.GET.get('start_date', '')
+        context['end_date'] = self.request.GET.get('end_date', '')
+        context['pstatus'] = self.request.GET.get('pstatus', '')
+        context['q'] = self.request.GET.get('q', '')
+        return context
 
 
 class PurchaseCreateView(LoginRequiredMixin, View):
