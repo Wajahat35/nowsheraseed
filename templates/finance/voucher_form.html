@@ -7,10 +7,13 @@
     <div class="col-lg-12">
         <div class="card-custom p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold mb-0">
-                    <i class="fas fa-pen-alt text-emerald me-2"></i>
-                    {% if voucher %}Edit Double-Entry Voucher: {{ voucher.voucher_number }}{% else %}Create Double-Entry Journal Voucher{% endif %}
-                </h4>
+                <div>
+                    <h4 class="fw-bold mb-1">
+                        <i class="fas fa-pen-alt text-emerald me-2"></i>
+                        {% if voucher %}Edit Double-Entry Voucher: {{ voucher.voucher_number }}{% else %}Create Double-Entry Journal Voucher{% endif %}
+                    </h4>
+                    <p class="text-muted small mb-0">Record debit and credit entries with dynamic running balance calculation.</p>
+                </div>
                 <a href="{% url 'finance:voucher_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
             </div>
 
@@ -18,6 +21,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="items_data" id="vch_items_json">
 
+                <!-- Header Details -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Voucher Type *</label>
@@ -32,74 +36,89 @@
                         {{ form.reference_no }}
                     </div>
                     <div class="col-md-12">
-                        <label class="form-label fw-semibold">Voucher Description / Narration</label>
+                        <label class="form-label fw-semibold">Overall Voucher Description / Narration</label>
                         {{ form.description }}
                     </div>
                 </div>
 
-                <!-- Quick Add Card -->
-                <div class="card bg-light p-3 border mb-4">
+                <!-- Entry Form / Quick Add Bar -->
+                <div class="card bg-light p-3 border mb-4 shadow-sm">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold text-dark mb-0"><i class="fas fa-plus-circle text-primary me-1"></i> Add Account Entry</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" onclick="addBlankRow()">
+                        <h6 class="fw-bold text-dark mb-0">
+                            <i class="fas fa-plus-circle text-primary me-1"></i> Add Voucher Entry
+                        </h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="addBlankRow()">
                             <i class="fas fa-plus me-1"></i> Add Blank Row
                         </button>
                     </div>
                     <div class="row g-2 align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Account</label>
-                            <select id="vch_acc_select" class="form-select">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Account *</label>
+                            <select id="vch_acc_select" class="form-select form-select-sm">
                                 <option value="">-- Select COA Account --</option>
                                 {% for acc in accounts %}
                                     <option value="{{ acc.id }}">{{ acc.code }} - {{ acc.name }} ({{ acc.category.get_name_display }})</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-semibold">Debit (PKR)</label>
-                            <input type="number" id="vch_debit" class="form-control" placeholder="0.00" step="0.01">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-semibold">Credit (PKR)</label>
-                            <input type="number" id="vch_credit" class="form-control" placeholder="0.00" step="0.01">
-                        </div>
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Line Narration</label>
-                            <input type="text" id="vch_narration" class="form-control" placeholder="Line detail...">
+                            <label class="form-label small fw-semibold">Description</label>
+                            <input type="text" id="vch_narration" class="form-control form-control-sm" placeholder="Entry description / narration...">
                         </div>
-                        <div class="col-md-1">
-                            <button type="button" id="add_vch_item_btn" class="btn btn-emerald text-white w-100 fw-bold" style="background-color: #10b981;">Add</button>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold text-success">Debit (PKR)</label>
+                            <input type="number" id="vch_debit" class="form-control form-control-sm text-end font-monospace fw-bold" placeholder="0.00" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold text-danger">Credit (PKR)</label>
+                            <input type="number" id="vch_credit" class="form-control form-control-sm text-end font-monospace fw-bold" placeholder="0.00" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" id="add_vch_item_btn" class="btn btn-emerald btn-sm text-white w-100 fw-bold" style="background-color: #10b981; height: 31px;">
+                                <i class="fas fa-plus me-1"></i> Add Entry
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Fully Editable Table -->
+                <!-- Table with Description, Debit, Credit, Balance Columns -->
                 <div class="table-responsive mb-4">
-                    <table class="table table-bordered align-middle">
+                    <table class="table table-bordered align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th style="width: 35%;">Chart of Account *</th>
-                                <th style="width: 18%;" class="text-end">Debit Amount (PKR)</th>
-                                <th style="width: 18%;" class="text-end">Credit Amount (PKR)</th>
-                                <th style="width: 24%;">Line Narration</th>
-                                <th style="width: 5%;" class="text-center">Action</th>
+                                <th style="width: 40%;">Description</th>
+                                <th style="width: 17%;" class="text-end">Debit (PKR)</th>
+                                <th style="width: 17%;" class="text-end">Credit (PKR)</th>
+                                <th style="width: 20%;" class="text-end">Balance (PKR)</th>
+                                <th style="width: 6%;" class="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody id="vch_items_body">
+                            <!-- Populated dynamically via JS. Empty by default on new voucher -->
                         </tbody>
                         <tfoot class="table-light fw-bold">
                             <tr>
                                 <td>TOTALS:</td>
-                                <td class="text-end text-success fs-6" id="lbl_total_dr">PKR 0.00</td>
-                                <td class="text-end text-danger fs-6" id="lbl_total_cr">PKR 0.00</td>
-                                <td colspan="2" id="lbl_balance_status" class="text-center text-muted">Entries must balance (Debit = Credit)</td>
+                                <td class="text-end text-success fs-6 font-monospace" id="lbl_total_dr">PKR 0.00</td>
+                                <td class="text-end text-danger fs-6 font-monospace" id="lbl_total_cr">PKR 0.00</td>
+                                <td class="text-end font-monospace" id="lbl_running_diff">PKR 0.00</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addBlankRow()" title="Add Row">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" id="lbl_balance_status" class="text-center py-2 bg-light">
+                                    <span class="badge bg-secondary fs-6 px-3 py-2">Add entries to calculate balance</span>
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Note: Vouchers can be posted balanced or unbalanced as needed.</small>
+                <div class="d-flex justify-content-between align-items-center pt-2">
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Both balanced vouchers (Debit = Credit) and single-entry/unbalanced vouchers are permitted.</small>
                     <div class="d-flex gap-2">
                         <a href="{% url 'finance:voucher_list' %}" class="btn btn-light border">Cancel</a>
                         <button type="submit" id="submit_vch_btn" class="btn btn-emerald text-white fw-bold px-4" style="background-color: #10b981;" disabled>
@@ -116,7 +135,7 @@
 <script>
     const availableAccounts = [
         {% for acc in accounts %}
-            { id: {{ acc.id }}, code: "{{ acc.code }}", name: "{{ acc.name|escapejs }}" },
+            { id: {{ acc.id }}, code: "{{ acc.code }}", name: "{{ acc.name|escapejs }}", category: "{{ acc.category.get_name_display|escapejs }}" },
         {% endfor %}
     ];
 </script>
@@ -137,25 +156,27 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        if (vchItems.length === 0) {
-            // Add 2 initial default blank rows for convenience
-            addBlankRow();
-            addBlankRow();
-        } else {
-            renderVch();
-        }
+        // By default, rows are empty unless editing an existing voucher
+        renderVch();
     });
 
+    // Handle Quick Entry Add Button
     document.getElementById('add_vch_item_btn').addEventListener('click', function() {
         const accSelect = document.getElementById('vch_acc_select');
         const accId = parseInt(accSelect.value);
         const accName = accSelect.options[accSelect.selectedIndex]?.text || '';
         const dr = parseFloat(document.getElementById('vch_debit').value) || 0;
         const cr = parseFloat(document.getElementById('vch_credit').value) || 0;
-        const narration = document.getElementById('vch_narration').value;
+        const narration = document.getElementById('vch_narration').value.trim();
 
         if (!accId) {
-            alert('Please select an account!');
+            alert('Please select an account from the dropdown.');
+            accSelect.focus();
+            return;
+        }
+
+        if (dr <= 0 && cr <= 0) {
+            alert('Please enter either a Debit or Credit amount.');
             return;
         }
 
@@ -196,14 +217,19 @@
             vchItems[index].account_id = accId;
             vchItems[index].account_name = match.code + ' - ' + match.name;
         }
-        renderVch(false); // don't redraw HTML structure while typing, just recalculate
+        recalculateTotals();
+    }
+
+    function updateLineNarration(index, val) {
+        vchItems[index].narration = val;
+        document.getElementById('vch_items_json').value = JSON.stringify(vchItems);
     }
 
     function updateLineDebit(index, val) {
         const num = parseFloat(val) || 0;
         vchItems[index].debit = num;
         if (num > 0) {
-            vchItems[index].credit = 0; // mutually exclusive debit/credit helper
+            vchItems[index].credit = 0;
             const crInput = document.getElementById(`cr_input_${index}`);
             if (crInput) crInput.value = '';
         }
@@ -214,23 +240,27 @@
         const num = parseFloat(val) || 0;
         vchItems[index].credit = num;
         if (num > 0) {
-            vchItems[index].debit = 0; // mutually exclusive debit/credit helper
+            vchItems[index].debit = 0;
             const drInput = document.getElementById(`dr_input_${index}`);
             if (drInput) drInput.value = '';
         }
         recalculateTotals();
     }
 
-    function updateLineNarration(index, val) {
-        vchItems[index].narration = val;
-        document.getElementById('vch_items_json').value = JSON.stringify(vchItems);
-    }
-
-    function renderVch(fullRedraw = true) {
+    function renderVch() {
         const tbody = document.getElementById('vch_items_body');
-        
-        if (fullRedraw) {
-            tbody.innerHTML = '';
+        tbody.innerHTML = '';
+
+        if (vchItems.length === 0) {
+            tbody.innerHTML = `
+                <tr id="empty_row_msg">
+                    <td colspan="5" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block text-secondary"></i>
+                        <span>No entries added yet. Use the <strong>Add Voucher Entry</strong> form above or click <strong>Add Blank Row</strong>.</span>
+                    </td>
+                </tr>
+            `;
+        } else {
             vchItems.forEach((item, index) => {
                 const tr = document.createElement('tr');
 
@@ -243,26 +273,31 @@
 
                 tr.innerHTML = `
                     <td>
-                        <select class="form-select form-select-sm fw-semibold" onchange="updateLineAcc(${index}, this.value)">
-                            ${optionsHtml}
-                        </select>
+                        <div class="d-flex flex-column gap-1">
+                            <select class="form-select form-select-sm fw-semibold" onchange="updateLineAcc(${index}, this.value)">
+                                ${optionsHtml}
+                            </select>
+                            <input type="text" class="form-control form-control-sm" placeholder="Line description / narration (editable)..." 
+                                   value="${escapeHtml(item.narration || '')}" oninput="updateLineNarration(${index}, this.value)">
+                        </div>
                     </td>
-                    <td>
+                    <td class="align-top">
                         <input type="number" id="dr_input_${index}" class="form-control form-control-sm text-end font-monospace text-success fw-bold" 
                                placeholder="0.00" step="0.01" value="${item.debit > 0 ? item.debit : ''}" 
                                oninput="updateLineDebit(${index}, this.value)">
                     </td>
-                    <td>
+                    <td class="align-top">
                         <input type="number" id="cr_input_${index}" class="form-control form-control-sm text-end font-monospace text-danger fw-bold" 
                                placeholder="0.00" step="0.01" value="${item.credit > 0 ? item.credit : ''}" 
                                oninput="updateLineCredit(${index}, this.value)">
                     </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm" placeholder="Narration..." 
-                               value="${item.narration || ''}" oninput="updateLineNarration(${index}, this.value)">
+                    <td class="align-middle text-end font-monospace fw-bold" id="row_bal_${index}">
+                        PKR 0.00
                     </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVchItem(${index})" title="Remove Line"><i class="fas fa-trash"></i></button>
+                    <td class="align-middle text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVchItem(${index})" title="Remove Line">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -275,30 +310,55 @@
     function recalculateTotals() {
         let totDr = 0;
         let totCr = 0;
+        let runningBal = 0;
 
-        vchItems.forEach(item => {
-            totDr += (parseFloat(item.debit) || 0);
-            totCr += (parseFloat(item.credit) || 0);
+        vchItems.forEach((item, index) => {
+            const dr = (parseFloat(item.debit) || 0);
+            const cr = (parseFloat(item.credit) || 0);
+            totDr += dr;
+            totCr += cr;
+            runningBal += (dr - cr);
+
+            const rowBalEl = document.getElementById(`row_bal_${index}`);
+            if (rowBalEl) {
+                const absBal = Math.abs(runningBal);
+                let balBadgeClass = 'text-muted';
+                let balSuffix = 'Bal';
+                if (runningBal > 0.001) {
+                    balBadgeClass = 'text-success';
+                    balSuffix = 'Dr';
+                } else if (runningBal < -0.001) {
+                    balBadgeClass = 'text-danger';
+                    balSuffix = 'Cr';
+                }
+                rowBalEl.innerHTML = `<span class="${balBadgeClass}">PKR ${absBal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <small class="fw-semibold">(${balSuffix})</small></span>`;
+            }
         });
 
         document.getElementById('lbl_total_dr').innerText = 'PKR ' + totDr.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         document.getElementById('lbl_total_cr').innerText = 'PKR ' + totCr.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
+        const diff = Math.abs(totDr - totCr);
+        const diffEl = document.getElementById('lbl_running_diff');
+        if (diffEl) {
+            diffEl.innerText = 'Diff: PKR ' + diff.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            diffEl.className = 'text-end font-monospace ' + (diff < 0.01 ? 'text-success' : 'text-danger');
+        }
+
         const submitBtn = document.getElementById('submit_vch_btn');
         const statusLbl = document.getElementById('lbl_balance_status');
-        const diff = Math.abs(totDr - totCr);
 
         const validItems = vchItems.filter(item => item.account_id && ((parseFloat(item.debit) || 0) > 0 || (parseFloat(item.credit) || 0) > 0));
 
         if (validItems.length > 0) {
             submitBtn.disabled = false;
             if (diff < 0.01 && (totDr > 0 || totCr > 0)) {
-                statusLbl.innerHTML = '<span class="badge bg-success fs-6 px-3 py-2"><i class="fas fa-check-circle me-1"></i> BALANCED (PKR ' + totDr.toFixed(2) + ')</span>';
+                statusLbl.innerHTML = '<span class="badge bg-success fs-6 px-3 py-2"><i class="fas fa-check-circle me-1"></i> BALANCED (PKR ' + totDr.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')</span>';
             } else {
-                statusLbl.innerHTML = '<span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="fas fa-info-circle me-1"></i> UNBALANCED / SINGLE-ENTRY (Allowed - Diff: PKR ' + diff.toFixed(2) + ')</span>';
+                statusLbl.innerHTML = '<span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="fas fa-info-circle me-1"></i> UNBALANCED / SINGLE-ENTRY (Allowed - Diff: PKR ' + diff.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ')</span>';
             }
         } else {
-            statusLbl.innerHTML = '<span class="badge bg-secondary fs-6 px-3 py-2">Add at least 1 line item to post</span>';
+            statusLbl.innerHTML = '<span class="badge bg-secondary fs-6 px-3 py-2">Add at least 1 line item with an amount to post</span>';
             submitBtn.disabled = true;
         }
 
@@ -307,7 +367,17 @@
 
     function removeVchItem(index) {
         vchItems.splice(index, 1);
-        renderVch(true);
+        renderVch();
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 </script>
 {% endblock %}

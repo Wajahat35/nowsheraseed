@@ -4,17 +4,17 @@
 {% block title %}Journal Vouchers{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
         <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice text-emerald me-2"></i> Double-Entry Journal Vouchers</h4>
-        <p class="text-muted small mb-0">Record and manage General Journal Vouchers (JV), Cash/Bank Payments, and Receipts. Single-entry & unbalanced vouchers permitted.</p>
+        <p class="text-muted small mb-0">Record and manage General Journal Vouchers (JV), Cash/Bank Payments, and Receipts.</p>
     </div>
-    <div class="d-flex gap-2">
-        <a href="{% url 'finance:voucher_list_excel' %}" class="btn btn-outline-success fw-semibold">
-            <i class="fas fa-file-excel me-1"></i> Export Excel
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'finance:voucher_list_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success fw-semibold">
+            <i class="fas fa-file-excel me-1"></i> Download Excel
         </a>
-        <a href="{% url 'finance:voucher_list_pdf' %}" class="btn btn-outline-danger fw-semibold">
-            <i class="fas fa-file-pdf me-1"></i> Export PDF
+        <a href="{% url 'finance:voucher_list_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-outline-danger fw-semibold">
+            <i class="fas fa-file-pdf me-1"></i> Download PDF
         </a>
         <a href="{% url 'finance:general_ledger' %}" class="btn btn-outline-primary fw-semibold">
             <i class="fas fa-book me-1"></i> General Ledger
@@ -23,6 +23,41 @@
             <i class="fas fa-plus me-1"></i> Create Journal Voucher
         </a>
     </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card-custom p-3 mb-4 shadow-sm">
+    <form method="GET" action="{% url 'finance:voucher_list' %}" class="row g-2 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">Start Date</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold text-muted mb-1">End Date</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Voucher Type</label>
+            <select name="vtype" class="form-select form-select-sm">
+                <option value="">-- All Voucher Types --</option>
+                {% for code, label in voucher_types %}
+                    <option value="{{ code }}" {% if vtype == code %}selected{% endif %}>{{ label }} ({{ code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Keyword</label>
+            <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm" placeholder="Voucher #, ref, description, account...">
+        </div>
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-emerald btn-sm text-white fw-semibold flex-fill" style="background-color: #10b981;">
+                <i class="fas fa-filter me-1"></i> Filter
+            </button>
+            <a href="{% url 'finance:voucher_list' %}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+                <i class="fas fa-redo"></i>
+            </a>
+        </div>
+    </form>
 </div>
 
 <div class="card-custom p-4">
@@ -62,26 +97,65 @@
                                     <i class="fas fa-exclamation-triangle me-1"></i> PKR {{ v.balance_difference|intcomma }}
                                 </span>
                             {% else %}
-                                <span class="text-muted small">0.00</span>
+                                <span class="badge bg-success-subtle text-success px-2 py-1">Balanced</span>
                             {% endif %}
                         </td>
                         <td>{{ v.created_by.username|default:"System" }}</td>
                         <td class="text-center">
-                            <a href="{% url 'finance:voucher_detail' v.pk %}" class="btn btn-sm btn-outline-info me-1" title="View Voucher"><i class="fas fa-eye"></i></a>
-                            <a href="{% url 'finance:voucher_detail_excel' v.pk %}" class="btn btn-sm btn-outline-success me-1" title="Download Excel"><i class="fas fa-file-excel"></i></a>
-                            <a href="{% url 'finance:voucher_detail_pdf' v.pk %}" class="btn btn-sm btn-outline-danger me-1" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
-                            <a href="{% url 'finance:voucher_edit' v.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Voucher"><i class="fas fa-edit"></i></a>
-                            <form method="POST" action="{% url 'finance:voucher_delete' v.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete Voucher {{ v.voucher_number }}?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Voucher"><i class="fas fa-trash"></i></button>
-                            </form>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'finance:voucher_detail' v.pk %}" class="btn btn-outline-info" title="View Voucher"><i class="fas fa-eye"></i></a>
+                                <a href="{% url 'finance:voucher_detail_excel' v.pk %}" class="btn btn-outline-success" title="Download Excel"><i class="fas fa-file-excel"></i></a>
+                                <a href="{% url 'finance:voucher_detail_pdf' v.pk %}" class="btn btn-outline-danger" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
+                                <a href="{% url 'finance:voucher_edit' v.pk %}" class="btn btn-outline-primary" title="Edit Voucher"><i class="fas fa-edit"></i></a>
+                                <form method="POST" action="{% url 'finance:voucher_delete' v.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete Voucher {{ v.voucher_number }}?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete Voucher"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="10" class="text-center text-muted py-4"><i class="fas fa-inbox me-2"></i>No financial vouchers created yet. Click <strong>Create Journal Voucher</strong> above.</td></tr>
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block text-secondary"></i>
+                            {% if search or start_date or end_date or vtype %}
+                                No journal vouchers match the specified filter criteria. <a href="{% url 'finance:voucher_list' %}" class="text-emerald fw-semibold">Clear Filters</a>
+                            {% else %}
+                                No journal vouchers created yet. Click <strong>Create Journal Voucher</strong> above.
+                            {% endif %}
+                        </td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+        <span class="small text-muted">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }} vouchers</span>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if vtype %}&vtype={{ vtype }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}">&laquo;</a>
+                </li>
+            {% endif %}
+            {% for num in paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if vtype %}&vtype={{ vtype }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if vtype %}&vtype={{ vtype }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search %}&search={{ search }}{% endif %}">&raquo;</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

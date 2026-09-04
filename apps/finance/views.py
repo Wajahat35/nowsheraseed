@@ -42,17 +42,41 @@ class VoucherListView(LoginRequiredMixin, ListView):
     model = JournalVoucher
     template_name = 'finance/voucher_list.html'
     context_object_name = 'vouchers'
-    paginate_by = 20
+    paginate_by = 25
 
     def get_queryset(self):
-        qs = JournalVoucher.objects.all()
+        qs = JournalVoucher.objects.all().select_related('created_by')
         vtype = self.request.GET.get('vtype')
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
         search = self.request.GET.get('search')
+
         if vtype:
             qs = qs.filter(voucher_type=vtype)
+        if start_date:
+            qs = qs.filter(date__gte=start_date)
+        if end_date:
+            qs = qs.filter(date__lte=end_date)
         if search:
-            qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
-        return qs.order_by('-id')
+            qs = qs.filter(
+                models.Q(voucher_number__icontains=search) |
+                models.Q(reference_no__icontains=search) |
+                models.Q(description__icontains=search) |
+                models.Q(items__narration__icontains=search) |
+                models.Q(items__account__name__icontains=search) |
+                models.Q(items__account__code__icontains=search)
+            ).distinct()
+
+        return qs.order_by('-date', '-id')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['vtype'] = self.request.GET.get('vtype', '')
+        context['search'] = self.request.GET.get('search', '')
+        context['start_date'] = self.request.GET.get('start_date', '')
+        context['end_date'] = self.request.GET.get('end_date', '')
+        context['voucher_types'] = JournalVoucher.VOUCHER_TYPES
+        return context
 
 
 class VoucherCreateView(LoginRequiredMixin, View):
@@ -77,7 +101,7 @@ class VoucherCreateView(LoginRequiredMixin, View):
                 raw_items = json.loads(items_data)
                 items_list = [i for i in raw_items if i.get('account_id')]
                 if not items_list:
-                    messages.error(request, "Voucher must contain at least one line item with an account selected.")
+                    messages.error(request, "Voucher must contain at least one line entry.")
                     return redirect('finance:voucher_create')
 
                 with transaction.atomic():
@@ -92,7 +116,7 @@ class VoucherCreateView(LoginRequiredMixin, View):
                         acc_id = item.get('account_id')
                         debit = Decimal(str(item.get('debit', 0) or 0))
                         credit = Decimal(str(item.get('credit', 0) or 0))
-                        narration = item.get('narration', '')
+                        narration = (item.get('narration') or item.get('description') or '').strip()
 
                         account = ChartOfAccount.objects.get(id=acc_id)
                         total_dr += debit
@@ -140,7 +164,8 @@ class VoucherUpdateView(LoginRequiredMixin, View):
                 'account_name': f"{item.account.code} - {item.account.name}",
                 'debit': float(item.debit),
                 'credit': float(item.credit),
-                'narration': item.narration or ''
+                'narration': item.narration or '',
+                'description': item.narration or ''
             })
 
         return render(request, self.template_name, {
@@ -160,7 +185,7 @@ class VoucherUpdateView(LoginRequiredMixin, View):
                 raw_items = json.loads(items_data)
                 items_list = [i for i in raw_items if i.get('account_id')]
                 if not items_list:
-                    messages.error(request, "Voucher must contain at least one line item with an account selected.")
+                    messages.error(request, "Voucher must contain at least one line entry.")
                     return redirect('finance:voucher_edit', pk=pk)
 
                 with transaction.atomic():
@@ -174,7 +199,7 @@ class VoucherUpdateView(LoginRequiredMixin, View):
                         acc_id = item.get('account_id')
                         debit = Decimal(str(item.get('debit', 0) or 0))
                         credit = Decimal(str(item.get('credit', 0) or 0))
-                        narration = item.get('narration', '')
+                        narration = (item.get('narration') or item.get('description') or '').strip()
 
                         account = ChartOfAccount.objects.get(id=acc_id)
                         total_dr += debit
@@ -223,16 +248,46 @@ class VoucherDetailView(LoginRequiredMixin, DetailView):
     template_name = 'finance/voucher_detail.html'
     context_object_name = 'voucher'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        voucher = self.get_object()
+        running_bal = Decimal('0.00')
+        items_with_balance = []
+        for item in voucher.items.all().select_related('account'):
+            running_bal += (item.debit - item.credit)
+            items_with_balance.append({
+                'item': item,
+                'running_balance': running_bal,
+                'abs_balance': abs(running_bal),
+                'balance_type': 'Dr' if running_bal > 0 else ('Cr' if running_bal < 0 else 'Bal')
+            })
+        context['items_with_balance'] = items_with_balance
+        return context
+
 
 class ExportVoucherListExcelView(LoginRequiredMixin, View):
     def get(self, request):
-        qs = JournalVoucher.objects.all().order_by('-id')
+        qs = JournalVoucher.objects.all().select_related('created_by').order_by('-date', '-id')
         vtype = request.GET.get('vtype')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
         search = request.GET.get('search')
+
         if vtype:
             qs = qs.filter(voucher_type=vtype)
+        if start_date:
+            qs = qs.filter(date__gte=start_date)
+        if end_date:
+            qs = qs.filter(date__lte=end_date)
         if search:
-            qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
+            qs = qs.filter(
+                models.Q(voucher_number__icontains=search) |
+                models.Q(reference_no__icontains=search) |
+                models.Q(description__icontains=search) |
+                models.Q(items__narration__icontains=search) |
+                models.Q(items__account__name__icontains=search) |
+                models.Q(items__account__code__icontains=search)
+            ).distinct()
 
         headers = ['Voucher #', 'Type', 'Date', 'Reference #', 'Description', 'Total Debit (PKR)', 'Total Credit (PKR)', 'Balance Diff (PKR)', 'Status', 'Created By']
         rows = []
@@ -256,15 +311,29 @@ class ExportVoucherListExcelView(LoginRequiredMixin, View):
 
 class ExportVoucherListPDFView(LoginRequiredMixin, View):
     def get(self, request):
-        qs = JournalVoucher.objects.all().order_by('-id')
+        qs = JournalVoucher.objects.all().order_by('-date', '-id')
         vtype = request.GET.get('vtype')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
         search = request.GET.get('search')
+
         if vtype:
             qs = qs.filter(voucher_type=vtype)
+        if start_date:
+            qs = qs.filter(date__gte=start_date)
+        if end_date:
+            qs = qs.filter(date__lte=end_date)
         if search:
-            qs = qs.filter(models.Q(voucher_number__icontains=search) | models.Q(reference_no__icontains=search) | models.Q(description__icontains=search))
+            qs = qs.filter(
+                models.Q(voucher_number__icontains=search) |
+                models.Q(reference_no__icontains=search) |
+                models.Q(description__icontains=search) |
+                models.Q(items__narration__icontains=search) |
+                models.Q(items__account__name__icontains=search) |
+                models.Q(items__account__code__icontains=search)
+            ).distinct()
 
-        headers = ['Voucher #', 'Type', 'Date', 'Ref #', 'Debit (PKR)', 'Credit (PKR)', 'Diff (PKR)', 'Status']
+        headers = ['Voucher #', 'Type', 'Date', 'Ref #', 'Description', 'Debit (PKR)', 'Credit (PKR)', 'Diff (PKR)', 'Status']
         rows = []
         for v in qs:
             status = "Balanced" if v.is_balanced else "Unbalanced"
@@ -273,6 +342,7 @@ class ExportVoucherListPDFView(LoginRequiredMixin, View):
                 v.voucher_type,
                 str(v.date),
                 v.reference_no or '-',
+                (v.description[:30] + '...') if v.description and len(v.description) > 30 else (v.description or '-'),
                 f"{v.total_debit:,.2f}",
                 f"{v.total_credit:,.2f}",
                 f"{v.balance_difference:,.2f}",
@@ -285,19 +355,27 @@ class ExportVoucherListPDFView(LoginRequiredMixin, View):
 class ExportVoucherDetailExcelView(LoginRequiredMixin, View):
     def get(self, request, pk):
         voucher = get_object_or_404(JournalVoucher, pk=pk)
-        headers = ['Account Code', 'Account Name', 'Debit (PKR)', 'Credit (PKR)', 'Line Narration']
+        headers = ['Description', 'Debit (PKR)', 'Credit (PKR)', 'Balance (PKR)']
         rows = []
-        for item in voucher.items.all():
+        running_bal = Decimal('0.00')
+        for item in voucher.items.all().select_related('account'):
+            running_bal += (item.debit - item.credit)
+            desc = f"{item.account.code} - {item.account.name}"
+            if item.narration:
+                desc += f" | {item.narration}"
+            bal_str = f"PKR {abs(running_bal):,.2f} ({'Dr' if running_bal > 0 else ('Cr' if running_bal < 0 else 'Bal')})"
             rows.append([
-                item.account.code,
-                item.account.name,
+                desc,
                 float(item.debit),
                 float(item.credit),
-                item.narration or ''
+                bal_str
             ])
-        rows.append(['TOTALS', '', float(voucher.total_debit), float(voucher.total_credit), ''])
+        rows.append(['TOTALS', float(voucher.total_debit), float(voucher.total_credit), f"Diff: PKR {voucher.balance_difference:,.2f}"])
         if not voucher.is_balanced:
-            rows.append(['BALANCE DIFFERENCE', '', float(voucher.balance_difference), '', 'UNBALANCED VOUCHER'])
+            rows.append(['STATUS: UNBALANCED VOUCHER', '', '', f"Diff: PKR {voucher.balance_difference:,.2f}"])
+        else:
+            rows.append(['STATUS: BALANCED VOUCHER', '', '', 'PKR 0.00'])
+
         filename = f"Voucher_{voucher.voucher_number}.xlsx"
         sheet_title = f"{voucher.voucher_number}"
         log_activity(request.user, 'EXPORT', 'Finance', f"Exported Journal Voucher {voucher.voucher_number} to Excel", request)
@@ -307,28 +385,27 @@ class ExportVoucherDetailExcelView(LoginRequiredMixin, View):
 class ExportVoucherDetailPDFView(LoginRequiredMixin, View):
     def get(self, request, pk):
         voucher = get_object_or_404(JournalVoucher, pk=pk)
-        headers = ['Account Code & Name', 'Debit (PKR)', 'Credit (PKR)', 'Narration']
+        headers = ['Description', 'Debit (PKR)', 'Credit (PKR)', 'Balance (PKR)']
         rows = []
-        for item in voucher.items.all():
+        running_bal = Decimal('0.00')
+        for item in voucher.items.all().select_related('account'):
+            running_bal += (item.debit - item.credit)
+            desc = f"{item.account.code} - {item.account.name}"
+            if item.narration:
+                desc += f" ({item.narration})"
+            bal_str = f"{abs(running_bal):,.2f} {'Dr' if running_bal > 0 else ('Cr' if running_bal < 0 else 'Bal')}"
             rows.append([
-                f"{item.account.code} - {item.account.name}",
+                desc,
                 f"{item.debit:,.2f}" if item.debit > 0 else "-",
                 f"{item.credit:,.2f}" if item.credit > 0 else "-",
-                item.narration or '-'
+                bal_str
             ])
         rows.append([
             'TOTALS',
             f"{voucher.total_debit:,.2f}",
             f"{voucher.total_credit:,.2f}",
-            ''
+            f"Diff: {voucher.balance_difference:,.2f}"
         ])
-        if not voucher.is_balanced:
-            rows.append([
-                'BALANCE DIFFERENCE',
-                f"Diff: {voucher.balance_difference:,.2f}",
-                '',
-                'UNBALANCED VOUCHER'
-            ])
         status_str = "Balanced" if voucher.is_balanced else f"UNBALANCED (Diff: PKR {voucher.balance_difference:,.2f})"
         title = f"Journal Voucher {voucher.voucher_number} ({voucher.get_voucher_type_display()}) [{status_str}]"
         filename = f"Voucher_{voucher.voucher_number}.pdf"

@@ -16,6 +16,9 @@
         <a href="{% url 'finance:voucher_detail_pdf' voucher.pk %}" class="btn btn-outline-danger fw-semibold">
             <i class="fas fa-file-pdf me-1"></i> PDF
         </a>
+        <a href="{% url 'finance:voucher_edit' voucher.pk %}" class="btn btn-outline-primary fw-semibold">
+            <i class="fas fa-edit me-1"></i> Edit Voucher
+        </a>
         <button onclick="window.print()" class="btn btn-dark"><i class="fas fa-print me-1"></i> Print</button>
         <a href="{% url 'finance:voucher_list' %}" class="btn btn-light border">Back to Vouchers</a>
     </div>
@@ -25,7 +28,7 @@
     <div class="row border-bottom pb-3 mb-4">
         <div class="col-md-6">
             <h4 class="fw-bold text-emerald">{{ company.name|default:"NOWSHERA SEED CORPORATION" }}</h4>
-            <div class="text-muted small">Financial Voucher Document</div>
+            <div class="text-muted small">Double-Entry Financial Voucher Document</div>
         </div>
         <div class="col-md-6 text-md-end">
             <h3 class="fw-bold">{{ voucher.voucher_number }}</h3>
@@ -46,20 +49,49 @@
         <table class="table table-bordered align-middle">
             <thead class="table-dark">
                 <tr>
-                    <th>Account Title</th>
-                    <th class="text-end">Debit (PKR)</th>
-                    <th class="text-end">Credit (PKR)</th>
-                    <th>Narration</th>
+                    <th style="width: 42%;">Description</th>
+                    <th style="width: 18%;" class="text-end">Debit (PKR)</th>
+                    <th style="width: 18%;" class="text-end">Credit (PKR)</th>
+                    <th style="width: 22%;" class="text-end">Balance (PKR)</th>
                 </tr>
             </thead>
             <tbody>
-                {% for item in voucher.items.all %}
+                {% for row in items_with_balance %}
                     <tr>
-                        <td class="fw-semibold">{{ item.account.code }} - {{ item.account.name }}</td>
-                        <td class="text-end text-success font-monospace">{% if item.debit > 0 %}PKR {{ item.debit|intcomma }}{% else %}-{% endif %}</td>
-                        <td class="text-end text-danger font-monospace">{% if item.credit > 0 %}PKR {{ item.credit|intcomma }}{% else %}-{% endif %}</td>
-                        <td>{{ item.narration|default:"-" }}</td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ row.item.account.code }} - {{ row.item.account.name }}</div>
+                            {% if row.item.narration %}
+                                <div class="text-muted small">{{ row.item.narration }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="text-end text-success font-monospace fw-semibold">
+                            {% if row.item.debit > 0 %}PKR {{ row.item.debit|intcomma }}{% else %}-{% endif %}
+                        </td>
+                        <td class="text-end text-danger font-monospace fw-semibold">
+                            {% if row.item.credit > 0 %}PKR {{ row.item.credit|intcomma }}{% else %}-{% endif %}
+                        </td>
+                        <td class="text-end font-monospace fw-bold">
+                            {% if row.balance_type == 'Dr' %}
+                                <span class="text-success">PKR {{ row.abs_balance|intcomma }} <small class="text-muted">(Dr)</small></span>
+                            {% elif row.balance_type == 'Cr' %}
+                                <span class="text-danger">PKR {{ row.abs_balance|intcomma }} <small class="text-muted">(Cr)</small></span>
+                            {% else %}
+                                <span class="text-muted">PKR 0.00 <small>(Bal)</small></span>
+                            {% endif %}
+                        </td>
                     </tr>
+                {% empty %}
+                    {% for item in voucher.items.all %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ item.account.code }} - {{ item.account.name }}</div>
+                                {% if item.narration %}<div class="text-muted small">{{ item.narration }}</div>{% endif %}
+                            </td>
+                            <td class="text-end text-success font-monospace">{% if item.debit > 0 %}PKR {{ item.debit|intcomma }}{% else %}-{% endif %}</td>
+                            <td class="text-end text-danger font-monospace">{% if item.credit > 0 %}PKR {{ item.credit|intcomma }}{% else %}-{% endif %}</td>
+                            <td class="text-end font-monospace">-</td>
+                        </tr>
+                    {% endfor %}
                 {% endfor %}
             </tbody>
             <tfoot class="table-light fw-bold font-monospace">
@@ -67,15 +99,20 @@
                     <td>TOTALS:</td>
                     <td class="text-end text-success fs-6">PKR {{ voucher.total_debit|intcomma }}</td>
                     <td class="text-end text-danger fs-6">PKR {{ voucher.total_credit|intcomma }}</td>
-                    <td></td>
+                    <td class="text-end fs-6 {% if voucher.is_balanced %}text-success{% else %}text-danger{% endif %}">
+                        {% if voucher.is_balanced %}
+                            PKR 0.00
+                        {% else %}
+                            Diff: PKR {{ voucher.balance_difference|intcomma }}
+                        {% endif %}
+                    </td>
                 </tr>
                 {% if not voucher.is_balanced %}
                     <tr class="table-warning text-dark">
-                        <td class="fw-bold">BALANCE DIFFERENCE:</td>
-                        <td colspan="2" class="text-center fw-bold text-danger fs-6">
-                            <i class="fas fa-exclamation-circle me-1"></i> PKR {{ voucher.balance_difference|intcomma }} (Unbalanced Diff)
+                        <td class="fw-bold">BALANCE STATUS:</td>
+                        <td colspan="3" class="text-center fw-bold text-danger fs-6">
+                            <i class="fas fa-exclamation-circle me-1"></i> UNBALANCED VOUCHER (Difference: PKR {{ voucher.balance_difference|intcomma }})
                         </td>
-                        <td><small class="text-muted">Single-entry / Unbalanced Voucher permitted</small></td>
                     </tr>
                 {% endif %}
             </tfoot>
