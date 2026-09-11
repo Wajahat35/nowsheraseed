@@ -317,6 +317,9 @@ document.addEventListener('DOMContentLoaded', function() {
         recognition.lang = 'ur-PK';
 
         recognition.onstart = function() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
             isListening = true;
             micBtn.classList.add('btn-danger', 'mic-pulse');
             micBtn.classList.remove('btn-emerald');
@@ -343,6 +346,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function startListening() {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         if (recognition && !isListening) {
             try { recognition.start(); } catch(e) {}
         }
@@ -360,6 +366,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     micBtn.addEventListener('click', function() {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         if (isListening) {
             if (recognition) recognition.stop();
             stopListening();
@@ -367,6 +376,33 @@ document.addEventListener('DOMContentLoaded', function() {
             startListening();
         }
     });
+
+    const openVoiceModalBtn = document.getElementById('openVoiceModalBtn');
+    if (openVoiceModalBtn) {
+        openVoiceModalBtn.addEventListener('click', function() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        });
+    }
+
+    const voiceModalEl = document.getElementById('voiceAssistantModal');
+    if (voiceModalEl) {
+        voiceModalEl.addEventListener('show.bs.modal', function () {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        });
+        voiceModalEl.addEventListener('hide.bs.modal', function () {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            if (isListening) {
+                if (recognition) recognition.stop();
+                stopListening();
+            }
+        });
+    }
 
     sendVoiceTextBtn.addEventListener('click', function() {
         const text = voiceTextInput.value.trim();
@@ -796,17 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function speakText(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.rate = 0.95;
-            utterance.pitch = 1.08; // Pleasant natural female tone
-
-            const femaleVoice = getFemaleVoice();
-            if (femaleVoice) {
-                utterance.voice = femaleVoice;
-            } else {
-                utterance.lang = 'ur-PK';
-            }
-            window.speechSynthesis.speak(utterance);
+            // Voice talking disabled: Voice assistant responses are displayed in UI transcript without audio playback
         }
     }
 
