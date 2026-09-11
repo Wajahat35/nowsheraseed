@@ -99,7 +99,10 @@ class VoucherCreateView(LoginRequiredMixin, View):
         if form.is_valid() and items_data:
             try:
                 raw_items = json.loads(items_data)
-                items_list = [i for i in raw_items if i.get('account_id')]
+                items_list = [
+                    i for i in raw_items 
+                    if ((i.get('narration') or i.get('description') or '').strip() or Decimal(str(i.get('debit', 0) or 0)) > 0 or Decimal(str(i.get('credit', 0) or 0)) > 0)
+                ]
                 if not items_list:
                     messages.error(request, "Voucher must contain at least one line entry.")
                     return redirect('finance:voucher_create')
@@ -114,11 +117,11 @@ class VoucherCreateView(LoginRequiredMixin, View):
 
                     for item in items_list:
                         acc_id = item.get('account_id')
+                        account = ChartOfAccount.objects.filter(id=acc_id).first() if acc_id else None
                         debit = Decimal(str(item.get('debit', 0) or 0))
                         credit = Decimal(str(item.get('credit', 0) or 0))
                         narration = (item.get('narration') or item.get('description') or '').strip()
 
-                        account = ChartOfAccount.objects.get(id=acc_id)
                         total_dr += debit
                         total_cr += credit
 
@@ -160,8 +163,8 @@ class VoucherUpdateView(LoginRequiredMixin, View):
         items_list = []
         for item in voucher.items.all():
             items_list.append({
-                'account_id': item.account.id,
-                'account_name': f"{item.account.code} - {item.account.name}",
+                'account_id': item.account.id if item.account else '',
+                'account_name': f"{item.account.code} - {item.account.name}" if item.account else '',
                 'debit': float(item.debit),
                 'credit': float(item.credit),
                 'narration': item.narration or '',
@@ -183,7 +186,10 @@ class VoucherUpdateView(LoginRequiredMixin, View):
         if form.is_valid() and items_data:
             try:
                 raw_items = json.loads(items_data)
-                items_list = [i for i in raw_items if i.get('account_id')]
+                items_list = [
+                    i for i in raw_items 
+                    if ((i.get('narration') or i.get('description') or '').strip() or Decimal(str(i.get('debit', 0) or 0)) > 0 or Decimal(str(i.get('credit', 0) or 0)) > 0)
+                ]
                 if not items_list:
                     messages.error(request, "Voucher must contain at least one line entry.")
                     return redirect('finance:voucher_edit', pk=pk)
@@ -197,11 +203,11 @@ class VoucherUpdateView(LoginRequiredMixin, View):
 
                     for item in items_list:
                         acc_id = item.get('account_id')
+                        account = ChartOfAccount.objects.filter(id=acc_id).first() if acc_id else None
                         debit = Decimal(str(item.get('debit', 0) or 0))
                         credit = Decimal(str(item.get('credit', 0) or 0))
                         narration = (item.get('narration') or item.get('description') or '').strip()
 
-                        account = ChartOfAccount.objects.get(id=acc_id)
                         total_dr += debit
                         total_cr += credit
 
@@ -253,7 +259,7 @@ class VoucherDetailView(LoginRequiredMixin, DetailView):
         voucher = self.get_object()
         running_bal = Decimal('0.00')
         items_with_balance = []
-        for item in voucher.items.all().select_related('account'):
+        for item in voucher.items.all():
             running_bal += (item.debit - item.credit)
             items_with_balance.append({
                 'item': item,
@@ -358,11 +364,17 @@ class ExportVoucherDetailExcelView(LoginRequiredMixin, View):
         headers = ['Description', 'Debit (PKR)', 'Credit (PKR)', 'Balance (PKR)']
         rows = []
         running_bal = Decimal('0.00')
-        for item in voucher.items.all().select_related('account'):
+        for item in voucher.items.all():
             running_bal += (item.debit - item.credit)
-            desc = f"{item.account.code} - {item.account.name}"
-            if item.narration:
-                desc += f" | {item.narration}"
+            if item.account and item.narration:
+                desc = f"{item.account.name} - {item.narration}"
+            elif item.narration:
+                desc = item.narration
+            elif item.account:
+                desc = f"{item.account.code} - {item.account.name}"
+            else:
+                desc = "Journal Entry"
+
             bal_str = f"PKR {abs(running_bal):,.2f} ({'Dr' if running_bal > 0 else ('Cr' if running_bal < 0 else 'Bal')})"
             rows.append([
                 desc,
@@ -388,11 +400,17 @@ class ExportVoucherDetailPDFView(LoginRequiredMixin, View):
         headers = ['Description', 'Debit (PKR)', 'Credit (PKR)', 'Balance (PKR)']
         rows = []
         running_bal = Decimal('0.00')
-        for item in voucher.items.all().select_related('account'):
+        for item in voucher.items.all():
             running_bal += (item.debit - item.credit)
-            desc = f"{item.account.code} - {item.account.name}"
-            if item.narration:
-                desc += f" ({item.narration})"
+            if item.account and item.narration:
+                desc = f"{item.account.name} - {item.narration}"
+            elif item.narration:
+                desc = item.narration
+            elif item.account:
+                desc = f"{item.account.code} - {item.account.name}"
+            else:
+                desc = "Journal Entry"
+
             bal_str = f"{abs(running_bal):,.2f} {'Dr' if running_bal > 0 else ('Cr' if running_bal < 0 else 'Bal')}"
             rows.append([
                 desc,

@@ -96,6 +96,8 @@ class SeedCategoryListView(LoginRequiredMixin, ListView):
             return redirect('seeds:category_list')
         return self.get(request)
 
+from django.http import HttpResponse, JsonResponse
+
 # Brand Views
 class BrandListView(LoginRequiredMixin, ListView):
     model = Brand
@@ -106,9 +108,35 @@ class BrandListView(LoginRequiredMixin, ListView):
         form = BrandForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            messages.success(request, "Brand added successfully!")
+            messages.success(request, "Brand/Company added successfully!")
             return redirect('seeds:brand_list')
         return self.get(request)
+
+
+class QuickBrandCreateView(LoginRequiredMixin, View):
+    def post(self, request):
+        name = request.POST.get('name', '').strip()
+        company_name = request.POST.get('company_name', '').strip()
+        if not name:
+            return JsonResponse({'status': 'error', 'message': 'Company/Brand name is required.'}, status=400)
+
+        brand, created = Brand.objects.get_or_create(
+            name=name,
+            defaults={'company_name': company_name}
+        )
+        if not created and company_name and not brand.company_name:
+            brand.company_name = company_name
+            brand.save()
+
+        log_activity(request.user, 'CREATE', 'Seeds', f"Added Company/Brand: {brand.name}", request)
+        return JsonResponse({
+            'status': 'success',
+            'brand': {
+                'id': brand.id,
+                'name': brand.name,
+                'company_name': brand.company_name or ''
+            }
+        })
 
 # Batch Management
 class SeedBatchListView(LoginRequiredMixin, ListView):

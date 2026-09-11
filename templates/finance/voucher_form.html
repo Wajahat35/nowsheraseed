@@ -10,9 +10,9 @@
                 <div>
                     <h4 class="fw-bold mb-1">
                         <i class="fas fa-pen-alt text-emerald me-2"></i>
-                        {% if voucher %}Edit Double-Entry Voucher: {{ voucher.voucher_number }}{% else %}Create Double-Entry Journal Voucher{% endif %}
+                        {% if voucher %}Edit Journal Voucher: {{ voucher.voucher_number }}{% else %}Create Journal Voucher{% endif %}
                     </h4>
-                    <p class="text-muted small mb-0">Record debit and credit entries with dynamic running balance calculation.</p>
+                    <p class="text-muted small mb-0">Record debit and credit voucher entries with dynamic running balance calculation.</p>
                 </div>
                 <a href="{% url 'finance:voucher_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i> Back to List</a>
             </div>
@@ -52,18 +52,9 @@
                         </button>
                     </div>
                     <div class="row g-2 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Account *</label>
-                            <select id="vch_acc_select" class="form-select form-select-sm">
-                                <option value="">-- Select COA Account --</option>
-                                {% for acc in accounts %}
-                                    <option value="{{ acc.id }}">{{ acc.code }} - {{ acc.name }} ({{ acc.category.get_name_display }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold">Description</label>
-                            <input type="text" id="vch_narration" class="form-control form-control-sm" placeholder="Entry description / narration...">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Description / Narration *</label>
+                            <input type="text" id="vch_narration" class="form-control form-control-sm" placeholder="e.g. Utility Bills / Fuel Expense / Cash Received...">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold text-success">Debit (PKR)</label>
@@ -73,7 +64,7 @@
                             <label class="form-label small fw-semibold text-danger">Credit (PKR)</label>
                             <input type="number" id="vch_credit" class="form-control form-control-sm text-end font-monospace fw-bold" placeholder="0.00" step="0.01">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <button type="button" id="add_vch_item_btn" class="btn btn-emerald btn-sm text-white w-100 fw-bold" style="background-color: #10b981; height: 31px;">
                                 <i class="fas fa-plus me-1"></i> Add Entry
                             </button>
@@ -86,10 +77,10 @@
                     <table class="table table-bordered align-middle mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th style="width: 40%;">Description</th>
+                                <th style="width: 45%;">Description</th>
                                 <th style="width: 17%;" class="text-end">Debit (PKR)</th>
                                 <th style="width: 17%;" class="text-end">Credit (PKR)</th>
-                                <th style="width: 20%;" class="text-end">Balance (PKR)</th>
+                                <th style="width: 15%;" class="text-end">Balance (PKR)</th>
                                 <th style="width: 6%;" class="text-center">Action</th>
                             </tr>
                         </thead>
@@ -101,7 +92,7 @@
                                 <td>TOTALS:</td>
                                 <td class="text-end text-success fs-6 font-monospace" id="lbl_total_dr">PKR 0.00</td>
                                 <td class="text-end text-danger fs-6 font-monospace" id="lbl_total_cr">PKR 0.00</td>
-                                <td class="text-end font-monospace" id="lbl_running_diff">PKR 0.00</td>
+                                <td class="text-end font-monospace" id="lbl_running_diff">Diff: PKR 0.00</td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="addBlankRow()" title="Add Row">
                                         <i class="fas fa-plus"></i>
@@ -110,7 +101,7 @@
                             </tr>
                             <tr>
                                 <td colspan="5" id="lbl_balance_status" class="text-center py-2 bg-light">
-                                    <span class="badge bg-secondary fs-6 px-3 py-2">Add entries to calculate balance</span>
+                                    <span class="badge bg-secondary fs-6 px-3 py-2">Add entries with debit/credit to calculate balance</span>
                                 </td>
                             </tr>
                         </tfoot>
@@ -130,15 +121,6 @@
         </div>
     </div>
 </div>
-
-<!-- Raw account choices array for JS dynamic selects -->
-<script>
-    const availableAccounts = [
-        {% for acc in accounts %}
-            { id: {{ acc.id }}, code: "{{ acc.code }}", name: "{{ acc.name|escapejs }}", category: "{{ acc.category.get_name_display|escapejs }}" },
-        {% endfor %}
-    ];
-</script>
 {% endblock %}
 
 {% block extra_js %}
@@ -156,22 +138,25 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        // By default, rows are empty unless editing an existing voucher
+        // Set today's date if date input is empty
+        const dateInput = document.querySelector('input[name="date"]');
+        if (dateInput && !dateInput.value) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+        }
+
         renderVch();
     });
 
     // Handle Quick Entry Add Button
     document.getElementById('add_vch_item_btn').addEventListener('click', function() {
-        const accSelect = document.getElementById('vch_acc_select');
-        const accId = parseInt(accSelect.value);
-        const accName = accSelect.options[accSelect.selectedIndex]?.text || '';
+        const narration = document.getElementById('vch_narration').value.trim();
         const dr = parseFloat(document.getElementById('vch_debit').value) || 0;
         const cr = parseFloat(document.getElementById('vch_credit').value) || 0;
-        const narration = document.getElementById('vch_narration').value.trim();
 
-        if (!accId) {
-            alert('Please select an account from the dropdown.');
-            accSelect.focus();
+        if (!narration && dr <= 0 && cr <= 0) {
+            alert('Please enter a description and debit or credit amount.');
+            document.getElementById('vch_narration').focus();
             return;
         }
 
@@ -181,43 +166,26 @@
         }
 
         vchItems.push({
-            account_id: accId,
-            account_name: accName,
+            narration: narration,
             debit: dr,
-            credit: cr,
-            narration: narration
+            credit: cr
         });
 
         // Reset quick input bar
-        accSelect.value = '';
+        document.getElementById('vch_narration').value = '';
         document.getElementById('vch_debit').value = '';
         document.getElementById('vch_credit').value = '';
-        document.getElementById('vch_narration').value = '';
 
         renderVch();
     });
 
     function addBlankRow() {
-        const firstAcc = availableAccounts.length > 0 ? availableAccounts[0].id : '';
-        const firstAccName = availableAccounts.length > 0 ? (availableAccounts[0].code + ' - ' + availableAccounts[0].name) : '';
         vchItems.push({
-            account_id: firstAcc,
-            account_name: firstAccName,
+            narration: '',
             debit: 0,
-            credit: 0,
-            narration: ''
+            credit: 0
         });
         renderVch();
-    }
-
-    function updateLineAcc(index, newAccId) {
-        const accId = parseInt(newAccId);
-        const match = availableAccounts.find(a => a.id === accId);
-        if (match) {
-            vchItems[index].account_id = accId;
-            vchItems[index].account_name = match.code + ' - ' + match.name;
-        }
-        recalculateTotals();
     }
 
     function updateLineNarration(index, val) {
@@ -264,22 +232,10 @@
             vchItems.forEach((item, index) => {
                 const tr = document.createElement('tr');
 
-                // Generate Account Select Options
-                let optionsHtml = '';
-                availableAccounts.forEach(acc => {
-                    const selected = acc.id === parseInt(item.account_id) ? 'selected' : '';
-                    optionsHtml += `<option value="${acc.id}" ${selected}>${acc.code} - ${acc.name}</option>`;
-                });
-
                 tr.innerHTML = `
                     <td>
-                        <div class="d-flex flex-column gap-1">
-                            <select class="form-select form-select-sm fw-semibold" onchange="updateLineAcc(${index}, this.value)">
-                                ${optionsHtml}
-                            </select>
-                            <input type="text" class="form-control form-control-sm" placeholder="Line description / narration (editable)..." 
-                                   value="${escapeHtml(item.narration || '')}" oninput="updateLineNarration(${index}, this.value)">
-                        </div>
+                        <input type="text" class="form-control form-control-sm" placeholder="Entry description / narration (editable)..." 
+                               value="${escapeHtml(item.narration || item.description || '')}" oninput="updateLineNarration(${index}, this.value)">
                     </td>
                     <td class="align-top">
                         <input type="number" id="dr_input_${index}" class="form-control form-control-sm text-end font-monospace text-success fw-bold" 
@@ -348,7 +304,7 @@
         const submitBtn = document.getElementById('submit_vch_btn');
         const statusLbl = document.getElementById('lbl_balance_status');
 
-        const validItems = vchItems.filter(item => item.account_id && ((parseFloat(item.debit) || 0) > 0 || (parseFloat(item.credit) || 0) > 0));
+        const validItems = vchItems.filter(item => ((parseFloat(item.debit) || 0) > 0 || (parseFloat(item.credit) || 0) > 0));
 
         if (validItems.length > 0) {
             submitBtn.disabled = false;

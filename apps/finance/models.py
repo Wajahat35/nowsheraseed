@@ -79,10 +79,11 @@ class JournalVoucher(models.Model):
 
 class JournalItem(models.Model):
     voucher = models.ForeignKey(JournalVoucher, on_delete=models.CASCADE, related_name='items')
-    account = models.ForeignKey(ChartOfAccount, on_delete=models.CASCADE, related_name='journal_items')
+    account = models.ForeignKey(ChartOfAccount, on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
     debit = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     credit = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     narration = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.account.name}: Dr {self.debit} | Cr {self.credit}"
+        acc_name = self.account.name if self.account else (self.narration or "General Entry")
+        return f"{acc_name}: Dr {self.debit} | Cr {self.credit}"

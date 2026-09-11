@@ -59,9 +59,13 @@
                 {% for row in items_with_balance %}
                     <tr>
                         <td>
-                            <div class="fw-bold text-dark">{{ row.item.account.code }} - {{ row.item.account.name }}</div>
+                            {% if row.item.account %}
+                                <div class="fw-bold text-dark">{{ row.item.account.code }} - {{ row.item.account.name }}</div>
+                            {% endif %}
                             {% if row.item.narration %}
-                                <div class="text-muted small">{{ row.item.narration }}</div>
+                                <div class="{% if row.item.account %}text-muted small{% else %}fw-semibold text-dark{% endif %}">{{ row.item.narration }}</div>
+                            {% elif not row.item.account %}
+                                <div class="text-muted small">General Entry</div>
                             {% endif %}
                         </td>
                         <td class="text-end text-success font-monospace fw-semibold">
@@ -84,8 +88,8 @@
                     {% for item in voucher.items.all %}
                         <tr>
                             <td>
-                                <div class="fw-bold text-dark">{{ item.account.code }} - {{ item.account.name }}</div>
-                                {% if item.narration %}<div class="text-muted small">{{ item.narration }}</div>{% endif %}
+                                {% if item.account %}<div class="fw-bold text-dark">{{ item.account.code }} - {{ item.account.name }}</div>{% endif %}
+                                {% if item.narration %}<div class="{% if item.account %}text-muted small{% else %}fw-semibold text-dark{% endif %}">{{ item.narration }}</div>{% endif %}
                             </td>
                             <td class="text-end text-success font-monospace">{% if item.debit > 0 %}PKR {{ item.debit|intcomma }}{% else %}-{% endif %}</td>
                             <td class="text-end text-danger font-monospace">{% if item.credit > 0 %}PKR {{ item.credit|intcomma }}{% else %}-{% endif %}</td>

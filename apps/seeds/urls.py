@@ -13,6 +13,7 @@ urlpatterns = [
     path('crops/', views.CropTypeListView.as_view(), name='crop_list'),
     path('categories/', views.SeedCategoryListView.as_view(), name='category_list'),
     path('brands/', views.BrandListView.as_view(), name='brand_list'),
+    path('brands/quick-add/', views.QuickBrandCreateView.as_view(), name='quick_brand_add'),
     
     path('batches/', views.SeedBatchListView.as_view(), name='batch_list'),
     path('batches/add/', views.SeedBatchCreateView.as_view(), name='batch_create'),
