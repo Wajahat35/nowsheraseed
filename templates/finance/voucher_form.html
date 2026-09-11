@@ -21,23 +21,16 @@
                 {% csrf_token %}
                 <input type="hidden" name="items_data" id="vch_items_json">
 
-                <!-- Header Details -->
+                <!-- Hidden Fields -->
+                {{ form.voucher_type }}
+                {{ form.reference_no }}
+                {{ form.description }}
+
+                <!-- Date Option -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Voucher Type *</label>
-                        {{ form.voucher_type }}
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Voucher Date *</label>
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label fw-bold text-dark"><i class="fas fa-calendar-alt text-emerald me-1"></i> Date *</label>
                         {{ form.date }}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Reference / Document #</label>
-                        {{ form.reference_no }}
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label fw-semibold">Overall Voucher Description / Narration</label>
-                        {{ form.description }}
                     </div>
                 </div>
 

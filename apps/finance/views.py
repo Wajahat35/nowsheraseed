@@ -71,6 +71,21 @@ class VoucherListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        filtered_qs = self.get_queryset()
+        aggregates = filtered_qs.aggregate(
+            sum_debit=models.Sum('total_debit'),
+            sum_credit=models.Sum('total_credit')
+        )
+        total_debit = aggregates['sum_debit'] or Decimal('0.00')
+        total_credit = aggregates['sum_credit'] or Decimal('0.00')
+        total_balance = total_debit - total_credit
+        balance_diff = abs(total_balance)
+
+        context['total_debit'] = total_debit
+        context['total_credit'] = total_credit
+        context['total_balance'] = total_balance
+        context['balance_diff'] = balance_diff
+        context['filtered_count'] = filtered_qs.count()
         context['vtype'] = self.request.GET.get('vtype', '')
         context['search'] = self.request.GET.get('search', '')
         context['start_date'] = self.request.GET.get('start_date', '')
@@ -132,6 +147,13 @@ class VoucherCreateView(LoginRequiredMixin, View):
                             credit=credit,
                             narration=narration
                         )
+
+                    if not voucher.description and items_list:
+                        first_item_desc = (items_list[0].get('narration') or items_list[0].get('description') or '').strip()
+                        if first_item_desc:
+                            voucher.description = first_item_desc
+                    if not voucher.voucher_type:
+                        voucher.voucher_type = 'JV'
 
                     voucher.total_debit = total_dr
                     voucher.total_credit = total_cr
@@ -219,6 +241,11 @@ class VoucherUpdateView(LoginRequiredMixin, View):
                             narration=narration
                         )
 
+                    if not vch.description and items_list:
+                        first_item_desc = (items_list[0].get('narration') or items_list[0].get('description') or '').strip()
+                        if first_item_desc:
+                            vch.description = first_item_desc
+
                     vch.total_debit = total_dr
                     vch.total_credit = total_cr
                     vch.save()
@@ -297,8 +324,12 @@ class ExportVoucherListExcelView(LoginRequiredMixin, View):
 
         headers = ['Voucher #', 'Type', 'Date', 'Reference #', 'Description', 'Total Debit (PKR)', 'Total Credit (PKR)', 'Balance Diff (PKR)', 'Status', 'Created By']
         rows = []
+        tot_debit = Decimal('0.00')
+        tot_credit = Decimal('0.00')
         for v in qs:
             status = "BALANCED" if v.is_balanced else "UNBALANCED"
+            tot_debit += v.total_debit
+            tot_credit += v.total_credit
             rows.append([
                 v.voucher_number,
                 v.get_voucher_type_display(),
@@ -311,6 +342,9 @@ class ExportVoucherListExcelView(LoginRequiredMixin, View):
                 status,
                 v.created_by.username if v.created_by else 'System'
             ])
+        tot_diff = abs(tot_debit - tot_credit)
+        tot_status = "BALANCED" if tot_debit == tot_credit else f"UNBALANCED (Diff: {float(tot_diff)})"
+        rows.append(['TOTALS (FILTERED)', '', '', '', '', float(tot_debit), float(tot_credit), float(tot_diff), tot_status, ''])
         log_activity(request.user, 'EXPORT', 'Finance', 'Exported Journal Vouchers list to Excel', request)
         return render_to_excel('journal_vouchers_list.xlsx', 'Journal Vouchers', headers, rows)
 
@@ -341,8 +375,12 @@ class ExportVoucherListPDFView(LoginRequiredMixin, View):
 
         headers = ['Voucher #', 'Type', 'Date', 'Ref #', 'Description', 'Debit (PKR)', 'Credit (PKR)', 'Diff (PKR)', 'Status']
         rows = []
+        tot_debit = Decimal('0.00')
+        tot_credit = Decimal('0.00')
         for v in qs:
             status = "Balanced" if v.is_balanced else "Unbalanced"
+            tot_debit += v.total_debit
+            tot_credit += v.total_credit
             rows.append([
                 v.voucher_number,
                 v.voucher_type,
@@ -354,6 +392,19 @@ class ExportVoucherListPDFView(LoginRequiredMixin, View):
                 f"{v.balance_difference:,.2f}",
                 status
             ])
+        tot_diff = abs(tot_debit - tot_credit)
+        tot_status = "Balanced" if tot_debit == tot_credit else f"Diff: {tot_diff:,.2f}"
+        rows.append([
+            'TOTALS',
+            '',
+            '',
+            '',
+            '',
+            f"{tot_debit:,.2f}",
+            f"{tot_credit:,.2f}",
+            f"{tot_diff:,.2f}",
+            tot_status
+        ])
         log_activity(request.user, 'EXPORT', 'Finance', 'Exported Journal Vouchers list to PDF', request)
         return render_to_pdf('journal_vouchers_list.pdf', 'Journal Vouchers Report', headers, rows)
 

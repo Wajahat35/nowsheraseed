@@ -18,15 +18,20 @@ from django.utils import timezone
 class JournalVoucherForm(forms.ModelForm):
     class Meta:
         model = JournalVoucher
-        fields = ('voucher_type', 'date', 'reference_no', 'description')
+        fields = ('date', 'voucher_type', 'reference_no', 'description')
         widgets = {
-            'voucher_type': forms.Select(attrs={'class': 'form-select'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'reference_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. JV-001 or doc ref'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Overall voucher description / remarks...'}),
+            'voucher_type': forms.HiddenInput(),
+            'reference_no': forms.HiddenInput(),
+            'description': forms.HiddenInput(),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.initial.get('date') and not (self.instance and self.instance.pk and self.instance.date):
             self.initial['date'] = timezone.now().date().strftime('%Y-%m-%d')
+        if not self.initial.get('voucher_type'):
+            self.initial['voucher_type'] = 'JV'
+        self.fields['voucher_type'].required = False
+        self.fields['reference_no'].required = False
+        self.fields['description'].required = False
