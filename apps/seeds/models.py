@@ -78,6 +78,25 @@ class Seed(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name} ({self.variety})"
 
+    def get_verify_url(self):
+        base_url = 'https://nowsheraseed.onrender.com'
+        return f"{base_url}/seeds/{self.pk}/verify/"
+
+    def get_qr_data_uri(self):
+        """Returns inline base64 PNG data URI for QR code pointing to seed online verification."""
+        import qrcode
+        import io
+        import base64
+        verify_url = self.get_verify_url()
+        qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=2)
+        qr.add_data(verify_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="#0f172a", back_color="white")
+        buffer = io.BytesIO()
+        qr_img.save(buffer, format='PNG')
+        b64 = base64.b64encode(buffer.getvalue()).decode('ascii')
+        return f"data:image/png;base64,{b64}"
+
     def get_total_stock(self):
         """Returns total available stock from all batches. Batches are the single source of truth."""
         return sum(b.current_qty for b in self.batches.all())

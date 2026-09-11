@@ -21,9 +21,10 @@
         <div class="small text-muted">{{ seed.variety }} ({{ seed.packing_size }})</div>
         <div class="fw-bold fs-5 text-success my-2">PKR {{ seed.retail_price|intcomma }}</div>
         
-        {% if seed.qr_code %}
-            <img src="{{ seed.qr_code.url }}" width="120" class="my-2">
-        {% endif %}
+        <div class="my-2">
+            <img src="{{ seed.get_qr_data_uri }}" width="130" height="130" style="display:inline-block; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px;" alt="Seed QR Code">
+            <div class="small text-muted mt-1" style="font-size: 0.75rem;">Scan QR Code to Verify Seed Online</div>
+        </div>
         <div class="font-monospace fw-bold fs-6">{{ seed.barcode }}</div>
         <div class="small text-muted">{{ company.name|default:"Enterprise Seed ERP" }}</div>
     </div>

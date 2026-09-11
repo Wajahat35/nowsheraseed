@@ -832,7 +832,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function speakText(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            // Voice talking disabled: Voice assistant responses are displayed in UI transcript without audio playback
+            if (!text || !text.trim()) return;
+
+            const utterance = new SpeechSynthesisUtterance(text.trim());
+            utterance.rate = 0.95;
+            utterance.pitch = 1.08; // Natural female tone
+
+            const femaleVoice = getFemaleVoice();
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
+            } else {
+                utterance.lang = 'ur-PK';
+            }
+            window.speechSynthesis.speak(utterance);
         }
     }
 

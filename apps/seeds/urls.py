@@ -9,6 +9,7 @@ urlpatterns = [
     path('<int:pk>/edit/', views.SeedUpdateView.as_view(), name='seed_update'),
     path('<int:pk>/delete/', views.SeedDeleteView.as_view(), name='seed_delete'),
     path('<int:pk>/barcode/', views.BarcodePrintView.as_view(), name='barcode_print'),
+    path('<int:pk>/verify/', views.SeedQRVerifyView.as_view(), name='seed_verify'),
     
     path('crops/', views.CropTypeListView.as_view(), name='crop_list'),
     path('categories/', views.SeedCategoryListView.as_view(), name='category_list'),

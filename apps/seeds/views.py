@@ -254,3 +254,13 @@ class SeedSampleCSVView(LoginRequiredMixin, View):
         writer.writerow(['Hybrid Wheat', 'Pak-11', 'Wheat', 'Hybrid', 'National Seeds', '50 Kg Bag', '3500', '3000', '3200', '20'])
         writer.writerow(['Gold Corn', 'Super Gold', 'Maize/Corn', 'Open Pollinated', 'Monsanto', '10 Kg Bag', '1800', '1500', '1650', '10'])
         return response
+
+
+class SeedQRVerifyView(View):
+    """Public QR scan verification page for seeds — no login required."""
+    def get(self, request, pk):
+        seed = get_object_or_404(Seed.objects.select_related('crop_type', 'category', 'brand').prefetch_related('batches'), pk=pk)
+        from apps.settings_app.models import CompanyProfile
+        company = CompanyProfile.get_instance()
+        return render(request, 'seeds/seed_qr_verify.html', {'seed': seed, 'company': company})
+

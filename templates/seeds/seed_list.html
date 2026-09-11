@@ -38,6 +38,7 @@
                     <th>Retail Price</th>
                     <th>Total Stock</th>
                     <th>Status</th>
+                    <th class="text-center">QR Verify</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -59,15 +60,22 @@
                             </span>
                         </td>
                         <td><span class="badge bg-info">{{ s.status }}</span></td>
+                        <td class="text-center">
+                            <a href="{% url 'seeds:seed_verify' s.pk %}" target="_blank" title="Scan or Click to Verify Seed Online" class="d-inline-block text-decoration-none">
+                                <img src="{{ s.get_qr_data_uri }}" width="46" height="46" style="border: 1px solid #dee2e6; border-radius: 6px; padding: 2px;" alt="QR Code">
+                                <div class="small text-success fw-bold mt-1" style="font-size: 0.7rem;"><i class="fas fa-check-circle"></i> Verify</div>
+                            </a>
+                        </td>
                         <td>
                             <div class="btn-group btn-group-sm">
+                                <a href="{% url 'seeds:seed_verify' s.pk %}" target="_blank" class="btn btn-outline-success" title="Verify Seed QR"><i class="fas fa-qrcode"></i></a>
                                 <a href="{% url 'seeds:barcode_print' s.pk %}" class="btn btn-outline-dark" title="Print Barcode"><i class="fas fa-barcode"></i></a>
                                 <a href="{% url 'seeds:seed_update' s.pk %}" class="btn btn-outline-secondary" title="Edit"><i class="fas fa-edit"></i></a>
                             </div>
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="9" class="text-center text-muted py-4">No seed items found in catalog.</td></tr>
+                    <tr><td colspan="10" class="text-center text-muted py-4">No seed items found in catalog.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
