@@ -111,6 +111,12 @@
                                     <a href="{% url 'sales:sales_detail' inv.pk %}?pay=1" class="btn btn-emerald text-white" style="background-color: #10b981;" title="Receive Payment"><i class="fas fa-cash-register"></i> Pay</a>
                                 {% endif %}
                                 <a href="{% url 'sales:invoice_print' inv.pk %}" class="btn btn-outline-dark" title="Print Invoice" target="_blank"><i class="fas fa-print"></i></a>
+                                {% if user.is_admin %}
+                                    <form action="{% url 'sales:sales_delete' inv.pk %}" method="post" class="d-inline" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete invoice {{ inv.invoice_number }}? Inventory stock will be restored.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger" title="Delete Invoice (Admin Only)"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

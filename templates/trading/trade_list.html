@@ -116,7 +116,9 @@
                         <td class="text-center">
                             <a href="{% url 'trading:trade_detail' t.pk %}" class="btn btn-sm btn-outline-info me-1" title="View Trade Details"><i class="fas fa-eye"></i></a>
                             <a href="{% url 'trading:trade_edit' t.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Trade"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'trading:trade_delete' t.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Trade"><i class="fas fa-trash"></i></a>
+                            {% if user.is_admin %}
+                            <a href="{% url 'trading:trade_delete' t.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Trade (Admin Only)"><i class="fas fa-trash"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}

@@ -21,7 +21,7 @@ from .forms import (
     TradingSalesInvoiceForm, TradingPurchaseInvoiceForm, TradingGatePassForm
 )
 from .services import calculate_trading_stats
-from apps.accounts.views import log_activity
+from apps.accounts.views import log_activity, AdminRequiredMixin
 from apps.reports.excel_generator import render_to_excel
 from apps.reports.pdf_generator import render_to_pdf
 
@@ -30,7 +30,7 @@ class TradingAccessRequiredMixin(UserPassesTestMixin):
     """Protects Trading views — user must have trading access or be superuser."""
     def test_func(self):
         user = self.request.user
-        return user.is_authenticated and (user.is_superuser or getattr(user, 'can_access_trading', True))
+        return user.is_authenticated and (user.is_superuser or user.has_trading_access())
 
     def handle_no_permission(self):
         if not self.request.user.is_authenticated:
@@ -117,7 +117,7 @@ class TradingAccountUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, U
         return response
 
 
-class TradingAccountDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+class TradingAccountDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, AdminRequiredMixin, DeleteView):
     model = TradingAccount
     template_name = 'trading/account_confirm_delete.html'
     success_url = reverse_lazy('trading:account_list')
@@ -204,7 +204,7 @@ class DepositUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, UpdateVi
         return response
 
 
-class DepositDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+class DepositDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Deposit
     template_name = 'trading/deposit_confirm_delete.html'
     success_url = reverse_lazy('trading:deposit_list')
@@ -260,7 +260,7 @@ class WithdrawalUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, Updat
         return response
 
 
-class WithdrawalDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+class WithdrawalDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Withdrawal
     template_name = 'trading/withdrawal_confirm_delete.html'
     success_url = reverse_lazy('trading:withdrawal_list')
@@ -339,7 +339,7 @@ class TradeUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, UpdateView
         return response
 
 
-class TradeDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+class TradeDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, AdminRequiredMixin, DeleteView):
     model = Trade
     template_name = 'trading/trade_confirm_delete.html'
     success_url = reverse_lazy('trading:trade_list')
@@ -493,16 +493,20 @@ class TradingSalesUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, Upd
         return response
 
 
-class TradingSalesDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+class TradingSalesDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, AdminRequiredMixin, DeleteView):
     model = TradingSalesInvoice
     template_name = 'trading/sales_confirm_delete.html'
     success_url = reverse_lazy('trading:sales_list')
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         obj = self.get_object()
-        log_activity(request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Sales Invoice {obj.invoice_number}", request)
-        messages.success(request, f"Sales Invoice {obj.invoice_number} deleted.")
-        return super().delete(request, *args, **kwargs)
+        log_activity(self.request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Sales Invoice {obj.invoice_number}", self.request)
+        messages.success(self.request, f"Sales Invoice {obj.invoice_number} deleted.")
+        return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.form_valid(self.get_form())
 
 
 class TradingSalesDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView):
@@ -646,16 +650,20 @@ class TradingPurchaseUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, 
         return response
 
 
-class TradingPurchaseDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+class TradingPurchaseDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, AdminRequiredMixin, DeleteView):
     model = TradingPurchaseInvoice
     template_name = 'trading/purchase_confirm_delete.html'
     success_url = reverse_lazy('trading:purchase_list')
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         obj = self.get_object()
-        log_activity(request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Purchase Invoice {obj.invoice_number}", request)
-        messages.success(request, f"Purchase Invoice {obj.invoice_number} deleted.")
-        return super().delete(request, *args, **kwargs)
+        log_activity(self.request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Purchase Invoice {obj.invoice_number}", self.request)
+        messages.success(self.request, f"Purchase Invoice {obj.invoice_number} deleted.")
+        return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.form_valid(self.get_form())
 
 
 class TradingPurchaseDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView):
@@ -711,16 +719,20 @@ class TradingGatePassUpdateView(LoginRequiredMixin, TradingAccessRequiredMixin, 
         return response
 
 
-class TradingGatePassDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, DeleteView):
+class TradingGatePassDeleteView(LoginRequiredMixin, TradingAccessRequiredMixin, AdminRequiredMixin, DeleteView):
     model = TradingGatePass
     template_name = 'trading/gatepass_confirm_delete.html'
     success_url = reverse_lazy('trading:gatepass_list')
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         obj = self.get_object()
-        log_activity(request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Gate Pass {obj.pass_number}", request)
+        log_activity(self.request.user, 'DELETE', 'Trading', f"Deleted Seed Trading Gate Pass {obj.pass_number}", self.request)
         messages.success(request, f"Gate Pass {obj.pass_number} deleted.")
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.form_valid(self.get_form())
 
 
 class TradingGatePassDetailView(LoginRequiredMixin, TradingAccessRequiredMixin, DetailView):

@@ -16,6 +16,7 @@ APP_TO_MODULE = {
     'accounts':   'accounts',
     'settings_app': 'settings',
     'dashboard':  'dashboard',
+    'trading':    'trading',
 }
 
 # Paths that are always public / don't need checking
@@ -43,8 +44,43 @@ class AuditLogMiddleware:
                 try:
                     match = resolve(path)
                     app_name = match.app_name or match.namespace or ''
+
+                    # Block Trading if user does not have trading access
+                    if (app_name == 'trading' or path.startswith('/trading/')) and not request.user.has_trading_access():
+                        return HttpResponseForbidden(
+                            '<html><body style="font-family:Inter,sans-serif;display:flex;align-items:center;'
+                            'justify-content:center;height:100vh;margin:0;background:#f0f4f8;">'
+                            '<div style="text-align:center;padding:40px;background:#fff;border-radius:12px;'
+                            'box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:480px;">'
+                            '<div style="font-size:3rem;margin-bottom:1rem;">🔒</div>'
+                            '<h2 style="color:#1e293b;font-weight:700;margin-bottom:0.5rem;">Access Restricted</h2>'
+                            '<p style="color:#64748b;margin-bottom:1.5rem;">You do not have permission to access the '
+                            '<strong>Trading Management System (Mian Traders)</strong>. '
+                            'Please contact your administrator to request access.</p>'
+                            '<a href="/dashboard/" style="display:inline-block;padding:10px 24px;background:#10b981;'
+                            'color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">← Go to Dashboard</a>'
+                            '</div></body></html>'
+                        )
+
+                    # Block Seeds Management if user does not have seed access
+                    if (app_name != 'trading' and not path.startswith('/trading/')) and not request.user.has_seed_access():
+                        return HttpResponseForbidden(
+                            '<html><body style="font-family:Inter,sans-serif;display:flex;align-items:center;'
+                            'justify-content:center;height:100vh;margin:0;background:#f0f4f8;">'
+                            '<div style="text-align:center;padding:40px;background:#fff;border-radius:12px;'
+                            'box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:480px;">'
+                            '<div style="font-size:3rem;margin-bottom:1rem;">🔒</div>'
+                            '<h2 style="color:#1e293b;font-weight:700;margin-bottom:0.5rem;">Access Restricted</h2>'
+                            '<p style="color:#64748b;margin-bottom:1.5rem;">You do not have permission to access the '
+                            '<strong>Nowshera Seeds Management ERP</strong>. '
+                            'Please contact your administrator to request access.</p>'
+                            '<a href="/trading/" style="display:inline-block;padding:10px 24px;background:#2563eb;'
+                            'color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">← Go to Trading</a>'
+                            '</div></body></html>'
+                        )
+
                     module = APP_TO_MODULE.get(app_name)
-                    if module and not request.user.has_module_perm(module, 'view'):
+                    if module and module != 'trading' and not request.user.has_module_perm(module, 'view'):
                         return HttpResponseForbidden(
                             '<html><body style="font-family:Inter,sans-serif;display:flex;align-items:center;'
                             'justify-content:center;height:100vh;margin:0;background:#f0f4f8;">'

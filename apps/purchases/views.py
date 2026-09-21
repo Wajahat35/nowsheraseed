@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, DetailView, View
+from django.views.generic import ListView, DetailView, View, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db import transaction
@@ -12,7 +12,7 @@ from .models import PurchaseInvoice, PurchaseItem
 from .forms import PurchaseInvoiceForm
 from apps.seeds.models import Seed, SeedBatch
 from apps.suppliers.models import Supplier
-from apps.accounts.views import log_activity
+from apps.accounts.views import log_activity, AdminRequiredMixin
 from apps.reports.pdf_generator import render_to_pdf
 from apps.reports.excel_generator import render_to_excel
 
@@ -242,3 +242,37 @@ class RecordPurchasePaymentView(LoginRequiredMixin, View):
             messages.error(request, f"Error recording payment: {str(e)}")
 
         return redirect('purchases:purchase_detail', pk=invoice.pk)
+
+
+class PurchaseInvoiceDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+    model = PurchaseInvoice
+    success_url = reverse_lazy('purchases:purchase_list')
+
+    def form_valid(self, form):
+        invoice = self.get_object()
+        inv_num = invoice.invoice_number
+        with transaction.atomic():
+            # Decrease stock for each item since purchase brought stock in
+            for item in invoice.items.all():
+                if item.batch:
+                    item.batch.current_qty = max(0, item.batch.current_qty - item.quantity)
+                    item.batch.save()
+                    from apps.inventory.models import StockMovement
+                    StockMovement.objects.create(
+                        movement_type='STOCK_OUT',
+                        seed=item.seed,
+                        batch=item.batch,
+                        quantity=-item.quantity,
+                        reference_no=inv_num,
+                        notes=f"Stock removed due to deleted Purchase Bill {inv_num}",
+                        user=self.request.user
+                    )
+            log_activity(self.request.user, 'DELETE', 'Purchases', f"Deleted Purchase Bill {inv_num} and adjusted stock", self.request)
+            messages.success(self.request, f"Purchase Bill {inv_num} was successfully deleted and inventory stock adjusted.")
+            return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.form_valid(self.get_form())
+
+

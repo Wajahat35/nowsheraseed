@@ -22,6 +22,7 @@
                     <th>Full Name</th>
                     <th>Email</th>
                     <th>Role</th>
+                    <th>Portal Access</th>
                     <th>Designation</th>
                     <th>Phone</th>
                     <th>Status</th>
@@ -35,6 +36,17 @@
                         <td class="fw-semibold">{{ u.get_full_name|default:u.username }}</td>
                         <td>{{ u.email|default:"-" }}</td>
                         <td><span class="badge bg-dark">{{ u.role.get_name_display|default:"No Role" }}</span></td>
+                        <td>
+                            {% if u.can_access_seed %}
+                                <span class="badge bg-success-subtle text-success border border-success me-1" title="Nowshera Seeds ERP Access"><i class="fas fa-seedling me-1"></i> Seeds</span>
+                            {% endif %}
+                            {% if u.can_access_trading %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary" title="Mian Traders Access"><i class="fas fa-chart-line me-1"></i> Trading</span>
+                            {% endif %}
+                            {% if not u.can_access_seed and not u.can_access_trading %}
+                                <span class="badge bg-secondary">No Access</span>
+                            {% endif %}
+                        </td>
                         <td>{{ u.designation|default:"-" }}</td>
                         <td>{{ u.phone|default:"-" }}</td>
                         <td><span class="badge {% if u.is_active %}bg-success{% else %}bg-danger{% endif %}">{% if u.is_active %}Active{% else %}Disabled{% endif %}</span></td>
@@ -44,7 +56,7 @@
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="8" class="text-center text-muted py-4">No users found.</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-4">No users found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

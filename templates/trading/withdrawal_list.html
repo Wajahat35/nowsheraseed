@@ -41,7 +41,9 @@
                         <td>{{ w.notes|default:"-" }}</td>
                         <td class="text-center">
                             <a href="{% url 'trading:withdrawal_edit' w.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Withdrawal"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'trading:withdrawal_delete' w.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Withdrawal"><i class="fas fa-trash"></i></a>
+                            {% if user.is_admin %}
+                            <a href="{% url 'trading:withdrawal_delete' w.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Withdrawal (Admin Only)"><i class="fas fa-trash"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}

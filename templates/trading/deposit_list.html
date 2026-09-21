@@ -41,7 +41,9 @@
                         <td>{{ d.notes|default:"-" }}</td>
                         <td class="text-center">
                             <a href="{% url 'trading:deposit_edit' d.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Deposit"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'trading:deposit_delete' d.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Deposit"><i class="fas fa-trash"></i></a>
+                            {% if user.is_admin %}
+                            <a href="{% url 'trading:deposit_delete' d.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Deposit (Admin Only)"><i class="fas fa-trash"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}

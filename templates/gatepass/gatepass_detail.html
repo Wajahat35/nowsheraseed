@@ -12,6 +12,14 @@
         <a href="{% url 'gatepass:gatepass_print' gatepass.pk %}" target="_blank" class="btn btn-dark me-2">
             <i class="fas fa-print me-1"></i> Print Pass
         </a>
+        {% if user.is_admin %}
+        <form action="{% url 'gatepass:gatepass_delete' gatepass.pk %}" method="post" class="d-inline me-2" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete gate pass {{ gatepass.pass_number }}?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="fas fa-trash me-1"></i> Delete Pass
+            </button>
+        </form>
+        {% endif %}
         <a href="{% url 'gatepass:gatepass_list' %}" class="btn btn-light border">Back to Logistics</a>
     </div>
 </div>

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, CreateView, DetailView, UpdateView, View
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, View, DeleteView
 from django.urls import reverse_lazy
 from django.http import JsonResponse
 from django.contrib import messages
@@ -9,7 +9,7 @@ from .models import GatePass
 from .forms import GatePassForm
 from apps.sales.models import SalesInvoice
 from apps.purchases.models import PurchaseInvoice
-from apps.accounts.views import log_activity
+from apps.accounts.views import log_activity, AdminRequiredMixin
 
 class GatePassListView(LoginRequiredMixin, ListView):
     model = GatePass
@@ -177,3 +177,21 @@ class GatePassReportView(LoginRequiredMixin, View):
             'end_date': end_date,
             'pass_type': pass_type
         })
+
+
+class GatePassDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+    model = GatePass
+    success_url = reverse_lazy('gatepass:gatepass_list')
+
+    def form_valid(self, form):
+        gatepass = self.get_object()
+        gp_num = gatepass.pass_number
+        log_activity(self.request.user, 'DELETE', 'GatePass', f"Deleted Gate Pass {gp_num} (Vehicle: {gatepass.vehicle_number})", self.request)
+        messages.success(self.request, f"Gate Pass {gp_num} was successfully deleted.")
+        return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.form_valid(self.get_form())
+
+

@@ -76,6 +76,27 @@ class AdminRequiredMixin(UserPassesTestMixin):
     def test_func(self):
         return self.request.user.is_authenticated and self.request.user.is_admin()
 
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect('login')
+        messages.error(self.request, "Access Denied: Administrator privileges required to perform this action.")
+        return redirect('dashboard:home')
+
+
+class SeedAccessRequiredMixin(UserPassesTestMixin):
+    """Protects Nowshera Seeds views — user must have seed access or be superuser."""
+    def test_func(self):
+        user = self.request.user
+        return user.is_authenticated and (user.is_superuser or getattr(user, 'can_access_seed', True))
+
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect('login')
+        messages.error(self.request, "Access Denied: You do not have permission to access the Nowshera Seeds Management System.")
+        if getattr(self.request.user, 'has_trading_access', lambda: False)():
+            return redirect('trading:dashboard')
+        return redirect('login')
+
 class UserListView(LoginRequiredMixin, AdminRequiredMixin, ListView):
     model = User
     template_name = 'accounts/user_list.html'
@@ -149,7 +170,10 @@ class UserPermissionView(LoginRequiredMixin, AdminRequiredMixin, View):
             perm.can_view = f'view_{module_key}' in request.POST
             perm.can_create = f'create_{module_key}' in request.POST
             perm.can_edit = f'edit_{module_key}' in request.POST
-            perm.can_delete = f'delete_{module_key}' in request.POST
+            if module_key in ['sales', 'purchases', 'gatepass', 'finance', 'trading']:
+                perm.can_delete = False
+            else:
+                perm.can_delete = f'delete_{module_key}' in request.POST
             perm.save()
         log_activity(request.user, 'UPDATE', 'Accounts', f"Updated module permissions for user {user.username}", request)
         messages.success(request, f"Permissions for {user.username} updated successfully!")

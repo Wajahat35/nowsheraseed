@@ -172,10 +172,12 @@
                                 <a href="{% url 'finance:voucher_detail_excel' v.pk %}" class="btn btn-outline-success" title="Download Excel"><i class="fas fa-file-excel"></i></a>
                                 <a href="{% url 'finance:voucher_detail_pdf' v.pk %}" class="btn btn-outline-danger" title="Download PDF"><i class="fas fa-file-pdf"></i></a>
                                 <a href="{% url 'finance:voucher_edit' v.pk %}" class="btn btn-outline-primary" title="Edit Voucher"><i class="fas fa-edit"></i></a>
-                                <form method="POST" action="{% url 'finance:voucher_delete' v.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete Voucher {{ v.voucher_number }}?');">
+                                {% if user.is_admin %}
+                                <form method="POST" action="{% url 'finance:voucher_delete' v.pk %}" class="d-inline" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete Voucher {{ v.voucher_number }}?');">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-danger" title="Delete Voucher"><i class="fas fa-trash"></i></button>
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete Voucher (Admin Only)"><i class="fas fa-trash"></i></button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

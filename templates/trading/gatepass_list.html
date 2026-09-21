@@ -58,7 +58,9 @@
                         <td class="text-center">
                             <a href="{% url 'trading:gatepass_detail' g.pk %}" class="btn btn-sm btn-outline-info me-1" title="View Pass"><i class="fas fa-eye"></i></a>
                             <a href="{% url 'trading:gatepass_edit' g.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Pass"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'trading:gatepass_delete' g.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Pass"><i class="fas fa-trash"></i></a>
+                            {% if user.is_admin %}
+                            <a href="{% url 'trading:gatepass_delete' g.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Pass (Admin Only)"><i class="fas fa-trash"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}

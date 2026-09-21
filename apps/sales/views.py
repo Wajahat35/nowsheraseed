@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, DetailView, View
+from django.views.generic import ListView, DetailView, View, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.db import transaction
@@ -12,7 +12,7 @@ from .models import SalesInvoice, SalesItem, Quotation, QuotationItem
 from .forms import SalesInvoiceForm, QuotationForm
 from apps.seeds.models import Seed, SeedBatch
 from apps.customers.models import Customer
-from apps.accounts.views import log_activity
+from apps.accounts.views import log_activity, AdminRequiredMixin, SeedAccessRequiredMixin
 from apps.reports.pdf_generator import render_to_pdf
 from apps.reports.excel_generator import render_to_excel
 
@@ -301,3 +301,37 @@ class QuotationListView(LoginRequiredMixin, ListView):
     template_name = 'sales/quotation_list.html'
     context_object_name = 'quotations'
     paginate_by = 20
+
+
+class SalesInvoiceDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
+    model = SalesInvoice
+    success_url = reverse_lazy('sales:sales_list')
+
+    def form_valid(self, form):
+        invoice = self.get_object()
+        inv_num = invoice.invoice_number
+        with transaction.atomic():
+            # Restore stock for each item
+            for item in invoice.items.all():
+                if item.batch:
+                    item.batch.current_qty += item.quantity
+                    item.batch.save()
+                    from apps.inventory.models import StockMovement
+                    StockMovement.objects.create(
+                        movement_type='STOCK_IN',
+                        seed=item.seed,
+                        batch=item.batch,
+                        quantity=item.quantity,
+                        reference_no=inv_num,
+                        notes=f"Restored from deleted Sales Invoice {inv_num}",
+                        user=self.request.user
+                    )
+            log_activity(self.request.user, 'DELETE', 'Sales', f"Deleted Sales Invoice {inv_num} and restored stock", self.request)
+            messages.success(self.request, f"Sales Invoice {inv_num} was successfully deleted and stock restored.")
+            return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.form_valid(self.get_form())
+
+

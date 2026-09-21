@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.SalesListView.as_view(), name='sales_list'),
     path('add/', views.SalesCreateView.as_view(), name='sales_create'),
     path('<int:pk>/', views.SalesDetailView.as_view(), name='sales_detail'),
+    path('<int:pk>/delete/', views.SalesInvoiceDeleteView.as_view(), name='sales_delete'),
     path('<int:pk>/payment/', views.RecordPaymentView.as_view(), name='record_payment'),
     path('<int:pk>/print/', views.SalesPrintInvoiceView.as_view(), name='invoice_print'),
     path('<int:pk>/regenerate-qr/', views.RegenerateQRView.as_view(), name='regenerate_qr'),

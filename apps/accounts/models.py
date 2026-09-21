@@ -64,22 +64,39 @@ class User(AbstractUser):
         """Check if user has permission for a module action. Admins always have all permissions."""
         if self.is_admin():
             return True
-        perm = self.module_permissions.filter(module=module).first()
-        if perm is None:
-            # Default: Managers can view all; others can only view dashboard
-            if self.is_manager() and action == 'view':
-                return True
-            if module == 'dashboard' and action == 'view':
-                return True
+
+        # Invoices, gate passes, and vouchers can NEVER be deleted by non-admins
+        if action == 'delete' and module in ['sales', 'purchases', 'gatepass', 'finance', 'trading']:
             return False
-        if action == 'view':
-            return perm.can_view
-        elif action == 'create':
-            return perm.can_create
-        elif action == 'edit':
-            return perm.can_edit
-        elif action == 'delete':
-            return perm.can_delete
+
+        perm = self.module_permissions.filter(module=module).first()
+        if perm is not None:
+            if action == 'view':
+                return perm.can_view
+            elif action == 'create':
+                return perm.can_create
+            elif action == 'edit':
+                return perm.can_edit
+            elif action == 'delete':
+                return perm.can_delete
+            return False
+
+        # Role-based intelligent defaults when no explicit per-module override exists
+        if action == 'delete':
+            return False
+
+        if self.is_manager():
+            return True
+        if module == 'dashboard' and action == 'view':
+            return True
+        if self.is_salesman() and module in ['sales', 'customers']:
+            return action in ['view', 'create', 'edit']
+        if self.is_storekeeper() and module in ['inventory', 'seeds', 'gatepass', 'purchases']:
+            return action in ['view', 'create', 'edit']
+        if self.is_accountant() and module in ['finance', 'expenses', 'reports', 'sales', 'purchases']:
+            return action in ['view', 'create', 'edit']
+        if self.role and self.role.name == Role.OPERATOR and module in ['sales', 'purchases', 'seeds', 'inventory', 'gatepass']:
+            return action in ['view', 'create', 'edit']
         return False
 
     def __str__(self):

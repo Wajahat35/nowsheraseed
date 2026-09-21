@@ -55,6 +55,12 @@
                             <div class="btn-group btn-group-sm">
                                 <a href="{% url 'gatepass:gatepass_detail' gp.pk %}" class="btn btn-outline-info" title="View"><i class="fas fa-eye"></i></a>
                                 <a href="{% url 'gatepass:gatepass_print' gp.pk %}" class="btn btn-outline-dark" target="_blank" title="Print"><i class="fas fa-print"></i></a>
+                                {% if user.is_admin %}
+                                    <form action="{% url 'gatepass:gatepass_delete' gp.pk %}" method="post" class="d-inline" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete gate pass {{ gp.pass_number }}?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger" title="Delete Gate Pass (Admin Only)"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

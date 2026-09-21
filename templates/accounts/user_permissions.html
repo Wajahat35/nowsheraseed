@@ -49,8 +49,14 @@
                                 {% if module_data.perm.can_edit %}checked{% endif %}>
                         </td>
                         <td class="text-center">
-                            <input type="checkbox" name="delete_{{ module_key }}" class="form-check-input module-cb" data-module="{{ module_key }}" data-type="delete"
-                                {% if module_data.perm.can_delete %}checked{% endif %}>
+                            {% if module_key == 'sales' or module_key == 'purchases' or module_key == 'gatepass' or module_key == 'finance' or module_key == 'trading' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="Deletion of Invoices, Gate Passes, and Vouchers is strictly restricted to Administrators.">
+                                    <i class="fas fa-lock me-1"></i>Admin Only
+                                </span>
+                            {% else %}
+                                <input type="checkbox" name="delete_{{ module_key }}" class="form-check-input module-cb" data-module="{{ module_key }}" data-type="delete"
+                                    {% if module_data.perm.can_delete %}checked{% endif %}>
+                            {% endif %}
                         </td>
                         <td class="text-center">
                             <input type="checkbox" class="form-check-input full-access-cb" data-module="{{ module_key }}"

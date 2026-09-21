@@ -18,6 +18,14 @@
         <a href="{% url 'purchases:purchase_print' invoice.pk %}" target="_blank" class="btn btn-dark me-2">
             <i class="fas fa-print me-1"></i> Print Bill
         </a>
+        {% if user.is_admin %}
+        <form action="{% url 'purchases:purchase_delete' invoice.pk %}" method="post" class="d-inline me-2" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete purchase bill {{ invoice.invoice_number }}? Stock will be decreased.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">
+                <i class="fas fa-trash me-1"></i> Delete Bill
+            </button>
+        </form>
+        {% endif %}
         <a href="{% url 'purchases:purchase_list' %}" class="btn btn-light border">Back to Purchases</a>
     </div>
 </div>

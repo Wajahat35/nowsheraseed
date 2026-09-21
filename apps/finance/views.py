@@ -265,15 +265,19 @@ class VoucherUpdateView(LoginRequiredMixin, View):
         return redirect('finance:voucher_edit', pk=pk)
 
 
-class VoucherDeleteView(LoginRequiredMixin, DeleteView):
+class VoucherDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView):
     model = JournalVoucher
     success_url = reverse_lazy('finance:voucher_list')
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         voucher = self.get_object()
-        log_activity(request.user, 'DELETE', 'Finance', f"Deleted Journal Voucher {voucher.voucher_number}", request)
-        messages.success(request, f"Journal Voucher {voucher.voucher_number} deleted.")
-        return super().delete(request, *args, **kwargs)
+        log_activity(self.request.user, 'DELETE', 'Finance', f"Deleted Journal Voucher {voucher.voucher_number}", self.request)
+        messages.success(self.request, f"Journal Voucher {voucher.voucher_number} deleted.")
+        return super().form_valid(form)
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return self.form_valid(self.get_form())
 
 
 class VoucherDetailView(LoginRequiredMixin, DetailView):

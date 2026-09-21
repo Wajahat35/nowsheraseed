@@ -111,6 +111,12 @@
                                     <a href="{% url 'purchases:purchase_detail' inv.pk %}?pay=1" class="btn btn-warning" title="Record Payment"><i class="fas fa-money-bill-wave"></i> Pay</a>
                                 {% endif %}
                                 <a href="{% url 'purchases:purchase_print' inv.pk %}" class="btn btn-outline-dark" title="Print Bill" target="_blank"><i class="fas fa-print"></i></a>
+                                {% if user.is_admin %}
+                                    <form action="{% url 'purchases:purchase_delete' inv.pk %}" method="post" class="d-inline" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete purchase bill {{ inv.invoice_number }}? Stock will be decreased.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger" title="Delete Bill (Admin Only)"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

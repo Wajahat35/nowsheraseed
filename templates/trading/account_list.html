@@ -58,7 +58,9 @@
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-warning me-1" title="Toggle Status"><i class="fas fa-power-off"></i></button>
                             </form>
-                            <a href="{% url 'trading:account_delete' acc.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Account"><i class="fas fa-trash"></i></a>
+                            {% if user.is_admin %}
+                            <a href="{% url 'trading:account_delete' acc.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Account (Admin Only)"><i class="fas fa-trash"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}
