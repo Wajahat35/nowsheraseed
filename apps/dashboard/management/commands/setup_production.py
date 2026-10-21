@@ -58,4 +58,21 @@ class Command(BaseCommand):
         company.erp_base_url = 'https://nowsheraseed.onrender.com'
         company.save()
 
+        # 5. Ensure Default Wastage Types exist
+        try:
+            from apps.wastage.models import WastageType
+            default_types = [
+                ('Broken Seed', 'Broken, damaged, or split seeds separated during grading', 35.00),
+                ('Husk & Chaff', 'Husk, chaff, straw, and light organic debris separated during aspiration', 12.00),
+                ('Low-Grade Screenings', 'Undersized seeds and fine particles screened out during cleaning', 25.00),
+            ]
+            for w_name, w_desc, w_price in default_types:
+                WastageType.objects.get_or_create(
+                    name=w_name,
+                    defaults={'description': w_desc, 'price_per_kg': w_price}
+                )
+            self.stdout.write(self.style.SUCCESS("[SUCCESS] Default wastage types verified/created"))
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"Wastage types setup notice: {e}"))
+
         self.stdout.write(self.style.SUCCESS("[SUCCESS] Production admin user & QR Code Base URL configured: https://nowsheraseed.onrender.com"))
