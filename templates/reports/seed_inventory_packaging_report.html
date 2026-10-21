@@ -31,7 +31,7 @@
     <div class="col-md-6">
         <div class="card-custom p-3 border-start border-4 border-primary h-100">
             <small class="text-muted fw-bold">TOTAL PACKAGING POTENTIAL (BAGS)</small>
-            <h3 class="fw-bold text-primary mb-0 font-monospace">{{ tot_all_bags:, }} Commercial Bags</h3>
+            <h3 class="fw-bold text-primary mb-0 font-monospace">{{ tot_all_bags|intcomma }} Commercial Bags</h3>
             <small class="text-muted">Converted based on variety pack weight</small>
         </div>
     </div>
@@ -58,7 +58,7 @@
                         <td class="fw-semibold">{{ r.seed.name }} ({{ r.seed.variety }})</td>
                         <td><span class="badge bg-light text-dark border">{{ r.pack_wgt|floatformat:0 }} KG / Bag</span></td>
                         <td class="text-end font-monospace fw-bold text-success fs-6">{{ r.total_kg|intcomma }} KG</td>
-                        <td class="text-end font-monospace fw-bold text-primary fs-6">{{ r.available_bags:, }} Bags</td>
+                        <td class="text-end font-monospace fw-bold text-primary fs-6">{{ r.available_bags|intcomma }} Bags</td>
                         <td class="text-end font-monospace text-muted">{{ r.loose_kg|intcomma }} KG</td>
                         <td class="small fw-semibold text-dark">{{ r.dual_display }}</td>
                     </tr>
