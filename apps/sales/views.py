@@ -138,18 +138,22 @@ class SalesCreateView(LoginRequiredMixin, View):
 
                         seed = Seed.objects.get(id=seed_id)
                         batch = SeedBatch.objects.get(id=batch_id) if batch_id else None
+                        bag_wgt = Decimal(str(seed.weight_kg or 50.0))
+                        req_kg = Decimal(str(qty)) * bag_wgt
 
                         if batch:
-                            available_stock = batch.current_qty
+                            available_kg = Decimal(str(batch.current_qty))
+                            avail_bags = int(available_kg // bag_wgt) if bag_wgt > 0 else int(available_kg)
                             stock_label = f"Batch #{batch.batch_number} ({seed.name})"
                         else:
-                            available_stock = seed.get_total_stock()
+                            available_kg = seed.get_total_stock_kg()
+                            avail_bags = int(available_kg // bag_wgt) if bag_wgt > 0 else int(available_kg)
                             stock_label = f"Seed '{seed.name}'"
 
-                        if qty > available_stock:
+                        if req_kg > available_kg:
                             messages.error(
                                 request,
-                                f"Cannot generate Sales Invoice: Requested quantity ({qty} Bags) exceeds available stock for {stock_label} ({available_stock} Bags available)."
+                                f"Cannot generate Sales Invoice: Requested quantity ({qty} Bags = {req_kg:,.1f} KG) exceeds available stock for {stock_label} ({available_kg:,.1f} KG ≈ {avail_bags} Bags available)."
                             )
                             return redirect('sales:sales_create')
 
@@ -311,19 +315,20 @@ class SalesInvoiceDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteView)
         invoice = self.get_object()
         inv_num = invoice.invoice_number
         with transaction.atomic():
-            # Restore stock for each item
+            # Restore stock in KG for each item
             for item in invoice.items.all():
                 if item.batch:
-                    item.batch.current_qty += item.quantity
+                    restore_kg = Decimal(str(item.get_total_weight_kg))
+                    item.batch.current_qty = Decimal(str(item.batch.current_qty)) + restore_kg
                     item.batch.save()
                     from apps.inventory.models import StockMovement
                     StockMovement.objects.create(
                         movement_type='STOCK_IN',
                         seed=item.seed,
                         batch=item.batch,
-                        quantity=item.quantity,
+                        quantity=restore_kg,
                         reference_no=inv_num,
-                        notes=f"Restored from deleted Sales Invoice {inv_num}",
+                        notes=f"Restored from deleted Sales Invoice {inv_num} ({item.quantity} Bags = {restore_kg:,.1f} KG)",
                         user=self.request.user
                     )
             log_activity(self.request.user, 'DELETE', 'Sales', f"Deleted Sales Invoice {inv_num} and restored stock", self.request)

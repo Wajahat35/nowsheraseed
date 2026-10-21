@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Seed Inventory & Packaging Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-boxes text-emerald me-2"></i> Seed Inventory &amp; Packaging Potential Report</h4>
+        <p class="text-muted small mb-0">Consolidated stock accounting in raw kilograms alongside equivalent commercial bags.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?export=excel" class="btn btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i> Export Excel
+        </a>
+        <a href="?export=pdf" class="btn btn-outline-danger" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Export PDF
+        </a>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card-custom p-3 border-start border-4 border-success h-100">
+            <small class="text-muted fw-bold">TOTAL CLEAN USABLE SEED STOCK (KG)</small>
+            <h3 class="fw-bold text-success mb-0 font-monospace">{{ tot_all_kg|intcomma }} KG</h3>
+            <small class="text-muted">Exact mass in warehouse batches</small>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card-custom p-3 border-start border-4 border-primary h-100">
+            <small class="text-muted fw-bold">TOTAL PACKAGING POTENTIAL (BAGS)</small>
+            <h3 class="fw-bold text-primary mb-0 font-monospace">{{ tot_all_bags:, }} Commercial Bags</h3>
+            <small class="text-muted">Converted based on variety pack weight</small>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover align-middle" id="seedPackRepTable">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Seed Variety</th>
+                    <th>Configured Bag Pack Size</th>
+                    <th class="text-end">Clean Stock (KG)</th>
+                    <th class="text-end">Available Bags</th>
+                    <th class="text-end">Loose Stock (KG)</th>
+                    <th>Dual UOM Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in report_rows %}
+                    <tr>
+                        <td class="fw-bold text-primary font-monospace">{{ r.seed.code }}</td>
+                        <td class="fw-semibold">{{ r.seed.name }} ({{ r.seed.variety }})</td>
+                        <td><span class="badge bg-light text-dark border">{{ r.pack_wgt|floatformat:0 }} KG / Bag</span></td>
+                        <td class="text-end font-monospace fw-bold text-success fs-6">{{ r.total_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold text-primary fs-6">{{ r.available_bags:, }} Bags</td>
+                        <td class="text-end font-monospace text-muted">{{ r.loose_kg|intcomma }} KG</td>
+                        <td class="small fw-semibold text-dark">{{ r.dual_display }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No seed stock items found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#seedPackRepTable');
+    });
+</script>
+{% endblock %}

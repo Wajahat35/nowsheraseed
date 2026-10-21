@@ -63,21 +63,25 @@
             <thead class="table-light">
                 <tr>
                     <th>Description</th>
-                    <th>Variety</th>
-                    <th>Qty</th>
-                    <th>Price</th>
-                    <th>Discount</th>
-                    <th class="text-end">Total</th>
+                    <th>Variety / Batch</th>
+                    <th class="text-center">Bags Qty</th>
+                    <th class="text-center">Bag Size (KG)</th>
+                    <th class="text-center">Total Net Wt (KG)</th>
+                    <th class="text-end">Rate per Bag</th>
+                    <th class="text-end">Discount</th>
+                    <th class="text-end">Total Price</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in invoice.items.all %}
                     <tr>
                         <td class="fw-bold">{{ item.seed.name }}</td>
-                        <td>{{ item.seed.variety }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td>PKR {{ item.unit_price|intcomma }}</td>
-                        <td>PKR {{ item.discount|intcomma }}</td>
+                        <td>{{ item.seed.variety }}{% if item.batch %} (Batch #{{ item.batch.batch_number }}){% endif %}</td>
+                        <td class="text-center fw-bold">{{ item.quantity }} Bags</td>
+                        <td class="text-center">{{ item.get_bag_size_kg|default:"50.0" }} KG</td>
+                        <td class="text-center fw-semibold">{{ item.get_total_weight_kg|intcomma }} KG</td>
+                        <td class="text-end">PKR {{ item.unit_price|intcomma }}</td>
+                        <td class="text-end">{% if item.discount > 0 %}PKR {{ item.discount|intcomma }}{% else %}-{% endif %}</td>
                         <td class="text-end fw-bold">PKR {{ item.subtotal|intcomma }}</td>
                     </tr>
                 {% endfor %}

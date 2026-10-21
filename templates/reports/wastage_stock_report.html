@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Wastage Stock & Movement Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-recycle text-danger me-2"></i> Wastage Stock &amp; Movement Audit Report</h4>
+        <p class="text-muted small mb-0">Track opening balances, inward intake from processing, sales dispatch, and closing stock.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?export=excel" class="btn btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i> Export Excel
+        </a>
+        <a href="?export=pdf" class="btn btn-outline-danger" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Export PDF
+        </a>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-success h-100">
+            <small class="text-muted fw-bold">TOTAL GENERATED FROM PROCESSING (KG)</small>
+            <h3 class="fw-bold text-success mb-0 font-monospace">+ {{ grand_inward|intcomma }} KG</h3>
+            <small class="text-muted">Inward byproduct yield</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-primary h-100">
+            <small class="text-muted fw-bold">TOTAL SOLD &amp; DISPATCHED (KG)</small>
+            <h3 class="fw-bold text-primary mb-0 font-monospace">- {{ grand_sold|intcomma }} KG</h3>
+            <small class="text-muted">Commercial sales to buyers</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-danger h-100">
+            <small class="text-muted fw-bold">CURRENT AVAILABLE BALANCE (KG)</small>
+            <h3 class="fw-bold text-danger mb-0 font-monospace">{{ grand_balance|intcomma }} KG</h3>
+            <small class="text-muted">Live inventory in storage</small>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover align-middle" id="wstStockRepTable">
+            <thead>
+                <tr>
+                    <th>Wastage Grade / Type</th>
+                    <th class="text-end">Opening Stock (KG)</th>
+                    <th class="text-end text-success">Processing Inward (KG)</th>
+                    <th class="text-end text-primary">Sold Wastage (KG)</th>
+                    <th class="text-end text-danger">Available Balance (KG)</th>
+                    <th class="text-end">Current Rate / KG</th>
+                    <th class="text-end">Est. Stock Valuation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in report_data %}
+                    <tr>
+                        <td class="fw-bold fs-6">{{ d.type.name }}</td>
+                        <td class="text-end font-monospace">{{ d.opening_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold text-success">+ {{ d.inward_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold text-primary">- {{ d.sold_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold text-danger fs-6">{{ d.balance_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace">PKR {{ d.rate_per_kg|intcomma }}</td>
+                        <td class="text-end font-monospace fw-bold text-dark">PKR {{ d.stock_value|intcomma }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">No wastage grades registered yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#wstStockRepTable');
+    });
+</script>
+{% endblock %}

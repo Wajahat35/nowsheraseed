@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Wastage Sales & Revenue Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice-dollar text-primary me-2"></i> Wastage Sales &amp; Revenue Report</h4>
+        <p class="text-muted small mb-0">Analysis of commercial byproduct sales, realization rate per kilogram, and buyer receivables.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}export=excel" class="btn btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i> Export Excel
+        </a>
+        <a href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}export=pdf" class="btn btn-outline-danger" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Export PDF
+        </a>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-dark h-100">
+            <small class="text-muted fw-bold">TOTAL KG SOLD</small>
+            <h3 class="fw-bold text-dark mb-0 font-monospace">{{ total_kg_sold|intcomma }} KG</h3>
+            <small class="text-muted">Total weight dispatched</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-primary h-100">
+            <small class="text-muted fw-bold">AVG REALIZED RATE / KG</small>
+            <h3 class="fw-bold text-primary mb-0 font-monospace">PKR {{ avg_rate_per_kg|floatformat:2 }}</h3>
+            <small class="text-muted">Mean realization price</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-success h-100">
+            <small class="text-muted fw-bold">TOTAL REVENUE COLLECTED</small>
+            <h3 class="fw-bold text-success mb-0 font-monospace">PKR {{ total_collected|intcomma }}</h3>
+            <small class="text-muted">Paid amount received</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-danger h-100">
+            <small class="text-muted fw-bold">PENDING BUYER RECEIVABLES</small>
+            <h3 class="fw-bold text-danger mb-0 font-monospace">PKR {{ total_receivables|intcomma }}</h3>
+            <small class="text-muted">Outstanding balances</small>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom p-4 mb-4">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3">
+                <i class="fas fa-filter me-1"></i> Filter Invoices
+            </button>
+            <a href="{% url 'reports:wastage_sales_report' %}" class="btn btn-sm btn-light border px-3">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover align-middle" id="wstSalesRepTable">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date</th>
+                    <th>Buyer Name</th>
+                    <th>Phone</th>
+                    <th class="text-end">Total KG Sold</th>
+                    <th class="text-end">Invoice Amount</th>
+                    <th class="text-end">Paid Amount</th>
+                    <th class="text-end">Receivable Due</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                    <tr>
+                        <td class="fw-bold font-monospace text-primary">{{ inv.invoice_number }}</td>
+                        <td>{{ inv.date }}</td>
+                        <td class="fw-semibold">{{ inv.buyer_name }}</td>
+                        <td>{{ inv.buyer_phone|default:"-" }}</td>
+                        <td class="text-end font-monospace fw-bold">{{ inv.total_weight_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold">PKR {{ inv.grand_total|intcomma }}</td>
+                        <td class="text-end font-monospace text-success fw-bold">PKR {{ inv.paid_amount|intcomma }}</td>
+                        <td class="text-end font-monospace {% if inv.due_amount > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+                            PKR {{ inv.due_amount|intcomma }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {% if inv.payment_status == 'Paid' %}bg-success{% elif inv.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                {{ inv.payment_status }}
+                            </span>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No wastage sales invoices found for selected range.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#wstSalesRepTable');
+    });
+</script>
+{% endblock %}

@@ -6,17 +6,17 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="fw-bold mb-1"><i class="fas fa-shopping-cart text-primary me-2"></i> Purchase Bills & Invoices</h4>
-        <p class="text-muted small mb-0">Record seed stock purchases from suppliers and manage payable bills.</p>
+        <h4 class="fw-bold mb-1"><i class="fas fa-shopping-cart text-primary me-2"></i> Purchase Bills &amp; Grower Intakes</h4>
+        <p class="text-muted small mb-0">Record seed stock intake/purchases from growers and manage payable bills.</p>
     </div>
     <a href="{% url 'purchases:purchase_create' %}" class="btn btn-primary fw-semibold">
-        <i class="fas fa-plus me-1"></i> New Purchase Bill
+        <i class="fas fa-plus me-1"></i> New Purchase / Intake Bill
     </a>
 </div>
 
 <div class="card-custom p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
-        <div class="fw-bold text-dark"><i class="fas fa-filter text-primary me-1"></i> Filter Purchase Bills</div>
+        <div class="fw-bold text-dark"><i class="fas fa-filter text-primary me-1"></i> Filter Grower Purchase Bills</div>
         <div class="btn-group">
             <a href="?{% if selected_supplier %}supplier={{ selected_supplier }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if pstatus %}pstatus={{ pstatus }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=excel" class="btn btn-sm btn-outline-success fw-semibold">
                 <i class="fas fa-file-excel me-1"></i> Download Excel
@@ -30,9 +30,9 @@
     <!-- Filter Form -->
     <form method="GET" class="row g-2">
         <div class="col-md-3">
-            <label class="form-label small fw-semibold text-muted mb-1">Supplier</label>
+            <label class="form-label small fw-semibold text-muted mb-1">Grower</label>
             <select name="supplier" class="form-select form-select-sm">
-                <option value="">All Suppliers</option>
+                <option value="">All Growers</option>
                 {% for s in suppliers %}
                     <option value="{{ s.id }}" {% if selected_supplier|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
                 {% endfor %}
@@ -57,7 +57,7 @@
         </div>
         <div class="col-md-3">
             <label class="form-label small fw-semibold text-muted mb-1">Search Keyword</label>
-            <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Bill #, Supplier, Supplier Bill #...">
+            <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Bill #, Grower, Grower Bill #...">
         </div>
         <div class="col-12 text-end mt-3">
             <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold">
@@ -75,8 +75,8 @@
             <thead>
                 <tr>
                     <th>Bill #</th>
-                    <th>Supplier</th>
-                    <th>Supplier Bill #</th>
+                    <th>Grower</th>
+                    <th>Grower Bill #</th>
                     <th>Date</th>
                     <th>Grand Total</th>
                     <th>Paid</th>

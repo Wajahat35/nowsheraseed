@@ -59,7 +59,7 @@ class PurchaseListView(LoginRequiredMixin, ListView):
         if export_fmt in ('excel', 'pdf'):
             invoices = self.get_queryset()
             if export_fmt == 'excel':
-                headers = ['Bill #', 'Supplier', 'Supplier Bill #', 'Date', 'Grand Total (PKR)', 'Paid (PKR)', 'Balance Due (PKR)', 'Payment Method', 'Status']
+                headers = ['Bill #', 'Grower', 'Grower Bill / Challan #', 'Date', 'Grand Total (PKR)', 'Paid (PKR)', 'Balance Due (PKR)', 'Payment Method', 'Status']
                 rows = [
                     [
                         inv.invoice_number,
@@ -76,7 +76,7 @@ class PurchaseListView(LoginRequiredMixin, ListView):
                 ]
                 return render_to_excel("purchase_invoices.xlsx", "PurchaseInvoices", headers, rows)
             elif export_fmt == 'pdf':
-                headers = ['Bill #', 'Supplier', 'Date', 'Grand Total', 'Paid', 'Status']
+                headers = ['Bill #', 'Grower', 'Date', 'Grand Total', 'Paid', 'Status']
                 rows = [
                     [
                         inv.invoice_number,
@@ -88,7 +88,7 @@ class PurchaseListView(LoginRequiredMixin, ListView):
                     ]
                     for inv in invoices
                 ]
-                return render_to_pdf("purchase_invoices.pdf", "Purchase Bills & Invoices Report", headers, rows)
+                return render_to_pdf("purchase_invoices.pdf", "Purchase Bills & Grower Intakes Report", headers, rows)
 
         return super().get(request, *args, **kwargs)
 
@@ -214,7 +214,7 @@ class RecordPurchasePaymentView(LoginRequiredMixin, View):
                 if cash_account and ap_account:
                     voucher = JournalVoucher.objects.create(
                         voucher_type='PAYMENT',
-                        description=f"Payment Sent PKR {amount:,.2f} for Purchase Bill {invoice.invoice_number} ({invoice.supplier.name})",
+                        description=f"Payment Sent PKR {amount:,.2f} for Purchase Bill {invoice.invoice_number} (Grower: {invoice.supplier.name})",
                         reference_no=ref_no or invoice.invoice_number,
                         created_by=request.user
                     )
@@ -223,7 +223,7 @@ class RecordPurchasePaymentView(LoginRequiredMixin, View):
                         account=ap_account,
                         debit=amount,
                         credit=0,
-                        narration=f"Payable settled for {invoice.supplier.name}"
+                        narration=f"Grower payable settled for {invoice.supplier.name}"
                     )
                     JournalItem.objects.create(
                         voucher=voucher,
@@ -252,19 +252,21 @@ class PurchaseInvoiceDeleteView(LoginRequiredMixin, AdminRequiredMixin, DeleteVi
         invoice = self.get_object()
         inv_num = invoice.invoice_number
         with transaction.atomic():
-            # Decrease stock for each item since purchase brought stock in
+            # Decrease stock for each item in KG
             for item in invoice.items.all():
                 if item.batch:
-                    item.batch.current_qty = max(0, item.batch.current_qty - item.quantity)
+                    bag_wgt = Decimal(str(item.seed.weight_kg or 50.0))
+                    deduct_kg = Decimal(str(item.quantity)) * bag_wgt
+                    item.batch.current_qty = max(Decimal('0'), Decimal(str(item.batch.current_qty)) - deduct_kg)
                     item.batch.save()
                     from apps.inventory.models import StockMovement
                     StockMovement.objects.create(
                         movement_type='STOCK_OUT',
                         seed=item.seed,
                         batch=item.batch,
-                        quantity=-item.quantity,
+                        quantity=-deduct_kg,
                         reference_no=inv_num,
-                        notes=f"Stock removed due to deleted Purchase Bill {inv_num}",
+                        notes=f"Stock removed due to deleted Purchase Bill {inv_num} ({item.quantity} Bags = {deduct_kg:,.1f} KG)",
                         user=self.request.user
                     )
             log_activity(self.request.user, 'DELETE', 'Purchases', f"Deleted Purchase Bill {inv_num} and adjusted stock", self.request)

@@ -98,8 +98,29 @@ class Seed(models.Model):
         return f"data:image/png;base64,{b64}"
 
     def get_total_stock(self):
-        """Returns total available stock from all batches. Batches are the single source of truth."""
-        return sum(b.current_qty for b in self.batches.all())
+        """Returns total available stock from all batches in KG."""
+        from decimal import Decimal
+        return sum((Decimal(str(b.current_qty or 0)) for b in self.batches.all()), Decimal('0.00'))
+
+    def get_total_stock_kg(self):
+        return self.get_total_stock()
+
+    def get_total_available_bags(self):
+        from decimal import Decimal
+        pack_wgt = Decimal(str(self.weight_kg or 50.0))
+        tot_kg = self.get_total_stock_kg()
+        if pack_wgt > Decimal('0'):
+            return int(tot_kg // pack_wgt)
+        return int(tot_kg)
+
+    def stock_dual_display(self):
+        from decimal import Decimal
+        tot_kg = self.get_total_stock_kg()
+        pack_wgt = Decimal(str(self.weight_kg or 50.0))
+        bags = int(tot_kg // pack_wgt) if pack_wgt > Decimal('0') else 0
+        rem_kg = tot_kg % pack_wgt if pack_wgt > Decimal('0') else Decimal('0')
+        rem_str = f" + {rem_kg:,.1f} KG loose" if rem_kg > Decimal('0.05') else ""
+        return f"{tot_kg:,.1f} KG (≈ {bags:,} Bags of {pack_wgt:g} KG{rem_str})"
 
 class SeedBatch(models.Model):
     batch_number = models.CharField(max_length=100)
@@ -107,8 +128,8 @@ class SeedBatch(models.Model):
     seed = models.ForeignKey(Seed, on_delete=models.CASCADE, related_name='batches')
     manufacturing_date = models.DateField()
     expiry_date = models.DateField()
-    initial_qty = models.IntegerField(default=0)
-    current_qty = models.IntegerField(default=0)
+    initial_qty = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Initial Stock (KG)")
+    current_qty = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Current Stock (KG)")
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     sale_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -117,8 +138,31 @@ class SeedBatch(models.Model):
         ordering = ['expiry_date']
         unique_together = ('batch_number', 'seed')
 
+    @property
+    def stock_kg(self):
+        from decimal import Decimal
+        return Decimal(str(self.current_qty or 0))
+
+    @property
+    def available_bags(self):
+        from decimal import Decimal
+        pack_wgt = Decimal(str(self.seed.weight_kg or 50.0))
+        if pack_wgt > Decimal('0'):
+            return int(self.stock_kg // pack_wgt)
+        return int(self.stock_kg)
+
+    @property
+    def stock_dual_display(self):
+        from decimal import Decimal
+        kg = self.stock_kg
+        pack_wgt = Decimal(str(self.seed.weight_kg or 50.0))
+        bags = int(kg // pack_wgt) if pack_wgt > Decimal('0') else 0
+        rem_kg = kg % pack_wgt if pack_wgt > Decimal('0') else Decimal('0')
+        rem_str = f" + {rem_kg:,.1f} KG loose" if rem_kg > Decimal('0.05') else ""
+        return f"{kg:,.1f} KG (≈ {bags:,} Bags of {pack_wgt:g} KG{rem_str})"
+
     def __str__(self):
-        return f"Batch #{self.batch_number} (Lot #{self.lot_number}) - {self.seed.name} [Qty: {self.current_qty}]"
+        return f"Batch #{self.batch_number} (Lot #{self.lot_number}) - {self.seed.name} [{self.stock_dual_display}]"
 
     def is_expired(self):
         from django.utils import timezone

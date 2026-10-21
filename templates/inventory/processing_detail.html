@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Processing Run {{ processing.batch_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-cogs text-emerald me-2"></i> Seed Processing Run: {{ processing.batch_number }}</h4>
+        <p class="text-muted small mb-0">Grower: {{ processing.grower.name }} | Date: {{ processing.date }}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-dark me-2"><i class="fas fa-print me-1"></i> Print Voucher</button>
+        <a href="{% url 'inventory:processing_list' %}" class="btn btn-light border">Back to Processing Runs</a>
+    </div>
+</div>
+
+<div class="card-custom p-4">
+    <!-- Header Summary -->
+    <div class="row border-bottom pb-4 mb-4">
+        <div class="col-md-6">
+            <h5 class="fw-bold text-emerald mb-1">{{ company.name|default:"Enterprise Seed ERP" }}</h5>
+            <div class="text-muted small">Seed Processing &amp; Quality Conditioning Unit</div>
+            <div class="mt-2">
+                <strong>Grower:</strong> {{ processing.grower.name }} {% if processing.grower.company_name %}({{ processing.grower.company_name }}){% endif %}<br>
+                <small class="text-muted">Contact: {{ processing.grower.phone }} | {{ processing.grower.city }}</small>
+            </div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <h3 class="fw-bold font-monospace text-primary mb-1">{{ processing.batch_number }}</h3>
+            <div>Processing Date: <strong>{{ processing.date }}</strong></div>
+            <div>Seed Variety: <strong>{{ processing.seed.name }} ({{ processing.seed.variety }})</strong></div>
+            {% if processing.target_batch %}
+                <div class="text-muted small">Generated Batch #: <strong>{{ processing.target_batch.batch_number }}</strong></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Mass Balance Breakdown Table -->
+    <h6 class="fw-bold text-dark mb-3"><i class="fas fa-balance-scale text-emerald me-2"></i>Mass Balance &amp; Material Separation Breakdown</h6>
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Component Partition</th>
+                    <th>Destination / Classification</th>
+                    <th class="text-end">Weight (KG)</th>
+                    <th class="text-center">Ratio (%)</th>
+                    <th>Inventory Stock Effect</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="table-light">
+                    <td class="fw-bold"><i class="fas fa-arrow-down text-primary me-2"></i>Total Raw Seed Input</td>
+                    <td>Intake from Grower {{ processing.grower.name }}</td>
+                    <td class="text-end fw-bold font-monospace fs-5 text-primary">{{ processing.raw_input_kg|intcomma }} KG</td>
+                    <td class="text-center fw-bold">100.00%</td>
+                    <td><span class="badge bg-secondary">Gross Intake</span></td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-success"><i class="fas fa-check-circle me-2"></i>Clean Usable Seed</td>
+                    <td>Standard Clean Packaging Stock</td>
+                    <td class="text-end fw-bold font-monospace fs-5 text-success">{{ processing.clean_seed_kg|intcomma }} KG</td>
+                    <td class="text-center fw-bold text-success">{{ processing.recovery_rate }}%</td>
+                    <td><span class="badge bg-success">+ Credited to Seed Inventory (≈ {{ processing.equivalent_bags|intcomma }} Bags)</span></td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-danger"><i class="fas fa-recycle me-2"></i>Wastage / Screenings</td>
+                    <td>{{ processing.wastage_type.name|default:"Low-grade Screenings / By-product" }}</td>
+                    <td class="text-end fw-bold font-monospace fs-5 text-danger">{{ processing.wastage_kg|intcomma }} KG</td>
+                    <td class="text-center fw-bold text-danger">{{ processing.wastage_rate }}%</td>
+                    <td><span class="badge bg-danger">+ Credited to Wastage Stock</span></td>
+                </tr>
+                <tr>
+                    <td class="fw-bold text-muted"><i class="fas fa-wind me-2"></i>Moisture &amp; Dust Loss</td>
+                    <td>Evaporative drying, fine chaff &amp; dust filter loss</td>
+                    <td class="text-end fw-semibold font-monospace text-muted">{{ processing.moisture_dust_loss_kg|intcomma }} KG</td>
+                    <td class="text-center text-muted">{{ processing.loss_rate }}%</td>
+                    <td><span class="badge bg-light text-dark border">Process Loss</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Packaging Potential Card -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="p-3 bg-light rounded border">
+                <h6 class="fw-bold mb-2"><i class="fas fa-box-open text-primary me-1"></i> Packaging Conversion Potential</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted d-block">Configured Bag Size:</small>
+                        <span class="fw-bold fs-6">{{ processing.seed.weight_kg|default:"50.0" }} KG per Bag</span>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted d-block">Equivalent Bags Generated:</small>
+                        <span class="fw-bold fs-4 text-emerald font-monospace">{{ processing.equivalent_bags|intcomma }} Bags</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="p-3 bg-light rounded border">
+                <h6 class="fw-bold mb-2"><i class="fas fa-clipboard-check text-success me-1"></i> Quality &amp; Inspection Audit</h6>
+                <div class="small text-muted mb-1">
+                    Processed by: <strong>{{ processing.created_by.get_full_name|default:processing.created_by.username }}</strong> on {{ processing.created_at|date:"Y-m-d H:i" }}
+                </div>
+                {% if processing.notes %}
+                    <div class="small fst-italic mt-2 p-2 bg-white rounded border">
+                        "{{ processing.notes }}"
+                    </div>
+                {% else %}
+                    <div class="small text-muted fst-italic">Standard conditioning specifications met.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

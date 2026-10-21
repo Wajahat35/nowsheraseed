@@ -21,8 +21,8 @@ class PurchaseInvoice(models.Model):
     ]
 
     invoice_number = models.CharField(max_length=50, unique=True, editable=False)
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='purchase_invoices')
-    supplier_bill_no = models.CharField(max_length=100, blank=True, null=True, help_text="Supplier's original bill number")
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='purchase_invoices', verbose_name="Grower")
+    supplier_bill_no = models.CharField(max_length=100, blank=True, null=True, help_text="Grower's original bill or challan number", verbose_name="Grower Bill / Challan #")
     date = models.DateField()
     due_date = models.DateField(blank=True, null=True)
     
@@ -63,6 +63,15 @@ class PurchaseInvoice(models.Model):
 
         super().save(*args, **kwargs)
 
+    class Meta:
+        verbose_name = "Purchase Bill / Intake"
+        verbose_name_plural = "Purchase Bills / Intakes"
+        ordering = ['-date', '-id']
+
+    @property
+    def grower(self):
+        return self.supplier
+
     @property
     def due_amount(self):
         grand = Decimal(str(self.grand_total or 0))
@@ -100,6 +109,8 @@ class PurchaseItem(models.Model):
                 from datetime import timedelta
                 today = timezone.now().date()
                 self.batch = SeedBatch.objects.filter(seed=self.seed).order_by('-id').first()
+                bag_wgt = Decimal(str(self.seed.weight_kg or 50.0))
+                intake_kg = Decimal(str(self.quantity)) * bag_wgt
                 if not self.batch:
                     self.batch = SeedBatch.objects.create(
                         seed=self.seed,
@@ -107,14 +118,16 @@ class PurchaseItem(models.Model):
                         lot_number=f"LOT-{self.purchase_invoice.invoice_number}",
                         manufacturing_date=today,
                         expiry_date=today + timedelta(days=365),
-                        initial_qty=self.quantity,
+                        initial_qty=intake_kg,
                         current_qty=0,
                         purchase_price=self.unit_price or 0,
                         sale_price=self.seed.retail_price or 0
                     )
                 PurchaseItem.objects.filter(pk=self.pk).update(batch=self.batch)
 
-            self.batch.current_qty += self.quantity
+            bag_wgt = Decimal(str(self.seed.weight_kg or 50.0))
+            intake_kg = Decimal(str(self.quantity)) * bag_wgt
+            self.batch.current_qty = Decimal(str(self.batch.current_qty)) + intake_kg
             self.batch.save()
             
             from apps.inventory.models import StockMovement
@@ -122,9 +135,9 @@ class PurchaseItem(models.Model):
                 movement_type='STOCK_IN',
                 seed=self.seed,
                 batch=self.batch,
-                quantity=self.quantity,
+                quantity=intake_kg,
                 reference_no=self.purchase_invoice.invoice_number,
-                notes=f"Purchased from {self.purchase_invoice.supplier.name}",
+                notes=f"Intake from grower {self.purchase_invoice.supplier.name} ({self.quantity} Bags of {bag_wgt:g} KG = {intake_kg:,.1f} KG)",
                 user=self.purchase_invoice.created_by
             )
 

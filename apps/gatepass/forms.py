@@ -64,10 +64,10 @@ class GatePassForm(forms.ModelForm):
             for pur in purchase_invoices:
                 if pur.invoice_number in existing_refs and pur.invoice_number != current_ref:
                     continue
-                supp_name = pur.supplier.name if pur.supplier else "Supplier"
+                supp_name = pur.supplier.name if pur.supplier else "Grower"
                 total_qty = sum(item.quantity for item in pur.items.all())
                 total_wgt = sum(item.quantity * item.seed.weight_kg for item in pur.items.all())
-                choices.append((pur.invoice_number, f"Purchase Bill: {pur.invoice_number} ({supp_name} - {total_qty} Bags / {total_wgt} Kg)"))
+                choices.append((pur.invoice_number, f"Purchase / Intake: {pur.invoice_number} (Grower: {supp_name} - {total_qty} Bags / {total_wgt} Kg)"))
         except Exception:
             pass
 

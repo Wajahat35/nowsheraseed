@@ -9,7 +9,9 @@ APP_TO_MODULE = {
     'seeds':      'seeds',
     'inventory':  'inventory',
     'customers':  'sales',       # customers are part of sales visibility
-    'suppliers':  'purchases',   # suppliers are part of purchases visibility
+    'suppliers':  'purchases',   # suppliers/growers are part of purchases visibility
+    'growers':    'purchases',
+    'wastage':    'inventory',   # wastage is part of stock/inventory control
     'expenses':   'expenses',
     'finance':    'finance',
     'reports':    'reports',

@@ -7,7 +7,7 @@
     <div class="col-lg-12">
         <div class="card-custom p-4">
             <h4 class="fw-bold mb-4">
-                <i class="fas fa-shopping-bag text-primary me-2"></i> Record Supplier Purchase Bill
+                <i class="fas fa-shopping-bag text-primary me-2"></i> Record Grower Purchase Bill / Seed Intake
             </h4>
 
             <form id="purchaseForm" method="POST" action="{% url 'purchases:purchase_create' %}">
@@ -19,11 +19,11 @@
                     <h6 class="fw-bold text-primary mb-3"><i class="fas fa-file-invoice me-2"></i>Bill Information</h6>
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Supplier *</label>
+                            <label class="form-label fw-semibold">Grower *</label>
                             {{ form.supplier }}
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Supplier Bill / Invoice #</label>
+                            <label class="form-label fw-semibold">Grower Bill / Challan #</label>
                             {{ form.supplier_bill_no }}
                         </div>
                         <div class="col-md-2">

@@ -34,20 +34,20 @@
         </div>
     </div>
 
-    <!-- 2. Supplier Report Card -->
+    <!-- 2. Grower Report Card -->
     <div class="col-md-6 col-lg-4">
         <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-secondary">
             <div>
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="p-3 bg-secondary bg-opacity-10 text-secondary rounded-circle">
-                        <i class="fas fa-truck fs-4"></i>
+                        <i class="fas fa-tractor fs-4"></i>
                     </div>
                     <div>
-                        <h5 class="fw-bold mb-0">Supplier Report</h5>
-                        <small class="text-muted">Payables & Procurement</small>
+                        <h5 class="fw-bold mb-0">Grower Report</h5>
+                        <small class="text-muted">Payables &amp; Intake</small>
                     </div>
                 </div>
-                <p class="text-muted small">Summary of registered suppliers, purchase history, and outstanding payable balances.</p>
+                <p class="text-muted small">Summary of registered growers, farm seed intake history, and outstanding payable balances.</p>
             </div>
             <div class="d-flex gap-2">
                 <a href="{% url 'reports:supplier_report' %}" class="btn btn-secondary text-white fw-semibold w-100">View Report</a>
@@ -191,6 +191,98 @@
                 <a href="{% url 'expenses:expense_list' %}" class="btn fw-semibold text-dark w-100" style="background-color: #f59e0b;">View Report</a>
                 <a href="{% url 'expenses:expense_list' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
                 <a href="{% url 'expenses:expense_list' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. Processing & Recovery Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-emerald">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-emerald bg-opacity-10 text-emerald rounded-circle">
+                        <i class="fas fa-cogs fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Processing &amp; Recovery</h5>
+                        <small class="text-muted">Mass Balance &amp; Yield Audit</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Audit raw seed input against clean usable seed recovery ratio, by-product wastage generated, and dust loss.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:processing_report' %}" class="btn btn-emerald text-white fw-semibold w-100" style="background-color: #10b981;">View Report</a>
+                <a href="{% url 'reports:processing_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:processing_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. Seed Inventory & Packaging Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-primary">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-circle">
+                        <i class="fas fa-boxes fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Seed Inventory &amp; Packaging</h5>
+                        <small class="text-muted">Dual UOM: KG &amp; Commercial Bags</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Stock tracking in base kilograms alongside available packaged bag counts per variety pack configuration.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:seed_inventory_report' %}" class="btn btn-primary text-white fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:seed_inventory_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:seed_inventory_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 11. Wastage Stock & Movement Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-danger">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle">
+                        <i class="fas fa-recycle fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Wastage Stock &amp; Movement</h5>
+                        <small class="text-muted">Opening, Inward &amp; Sold</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Opening stock (KG), processing additions, commercial sales deductions, and current available balance per grade.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:wastage_stock_report' %}" class="btn btn-danger text-white fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:wastage_stock_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:wastage_stock_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 12. Wastage Sales & Revenue Report Card -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card-custom p-4 h-100 d-flex flex-column justify-content-between border-start border-4 border-info">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="p-3 bg-info bg-opacity-10 text-info rounded-circle">
+                        <i class="fas fa-file-invoice-dollar fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Wastage Sales &amp; Revenue</h5>
+                        <small class="text-muted">Commercial Realization</small>
+                    </div>
+                </div>
+                <p class="text-muted small">Total KG sold, average realized rate per KG, total revenue collected, and pending buyer receivables.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'reports:wastage_sales_report' %}" class="btn btn-info text-white fw-semibold w-100">View Report</a>
+                <a href="{% url 'reports:wastage_sales_report' %}?export=pdf" class="btn btn-outline-danger"><i class="fas fa-file-pdf"></i></a>
+                <a href="{% url 'reports:wastage_sales_report' %}?export=excel" class="btn btn-outline-success"><i class="fas fa-file-excel"></i></a>
             </div>
         </div>
     </div>

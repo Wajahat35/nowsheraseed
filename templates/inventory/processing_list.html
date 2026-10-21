@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Seed Intake & Processing Runs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-cogs text-emerald me-2"></i> Seed Intake &amp; Processing Runs</h4>
+        <p class="text-muted small mb-0">Record raw intake from growers, validate recovery equation, and separate clean usable seed from wastage.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'inventory:processing_create' %}" class="btn btn-emerald text-white fw-bold" style="background-color: #10b981;">
+            <i class="fas fa-plus me-1"></i> New Intake Processing Run
+        </a>
+    </div>
+</div>
+
+<div class="card-custom p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
+        <div class="fw-bold text-dark"><i class="fas fa-filter text-emerald me-1"></i> Filter Processing History</div>
+        <div class="btn-group">
+            <a href="?{% if selected_seed %}seed={{ selected_seed }}&{% endif %}{% if selected_grower %}grower={{ selected_grower }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=excel" class="btn btn-sm btn-outline-success fw-semibold">
+                <i class="fas fa-file-excel me-1"></i> Export Excel
+            </a>
+            <a href="?{% if selected_seed %}seed={{ selected_seed }}&{% endif %}{% if selected_grower %}grower={{ selected_grower }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=pdf" class="btn btn-sm btn-outline-danger fw-semibold" target="_blank">
+                <i class="fas fa-file-pdf me-1"></i> Export PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="GET" class="row g-2">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Grower</label>
+            <select name="grower" class="form-select form-select-sm">
+                <option value="">All Growers</option>
+                {% for g in growers %}
+                    <option value="{{ g.id }}" {% if selected_grower|stringformat:"s" == g.id|stringformat:"s" %}selected{% endif %}>{{ g.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Seed Variety</label>
+            <select name="seed" class="form-select form-select-sm">
+                <option value="">All Varieties</option>
+                {% for s in seeds %}
+                    <option value="{{ s.id }}" {% if selected_seed|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }} ({{ s.variety }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Keyword</label>
+            <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Run #, Grower Name, Lot #...">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-sm btn-emerald text-white fw-semibold w-100" style="background-color: #10b981;">
+                <i class="fas fa-filter me-1"></i> Apply
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover align-middle" id="processingTable">
+            <thead>
+                <tr>
+                    <th>Run #</th>
+                    <th>Date</th>
+                    <th>Grower</th>
+                    <th>Seed Variety</th>
+                    <th class="text-end">Raw Input (KG)</th>
+                    <th class="text-end">Clean Seed (KG)</th>
+                    <th class="text-end">Wastage (KG)</th>
+                    <th class="text-center">Recovery %</th>
+                    <th class="text-center">Equiv Bags</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in processings %}
+                    <tr>
+                        <td class="fw-bold text-primary font-monospace">{{ p.batch_number }}</td>
+                        <td>{{ p.date }}</td>
+                        <td class="fw-semibold">{{ p.grower.name }}</td>
+                        <td>{{ p.seed.name }} <small class="text-muted">({{ p.seed.variety }})</small></td>
+                        <td class="text-end font-monospace fw-bold text-dark">{{ p.raw_input_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold text-success">{{ p.clean_seed_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold text-danger">{{ p.wastage_kg|intcomma }} KG</td>
+                        <td class="text-center">
+                            <span class="badge {% if p.recovery_rate >= 90 %}bg-success{% elif p.recovery_rate >= 80 %}bg-primary{% else %}bg-warning text-dark{% endif %} px-2 py-1">
+                                {{ p.recovery_rate }}%
+                            </span>
+                        </td>
+                        <td class="text-center fw-bold font-monospace text-emerald">
+                            ≈ {{ p.equivalent_bags|intcomma }} Bags
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'inventory:processing_detail' p.pk %}" class="btn btn-sm btn-outline-info" title="View Breakdown">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">No seed intake processing runs recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#processingTable');
+    });
+</script>
+{% endblock %}

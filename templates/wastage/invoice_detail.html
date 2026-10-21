@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Wastage Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice text-secondary me-2"></i> Wastage Invoice {{ invoice.invoice_number }}</h4>
+        <p class="text-muted small mb-0">Buyer: {{ invoice.buyer_name }} | Date: {{ invoice.date }}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-dark me-2">
+            <i class="fas fa-print me-1"></i> Print Invoice
+        </button>
+        {% if user.is_admin %}
+            <form action="{% url 'wastage:invoice_delete' invoice.pk %}" method="POST" class="d-inline me-2" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete Wastage Invoice {{ invoice.invoice_number }}? Sold stock will be restored to Wastage Inventory.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="fas fa-trash me-1"></i> Delete Invoice
+                </button>
+            </form>
+        {% endif %}
+        <a href="{% url 'wastage:invoice_list' %}" class="btn btn-light border">Back to Invoices</a>
+    </div>
+</div>
+
+<div class="card-custom p-4 invoice-print-sheet">
+    <!-- Header -->
+    <div class="row border-bottom pb-4 mb-4 align-items-center">
+        <div class="col-7">
+            <img src="{{ company.get_invoice_logo_url }}" style="max-height: 55px;" class="mb-2" alt="{{ company.name }}">
+            <h4 class="fw-bold mb-0 text-dark">{{ company.name|default:"Enterprise Seed ERP" }}</h4>
+            <div class="text-muted small fw-semibold">Seed Conditioning &amp; By-Products Commercial Division</div>
+            <div class="text-muted small">{{ company.address|default:"Lahore, Pakistan" }} | Phone: {{ company.phone|default:"" }}</div>
+        </div>
+        <div class="col-5 text-end">
+            <span class="badge bg-secondary fs-6 px-3 py-2 text-uppercase">WASTAGE DISPATCH INVOICE</span>
+            <h3 class="fw-bold font-monospace text-primary mt-2 mb-0">{{ invoice.invoice_number }}</h3>
+            <div class="small text-muted">Date: {{ invoice.date }}</div>
+            {% if invoice.reference_no %}<div class="small text-muted">Vehicle/Bilty: <strong>{{ invoice.reference_no }}</strong></div>{% endif %}
+        </div>
+    </div>
+
+    <!-- Buyer & Dispatch Info -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="p-3 bg-light rounded border h-100">
+                <small class="text-muted fw-bold d-block text-uppercase mb-1">BILLED TO (BUYER):</small>
+                <h5 class="fw-bold text-dark mb-1">{{ invoice.buyer_name }}</h5>
+                {% if invoice.buyer_phone %}<div><i class="fas fa-phone me-1 text-muted"></i> {{ invoice.buyer_phone }}</div>{% endif %}
+                {% if invoice.buyer_address %}<div><i class="fas fa-map-marker-alt me-1 text-muted"></i> {{ invoice.buyer_address }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="p-3 bg-light rounded border h-100 text-md-end">
+                <small class="text-muted fw-bold d-block text-uppercase mb-1">SETTLEMENT DETAILS:</small>
+                <div>Payment Method: <strong>{{ invoice.payment_method }}</strong></div>
+                <div class="mt-1">
+                    Status: 
+                    <span class="badge fs-6 {% if invoice.payment_status == 'Paid' %}bg-success{% elif invoice.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                        {{ invoice.get_payment_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line Items Table -->
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>By-Product / Wastage Grade</th>
+                    <th class="text-end">Dispatched Weight (KG)</th>
+                    <th class="text-end">Rate / KG (PKR)</th>
+                    <th class="text-end">Subtotal (PKR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items.all %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td class="fw-bold">{{ item.wastage_type.name }}</td>
+                        <td class="text-end font-monospace fw-bold">{{ item.quantity_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace">PKR {{ item.rate_per_kg|intcomma }}</td>
+                        <td class="text-end font-monospace fw-bold">PKR {{ item.subtotal|intcomma }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Summary Box & QR Verification -->
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6 text-center text-md-start">
+            <div class="d-inline-block text-center p-2 border rounded bg-light">
+                <img src="{{ invoice.get_qr_data_uri }}" width="110" height="110" alt="QR Code">
+                <div class="small text-muted mt-1" style="font-size: 10px;">Scan to Verify Online</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <table class="table table-borderless table-sm">
+                <tr>
+                    <td class="fw-semibold">Total Dispatched Weight:</td>
+                    <td class="text-end font-monospace fw-bold">{{ invoice.total_weight_kg|intcomma }} KG</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold">Gross Subtotal:</td>
+                    <td class="text-end font-monospace">PKR {{ invoice.subtotal|intcomma }}</td>
+                </tr>
+                {% if invoice.discount_amount > 0 %}
+                    <tr>
+                        <td class="fw-semibold text-danger">Discount:</td>
+                        <td class="text-end font-monospace text-danger">- PKR {{ invoice.discount_amount|intcomma }}</td>
+                    </tr>
+                {% endif %}
+                <tr class="border-top">
+                    <td class="fw-bold fs-5 text-primary">Grand Total:</td>
+                    <td class="text-end fw-bold fs-5 text-primary font-monospace">PKR {{ invoice.grand_total|intcomma }}</td>
+                </tr>
+                <tr>
+                    <td class="fw-semibold text-success">Paid Amount:</td>
+                    <td class="text-end font-monospace text-success fw-bold">PKR {{ invoice.paid_amount|intcomma }}</td>
+                </tr>
+                <tr class="border-top table-light">
+                    <td class="fw-bold text-danger">Balance Due:</td>
+                    <td class="text-end font-monospace text-danger fw-bold fs-5">PKR {{ invoice.due_amount|intcomma }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    {% if invoice.remarks %}
+        <div class="p-3 bg-light rounded border mb-4 small">
+            <strong>Dispatch &amp; Loading Notes:</strong> {{ invoice.remarks }}
+        </div>
+    {% endif %}
+
+    <!-- Signatures -->
+    <div class="row text-center mt-5 pt-4 border-top">
+        <div class="col-4">
+            <div class="border-bottom mx-auto" style="width: 140px; height: 35px;"></div>
+            <small class="text-muted d-block mt-1">Weighbridge Incharge</small>
+        </div>
+        <div class="col-4">
+            <div class="border-bottom mx-auto" style="width: 140px; height: 35px;"></div>
+            <small class="text-muted d-block mt-1">Buyer / Driver Signature</small>
+        </div>
+        <div class="col-4">
+            <div class="border-bottom mx-auto" style="width: 140px; height: 35px;"></div>
+            <small class="text-muted d-block mt-1">Authorized Stamp</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

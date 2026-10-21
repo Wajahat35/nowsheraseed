@@ -64,18 +64,20 @@
         </div>
     </div>
 
-    <!-- Items Table -->
+    <!-- Items Table (Dual UOM: Bags & KG) -->
     <div class="table-responsive mb-4">
         <table class="table table-bordered align-middle">
             <thead class="table-dark">
                 <tr>
                     <th>#</th>
                     <th>Seed Description</th>
-                    <th>Variety</th>
-                    <th>Qty (Bags)</th>
-                    <th class="text-end">Unit Price</th>
+                    <th>Variety / Batch</th>
+                    <th class="text-center">Bags Quantity</th>
+                    <th class="text-center">Bag Size (KG)</th>
+                    <th class="text-center">Total Net Weight (KG)</th>
+                    <th class="text-end">Rate per Bag</th>
                     <th class="text-end">Discount</th>
-                    <th class="text-end">Subtotal</th>
+                    <th class="text-end">Total Price</th>
                 </tr>
             </thead>
             <tbody>
@@ -83,11 +85,13 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td class="fw-bold">{{ item.seed.name }}</td>
-                        <td>{{ item.seed.variety }}</td>
-                        <td>{{ item.quantity }}</td>
-                        <td class="text-end">PKR {{ item.unit_price|intcomma }}</td>
-                        <td class="text-end">PKR {{ item.discount|intcomma }}</td>
-                        <td class="text-end fw-bold">PKR {{ item.subtotal|intcomma }}</td>
+                        <td>{{ item.seed.variety }}{% if item.batch %} <span class="badge bg-light text-dark border">#{{ item.batch.batch_number }}</span>{% endif %}</td>
+                        <td class="text-center fw-bold fs-6 text-primary">{{ item.quantity }} Bags</td>
+                        <td class="text-center font-monospace">{{ item.get_bag_size_kg|default:"50.0" }} KG</td>
+                        <td class="text-center fw-semibold text-dark font-monospace">{{ item.get_total_weight_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace">PKR {{ item.unit_price|intcomma }}</td>
+                        <td class="text-end font-monospace text-danger">{% if item.discount > 0 %}-PKR {{ item.discount|intcomma }}{% else %}-{% endif %}</td>
+                        <td class="text-end fw-bold font-monospace">PKR {{ item.subtotal|intcomma }}</td>
                     </tr>
                 {% endfor %}
             </tbody>

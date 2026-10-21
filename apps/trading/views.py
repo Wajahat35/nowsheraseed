@@ -562,7 +562,7 @@ class TradingPurchaseListView(LoginRequiredMixin, TradingAccessRequiredMixin, Li
         if export_fmt in ('excel', 'pdf'):
             invoices = self.get_queryset()
             if export_fmt == 'excel':
-                headers = ['Invoice #', 'Date', 'Supplier / Grower Party', 'Phone', 'Crop Particulars', 'Weight (Kg)', 'Rate / 40 Kg (PKR)', 'Total Amount (PKR)', 'Paid (PKR)', 'Balance (PKR)', 'Status']
+                headers = ['Invoice #', 'Date', 'Grower Party', 'Phone', 'Crop Particulars', 'Weight (Kg)', 'Rate / 40 Kg (PKR)', 'Total Amount (PKR)', 'Paid (PKR)', 'Balance (PKR)', 'Status']
                 rows = [
                     [
                         p.invoice_number,
@@ -581,7 +581,7 @@ class TradingPurchaseListView(LoginRequiredMixin, TradingAccessRequiredMixin, Li
                 ]
                 return render_to_excel("trading_purchase_invoices.xlsx", "TradingPurchases", headers, rows)
             elif export_fmt == 'pdf':
-                headers = ['Invoice #', 'Date', 'Supplier', 'Crop', 'Total (PKR)', 'Paid (PKR)', 'Status']
+                headers = ['Invoice #', 'Date', 'Grower', 'Crop', 'Total (PKR)', 'Paid (PKR)', 'Status']
                 rows = [
                     [
                         p.invoice_number,
@@ -632,7 +632,7 @@ class TradingPurchaseCreateView(LoginRequiredMixin, TradingAccessRequiredMixin, 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         response = super().form_valid(form)
-        log_activity(self.request.user, 'CREATE', 'Trading', f"Created Seed Trading Purchase Invoice {self.object.invoice_number} (Supplier: {self.object.supplier_name})", self.request)
+        log_activity(self.request.user, 'CREATE', 'Trading', f"Created Seed Trading Purchase Invoice {self.object.invoice_number} (Grower: {self.object.supplier_name})", self.request)
         messages.success(self.request, f"Purchase Invoice {self.object.invoice_number} created successfully!")
         return response
 

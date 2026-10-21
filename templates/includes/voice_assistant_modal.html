@@ -154,7 +154,7 @@
                     <!-- Invoice Header Block (Billed To / Transport Details) -->
                     <div class="row mb-3 p-3 bg-light rounded border align-items-center">
                         <div class="col-md-7" id="partyBlock">
-                            <span class="text-muted small d-block uppercase fw-bold" id="partyRoleLabel">BILLED TO / SUPPLIER DETAILS:</span>
+                            <span class="text-muted small d-block uppercase fw-bold" id="partyRoleLabel">BILLED TO / GROWER DETAILS:</span>
                             <strong class="fs-5 text-dark d-block" id="draftPartyName">-</strong>
                             <div class="small text-muted" id="draftPartyCompany"></div>
                             <div class="small text-muted">Verification Status: <span class="badge bg-emerald text-white px-2" style="background-color: #10b981;">VERIFIED PARTY</span></div>
@@ -523,9 +523,9 @@ document.addEventListener('DOMContentLoaded', function() {
             draftDocRefNo.innerText = 'PUR-DRAFT';
             
             partyBlock.classList.remove('d-none');
-            partyRoleLabel.innerText = 'SUPPLIER DETAILS:';
+            partyRoleLabel.innerText = 'GROWER DETAILS:';
             draftPartyName.innerText = draft.party_name || '(Missing - Required)';
-            draftPartyCompany.innerText = draft.party_company ? `Company: ${draft.party_company}` : 'Govt Certified Seed Supplier';
+            draftPartyCompany.innerText = draft.party_company ? `Farm: ${draft.party_company}` : 'Registered Seed Grower';
             
             driverSubBlock.classList.add('d-none');
             vehicleSubBlock.classList.add('d-none');
@@ -587,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function() {
             draftDocRefNo.innerText = isSales ? 'TSL-DRAFT' : 'TPR-DRAFT';
 
             partyBlock.classList.remove('d-none');
-            partyRoleLabel.innerText = isSales ? 'CUSTOMER / BUYER:' : 'SUPPLIER / GROWER:';
+            partyRoleLabel.innerText = isSales ? 'CUSTOMER / BUYER:' : 'GROWER DETAILS:';
             draftPartyName.innerText = draft.party_name || '(Missing - Required)';
             draftPartyCompany.innerText = 'Mian Traders (Commission Agent)';
 

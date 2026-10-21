@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Wastage Sales Invoices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-file-invoice text-secondary me-2"></i> Wastage Sales Invoices &amp; Dispatch</h4>
+        <p class="text-muted small mb-0">Record byproduct sales to commercial buyers, manage dispatch weights, and track collections.</p>
+    </div>
+    <a href="{% url 'wastage:invoice_create' %}" class="btn btn-primary fw-semibold">
+        <i class="fas fa-plus me-1"></i> New Wastage Sale Invoice
+    </a>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-success h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted fw-bold">TOTAL WASTAGE REVENUE</small>
+                    <h3 class="fw-bold text-success mb-0 font-monospace">PKR {{ kpi_total_revenue|intcomma }}</h3>
+                    <small class="text-muted">All-time gross sales</small>
+                </div>
+                <div class="p-3 bg-success bg-opacity-10 text-success rounded-circle">
+                    <i class="fas fa-chart-line fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-primary h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted fw-bold">TOTAL AMOUNT COLLECTED</small>
+                    <h3 class="fw-bold text-primary mb-0 font-monospace">PKR {{ kpi_total_paid|intcomma }}</h3>
+                    <small class="text-muted">Realized cash / bank payments</small>
+                </div>
+                <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-circle">
+                    <i class="fas fa-money-bill-wave fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-danger h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted fw-bold">OUTSTANDING RECEIVABLES</small>
+                    <h3 class="fw-bold text-danger mb-0 font-monospace">PKR {{ kpi_receivables|intcomma }}</h3>
+                    <small class="text-muted">Pending buyer balances</small>
+                </div>
+                <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle">
+                    <i class="fas fa-hourglass-half fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-3 border-bottom">
+        <div class="fw-bold text-dark"><i class="fas fa-filter text-primary me-1"></i> Filter Wastage Invoices</div>
+        <div class="btn-group">
+            <a href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if pstatus %}pstatus={{ pstatus }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=excel" class="btn btn-sm btn-outline-success fw-semibold">
+                <i class="fas fa-file-excel me-1"></i> Export Excel
+            </a>
+            <a href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if pstatus %}pstatus={{ pstatus }}&{% endif %}{% if q %}q={{ q }}&{% endif %}export=pdf" class="btn btn-sm btn-outline-danger fw-semibold" target="_blank">
+                <i class="fas fa-file-pdf me-1"></i> Export PDF
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="GET" class="row g-2">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Payment Status</label>
+            <select name="pstatus" class="form-select form-select-sm">
+                <option value="">All Statuses</option>
+                <option value="Paid" {% if pstatus == 'Paid' %}selected{% endif %}>Paid in Full</option>
+                <option value="Partial" {% if pstatus == 'Partial' %}selected{% endif %}>Partially Paid</option>
+                <option value="Unpaid" {% if pstatus == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold text-muted mb-1">Search Keyword</label>
+            <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Invoice #, Buyer Name, Ref...">
+        </div>
+        <div class="col-12 text-end mt-3">
+            <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold">
+                <i class="fas fa-filter me-1"></i> Apply Filter
+            </button>
+            <a href="{% url 'wastage:invoice_list' %}" class="btn btn-sm btn-light border px-3">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover align-middle" id="wastageInvoiceTable">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date</th>
+                    <th>Buyer / Trader Name</th>
+                    <th>Contact Phone</th>
+                    <th class="text-end">Total Weight (KG)</th>
+                    <th class="text-end">Grand Total</th>
+                    <th class="text-end">Paid Amount</th>
+                    <th class="text-end">Balance Due</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                    <tr>
+                        <td class="fw-bold font-monospace text-primary">{{ inv.invoice_number }}</td>
+                        <td>{{ inv.date }}</td>
+                        <td class="fw-semibold">{{ inv.buyer_name }}</td>
+                        <td>{{ inv.buyer_phone|default:"-" }}</td>
+                        <td class="text-end font-monospace fw-bold text-dark">{{ inv.total_weight_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace fw-bold">PKR {{ inv.grand_total|intcomma }}</td>
+                        <td class="text-end font-monospace text-success fw-bold">PKR {{ inv.paid_amount|intcomma }}</td>
+                        <td class="text-end font-monospace {% if inv.due_amount > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+                            PKR {{ inv.due_amount|intcomma }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {% if inv.payment_status == 'Paid' %}bg-success{% elif inv.payment_status == 'Partial' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                {{ inv.payment_status }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'wastage:invoice_detail' inv.pk %}" class="btn btn-outline-info" title="View & Print Invoice">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% if user.is_admin %}
+                                    <form action="{% url 'wastage:invoice_delete' inv.pk %}" method="POST" class="d-inline" onsubmit="return confirm('ADMIN ACTION: Are you sure you want to delete Wastage Invoice {{ inv.invoice_number }}? Sold stock will be restored to Wastage Inventory.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger" title="Delete Invoice (Admin Only)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">No wastage invoices recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#wastageInvoiceTable');
+    });
+</script>
+{% endblock %}

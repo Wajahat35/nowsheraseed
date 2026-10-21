@@ -26,10 +26,10 @@
                     <th>Code</th>
                     <th>Seed Name</th>
                     <th>Variety</th>
-                    <th>Packing</th>
-                    <th>Min Alert Qty</th>
-                    <th>Available Stock</th>
-                    <th>Retail Price</th>
+                    <th>Pack Size</th>
+                    <th>Available Stock (Dual UOM: KG &amp; Bags)</th>
+                    <th>Min Alert</th>
+                    <th>Retail Rate / Bag</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -39,18 +39,17 @@
                         <td class="fw-bold text-primary">{{ s.code }}</td>
                         <td class="fw-semibold">{{ s.name }}</td>
                         <td>{{ s.variety }}</td>
-                        <td>{{ s.packing_size }}</td>
-                        <td>{{ s.min_stock_alert }} Bags</td>
-                        <td class="fw-bold fs-6">
-                            <span class="badge {% if s.get_total_stock <= s.min_stock_alert %}bg-danger{% else %}bg-success{% endif %} fs-6 px-3 py-2">
-                                {{ s.get_total_stock }} Bags
-                            </span>
-                        </td>
-                        <td>PKR {{ s.retail_price|intcomma }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ s.packing_size }} ({{ s.weight_kg|default:"50.0" }} KG)</span></td>
                         <td>
-                            {% if s.get_total_stock <= 0 %}
+                            <div class="fw-bold text-dark fs-6">{{ s.stock_dual_display }}</div>
+                            <small class="text-muted">Clean Inventory: {{ s.get_total_stock_kg|intcomma }} KG</small>
+                        </td>
+                        <td>{{ s.min_stock_alert }} Bags</td>
+                        <td class="font-monospace">PKR {{ s.retail_price|intcomma }}</td>
+                        <td>
+                            {% if s.get_total_stock_kg <= 0 %}
                                 <span class="badge bg-danger">OUT OF STOCK</span>
-                            {% elif s.get_total_stock <= s.min_stock_alert %}
+                            {% elif s.get_total_available_bags <= s.min_stock_alert %}
                                 <span class="badge bg-warning text-dark">LOW STOCK</span>
                             {% else %}
                                 <span class="badge bg-success">IN STOCK</span>

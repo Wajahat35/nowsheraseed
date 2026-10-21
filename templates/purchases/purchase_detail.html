@@ -7,7 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
     <div>
         <h4 class="fw-bold mb-1"><i class="fas fa-shopping-cart text-primary me-2"></i> Purchase Bill {{ invoice.invoice_number }}</h4>
-        <p class="text-muted small mb-0">Supplier: {{ invoice.supplier.name }} | Date: {{ invoice.date }}</p>
+        <p class="text-muted small mb-0">Grower: {{ invoice.supplier.name }} | Date: {{ invoice.date }}</p>
     </div>
     <div>
         {% if invoice.payment_status != 'Paid' %}
@@ -40,7 +40,7 @@
         </div>
         <div class="col-md-6 text-md-end">
             <h3 class="fw-bold">{{ invoice.invoice_number }}</h3>
-            <div>Supplier Bill #: <strong>{{ invoice.supplier_bill_no|default:"N/A" }}</strong></div>
+            <div>Grower Bill / Challan #: <strong>{{ invoice.supplier_bill_no|default:"N/A" }}</strong></div>
             <div>Date: {{ invoice.date }}</div>
             {% if invoice.due_date %}<div>Due Date: {{ invoice.due_date }}</div>{% endif %}
             <div>Payment Status:
@@ -51,14 +51,14 @@
         </div>
     </div>
 
-    <!-- Supplier Info -->
+    <!-- Grower Info -->
     <div class="row mb-4">
         <div class="col-md-6">
-            <h6 class="fw-bold text-uppercase text-muted">Purchased From:</h6>
+            <h6 class="fw-bold text-uppercase text-muted">Intake / Purchased From (Grower):</h6>
             <h5 class="fw-bold mb-1">{{ invoice.supplier.name }}</h5>
             <div>{{ invoice.supplier.company_name|default:"" }}</div>
             <div>Phone: {{ invoice.supplier.phone }}</div>
-            <div>City: {{ invoice.supplier.city|default:"" }}</div>
+            <div>City / Tehsil: {{ invoice.supplier.city|default:"" }}</div>
         </div>
         <div class="col-md-6 text-md-end text-muted small">
             <div>Payment Method: <strong>{{ invoice.payment_method }}</strong></div>
@@ -147,14 +147,14 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="alert alert-info py-2">
-                        <small>Supplier: <strong>{{ invoice.supplier.name }}</strong></small><br>
+                        <small>Grower: <strong>{{ invoice.supplier.name }}</strong></small><br>
                         <small>Total Bill: <strong>PKR {{ invoice.grand_total|intcomma }}</strong> | Already Paid: <strong>PKR {{ invoice.paid_amount|intcomma }}</strong></small><br>
                         <small>Balance Due: <strong class="text-danger">PKR {{ invoice.due_amount|intcomma }}</strong></small>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Payment Amount (PKR) *</label>
-                        <input type="number" step="0.01" name="amount" value="{{ invoice.due_amount }}" class="form-control font-monospace fs-5 fw-bold" placeholder="Enter amount paid to supplier" required>
+                        <input type="number" step="0.01" name="amount" value="{{ invoice.due_amount }}" class="form-control font-monospace fs-5 fw-bold" placeholder="Enter amount paid to grower" required>
                     </div>
 
                     <div class="mb-3">

@@ -105,9 +105,12 @@ class TradingPurchaseInvoiceForm(forms.ModelForm):
     class Meta:
         model = TradingPurchaseInvoice
         fields = ('date', 'supplier_name', 'phone', 'crop_name', 'crop_weight', 'rate_per_40kg', 'total_amount', 'paid_amount', 'remarks')
+        labels = {
+            'supplier_name': 'Grower Party Name *',
+        }
         widgets = {
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'supplier_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Punjab Seed Growers'}),
+            'supplier_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Haji Muhammad Aslam / Agri Farm'}),
             'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '0300-9876543'}),
             'crop_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Wheat / Paddy Rice / Maize'}),
             'crop_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'e.g. 2000.00 (Kg)', 'id': 'id_crop_weight'}),
@@ -131,7 +134,7 @@ class TradingGatePassForm(forms.ModelForm):
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'vehicle_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. LES-4890'}),
             'driver_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Driver Name'}),
-            'party_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer / Supplier Name'}),
+            'party_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer / Grower Name'}),
             'seed_item': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Wheat Seed Faisalabad 2008'}),
             'bags_qty': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '100'}),
             'gross_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': '5000.00'}),

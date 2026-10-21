@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Record Seed Intake & Processing{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card-custom p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                <div>
+                    <h4 class="fw-bold mb-1 text-emerald">
+                        <i class="fas fa-cogs me-2"></i> Seed Intake &amp; Processing Entry
+                    </h4>
+                    <p class="text-muted small mb-0">Record raw intake from grower, validate mass balance equation, and route clean seed vs wastage.</p>
+                </div>
+                <a href="{% url 'inventory:processing_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Processing Runs
+                </a>
+            </div>
+
+            <!-- Live Equation Balance Alert Banner -->
+            <div class="alert alert-secondary d-flex align-items-center justify-content-between p-3 mb-4 rounded-3" id="equation_banner">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fas fa-balance-scale fs-3 text-emerald" id="balance_icon"></i>
+                    <div>
+                        <div class="fw-bold fs-6" id="balance_title">Mass Balance Equation Validation</div>
+                        <small class="text-muted" id="balance_equation_text">
+                            Raw Input (0 KG) = Clean Usable Seed (0 KG) + Wastage (0 KG) + Moisture/Dust Loss (0 KG)
+                        </small>
+                    </div>
+                </div>
+                <span class="badge bg-secondary fs-6 px-3 py-2 font-monospace" id="balance_badge">Equation Pending</span>
+            </div>
+
+            <form method="POST" id="processingForm">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-4">
+                        {% for err in form.non_field_errors %}{{ err }}<br>{% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- SECTION 1: Intake & Variety Info -->
+                <div class="border rounded p-3 mb-4 bg-light">
+                    <h6 class="fw-bold text-dark mb-3"><i class="fas fa-tractor text-secondary me-2"></i>Source Intake Information</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Processing Date *</label>
+                            {{ form.date }}
+                            {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Grower (Intake Origin) *</label>
+                            {{ form.grower }}
+                            {% if form.grower.errors %}<div class="text-danger small">{{ form.grower.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Seed Variety to Process *</label>
+                            <select name="seed" id="id_seed_select" class="form-select select2-enable" required>
+                                <option value="">-- Select Seed Variety --</option>
+                                {% for s in seeds %}
+                                    <option value="{{ s.id }}" data-weight="{{ s.weight_kg|default:'50.0' }}" data-name="{{ s.name }}" {% if form.seed.value|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ s.name }} ({{ s.variety }}) &bull; Pack: {{ s.weight_kg|default:"50.0" }} KG/Bag
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.seed.errors %}<div class="text-danger small">{{ form.seed.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: Weight Metrics & Split Breakdown -->
+                <div class="card border mb-4">
+                    <div class="card-header bg-dark text-white fw-bold py-2 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-weight-hanging me-2"></i>Weight Partitioning (Strict UOM in Kilograms)</span>
+                        <span class="badge bg-light text-dark fw-normal small">Base Unit: KG</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4 align-items-start">
+                            
+                            <!-- 1. Raw Input -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold text-primary mb-1">
+                                    <i class="fas fa-inbox me-1"></i> Total Raw Seed Input (KG) *
+                                </label>
+                                {{ form.raw_input_kg }}
+                                <small class="text-muted d-block mt-1">Raw uncleaned weight weighed at weighbridge/scale</small>
+                                {% if form.raw_input_kg.errors %}<div class="text-danger small">{{ form.raw_input_kg.errors }}</div>{% endif %}
+                            </div>
+
+                            <!-- 2. Clean Seed Output -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold text-success mb-1">
+                                    <i class="fas fa-check-circle me-1"></i> Clean Usable Seed (KG) *
+                                </label>
+                                {{ form.clean_seed_kg }}
+                                <div class="p-2 mt-2 bg-success bg-opacity-10 rounded border border-success">
+                                    <small class="text-success fw-bold d-block">Packaging Potential:</small>
+                                    <span class="fw-bold font-monospace fs-6 text-success" id="equiv_bags_lbl">≈ 0 Bags</span>
+                                </div>
+                                {% if form.clean_seed_kg.errors %}<div class="text-danger small">{{ form.clean_seed_kg.errors }}</div>{% endif %}
+                            </div>
+
+                            <!-- 3. Wastage Output -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold text-danger mb-1">
+                                    <i class="fas fa-recycle me-1"></i> Wastage / Screenings (KG)
+                                </label>
+                                {{ form.wastage_kg }}
+                                <div class="mt-2">
+                                    <label class="form-label small fw-semibold text-muted mb-1">Wastage Destination Grade:</label>
+                                    {{ form.wastage_type }}
+                                </div>
+                                {% if form.wastage_kg.errors %}<div class="text-danger small">{{ form.wastage_kg.errors }}</div>{% endif %}
+                            </div>
+
+                            <!-- 4. Loss -->
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold text-secondary mb-1">
+                                    <i class="fas fa-wind me-1"></i> Dust &amp; Moisture Loss (KG)
+                                </label>
+                                {{ form.moisture_dust_loss_kg }}
+                                <small class="text-muted d-block mt-1">Auto-calculated or measured drying/chaff loss</small>
+                                {% if form.moisture_dust_loss_kg.errors %}<div class="text-danger small">{{ form.moisture_dust_loss_kg.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Progress / Recovery Metrics Row -->
+                        <div class="row mt-4 pt-3 border-top g-3">
+                            <div class="col-md-4 text-center border-end">
+                                <span class="text-muted small fw-bold">RECOVERY EFFICIENCY</span>
+                                <h4 class="fw-bold text-success mt-1 mb-0" id="recovery_pct_lbl">0.00%</h4>
+                                <small class="text-muted">Clean Seed Yield Ratio</small>
+                            </div>
+                            <div class="col-md-4 text-center border-end">
+                                <span class="text-muted small fw-bold">WASTAGE YIELD</span>
+                                <h4 class="fw-bold text-danger mt-1 mb-0" id="wastage_pct_lbl">0.00%</h4>
+                                <small class="text-muted">Screenings & By-Products</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <span class="text-muted small fw-bold">MOISTURE &amp; DUST LOSS</span>
+                                <h4 class="fw-bold text-secondary mt-1 mb-0" id="loss_pct_lbl">0.00%</h4>
+                                <small class="text-muted">Evaporation & Fine Dust</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: Notes -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Quality Inspection &amp; Processing Notes</label>
+                    {{ form.notes }}
+                </div>
+
+                <!-- Submit Action Buttons -->
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'inventory:processing_list' %}" class="btn btn-light border px-4">Cancel</a>
+                    <button type="submit" class="btn btn-emerald text-white fw-bold px-4 fs-6" id="save_btn" style="background-color: #10b981;">
+                        <i class="fas fa-check-circle me-1"></i> Confirm &amp; Route Processed Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const rawInput = document.getElementById('id_raw_input_kg');
+        const cleanInput = document.getElementById('id_clean_seed_kg');
+        const wastageInput = document.getElementById('id_wastage_kg');
+        const lossInput = document.getElementById('id_moisture_dust_loss_kg');
+        const seedSelect = document.getElementById('id_seed_select');
+
+        const equivBagsLbl = document.getElementById('equiv_bags_lbl');
+        const recPctLbl = document.getElementById('recovery_pct_lbl');
+        const wstPctLbl = document.getElementById('wastage_pct_lbl');
+        const lossPctLbl = document.getElementById('loss_pct_lbl');
+
+        const eqBanner = document.getElementById('equation_banner');
+        const eqText = document.getElementById('balance_equation_text');
+        const eqBadge = document.getElementById('balance_badge');
+        const balanceIcon = document.getElementById('balance_icon');
+
+        function recalculate() {
+            const raw = parseFloat(rawInput.value) || 0;
+            const clean = parseFloat(cleanInput.value) || 0;
+            const wastage = parseFloat(wastageInput.value) || 0;
+            let loss = parseFloat(lossInput.value) || 0;
+
+            // Auto-balance loss if loss is not manually entered
+            if (raw > 0 && (clean + wastage) <= raw && lossInput.value === '') {
+                loss = Math.max(0, raw - (clean + wastage));
+                lossInput.value = loss.toFixed(2);
+            }
+
+            const currentSum = clean + wastage + loss;
+            const diff = Math.abs(raw - currentSum);
+
+            // Packaging potential calculation
+            let packWeight = 50.0;
+            const selOption = seedSelect.options[seedSelect.selectedIndex];
+            if (selOption && selOption.dataset.weight) {
+                packWeight = parseFloat(selOption.dataset.weight) || 50.0;
+            }
+
+            if (clean > 0 && packWeight > 0) {
+                const bags = (clean / packWeight).toFixed(1);
+                equivBagsLbl.innerText = `≈ ${bags} Bags (${packWeight} KG/Bag)`;
+            } else {
+                equivBagsLbl.innerText = '≈ 0 Bags';
+            }
+
+            // Yield %
+            if (raw > 0) {
+                const recPct = ((clean / raw) * 100).toFixed(2);
+                const wstPct = ((wastage / raw) * 100).toFixed(2);
+                const lPct = ((loss / raw) * 100).toFixed(2);
+
+                recPctLbl.innerText = `${recPct}%`;
+                wstPctLbl.innerText = `${wstPct}%`;
+                lossPctLbl.innerText = `${lPct}%`;
+            } else {
+                recPctLbl.innerText = '0.00%';
+                wstPctLbl.innerText = '0.00%';
+                lossPctLbl.innerText = '0.00%';
+            }
+
+            // Validate equation banner
+            eqText.innerText = `Raw Input (${raw.toLocaleString()} KG) = Clean Usable Seed (${clean.toLocaleString()} KG) + Wastage (${wastage.toLocaleString()} KG) + Loss (${loss.toLocaleString()} KG) [Sum: ${currentSum.toLocaleString()} KG]`;
+
+            if (raw > 0 && diff <= 0.05) {
+                eqBanner.className = 'alert alert-success d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 border-success';
+                eqBadge.className = 'badge bg-success fs-6 px-3 py-2';
+                eqBadge.innerHTML = '<i class="fas fa-check me-1"></i> Equation Balanced (100%)';
+                balanceIcon.className = 'fas fa-balance-scale fs-3 text-success';
+            } else if (raw > 0) {
+                eqBanner.className = 'alert alert-danger d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 border-danger';
+                eqBadge.className = 'badge bg-danger fs-6 px-3 py-2';
+                eqBadge.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i> Imbalance: ${(raw - currentSum).toFixed(2)} KG`;
+                balanceIcon.className = 'fas fa-balance-scale-right fs-3 text-danger';
+            } else {
+                eqBanner.className = 'alert alert-secondary d-flex align-items-center justify-content-between p-3 mb-4 rounded-3';
+                eqBadge.className = 'badge bg-secondary fs-6 px-3 py-2';
+                eqBadge.innerText = 'Equation Pending';
+                balanceIcon.className = 'fas fa-balance-scale fs-3 text-emerald';
+            }
+        }
+
+        rawInput.addEventListener('input', recalculate);
+        cleanInput.addEventListener('input', recalculate);
+        wastageInput.addEventListener('input', recalculate);
+        lossInput.addEventListener('input', recalculate);
+        seedSelect.addEventListener('change', recalculate);
+
+        // Run once on load
+        recalculate();
+    });
+</script>
+{% endblock %}

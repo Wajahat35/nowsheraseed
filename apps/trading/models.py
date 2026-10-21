@@ -346,7 +346,7 @@ class TradingPurchaseInvoice(models.Model):
 
     invoice_number = models.CharField(max_length=50, unique=True, editable=False)
     date = models.DateField()
-    supplier_name = models.CharField(max_length=150, verbose_name="Supplier / Grower Party Name")
+    supplier_name = models.CharField(max_length=150, verbose_name="Grower Party Name")
     phone = models.CharField(max_length=30, blank=True, null=True)
     
     # Crop Trading Fields
@@ -480,7 +480,7 @@ class TradingGatePass(models.Model):
     
     vehicle_no = models.CharField(max_length=50, verbose_name="Vehicle / Truck No.")
     driver_name = models.CharField(max_length=100, blank=True, null=True)
-    party_name = models.CharField(max_length=150, verbose_name="Party / Customer / Supplier Name")
+    party_name = models.CharField(max_length=150, verbose_name="Party / Customer / Grower Name")
     seed_item = models.CharField(max_length=150, verbose_name="Seed Variety / Lot Description")
     
     bags_qty = models.IntegerField(default=0, verbose_name="Number of Bags")

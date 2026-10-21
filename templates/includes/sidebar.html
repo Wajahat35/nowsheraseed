@@ -69,9 +69,29 @@
 
         {% if user.is_admin or perms_map.inventory %}
         <a href="{% url 'inventory:stock_list' %}" title="Inventory"
-           class="sidebar-item {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}">
+           class="sidebar-item {% if request.resolver_match.app_name == 'inventory' and request.resolver_match.url_name != 'processing_list' and request.resolver_match.url_name != 'processing_create' %}active{% endif %}">
             <i class="fas fa-boxes sidebar-item-icon"></i>
             <span class="sidebar-item-label">Inventory Stock Control</span>
+        </a>
+        <a href="{% url 'inventory:processing_list' %}" title="Seed Intake &amp; Processing"
+           class="sidebar-item {% if request.resolver_match.url_name == 'processing_list' or request.resolver_match.url_name == 'processing_create' %}active{% endif %}">
+            <i class="fas fa-cogs sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Intake &amp; Processing</span>
+        </a>
+        {% endif %}
+
+        <!-- Wastage Module Section Header -->
+        {% if user.is_admin or perms_map.inventory %}
+        <div class="sidebar-section-label">Wastage Management</div>
+        <a href="{% url 'wastage:wastage_inventory' %}" title="Wastage Inventory &amp; Pricing"
+           class="sidebar-item {% if request.resolver_match.app_name == 'wastage' and request.resolver_match.url_name != 'invoice_list' and request.resolver_match.url_name != 'invoice_create' %}active{% endif %}">
+            <i class="fas fa-recycle sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Wastage Inventory</span>
+        </a>
+        <a href="{% url 'wastage:invoice_list' %}" title="Wastage Invoices &amp; Sales"
+           class="sidebar-item {% if request.resolver_match.app_name == 'wastage' and (request.resolver_match.url_name == 'invoice_list' or request.resolver_match.url_name == 'invoice_create' or request.resolver_match.url_name == 'invoice_detail') %}active{% endif %}">
+            <i class="fas fa-file-invoice sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Wastage Invoices / Sell</span>
         </a>
         {% endif %}
 
@@ -89,10 +109,10 @@
         {% endif %}
 
         {% if user.is_admin or perms_map.purchases %}
-        <a href="{% url 'suppliers:supplier_list' %}" title="Suppliers"
+        <a href="{% url 'suppliers:supplier_list' %}" title="Growers"
            class="sidebar-item {% if request.resolver_match.app_name == 'suppliers' %}active{% endif %}">
-            <i class="fas fa-truck sidebar-item-icon"></i>
-            <span class="sidebar-item-label">Supplier Directory</span>
+            <i class="fas fa-tractor sidebar-item-icon"></i>
+            <span class="sidebar-item-label">Grower Directory</span>
         </a>
         {% endif %}
 

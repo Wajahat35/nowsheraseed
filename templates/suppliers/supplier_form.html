@@ -1,25 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if form.instance.pk %}Edit Supplier{% else %}Add New Supplier{% endif %}{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit Grower{% else %}Register New Grower{% endif %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card-custom p-4">
             <h4 class="fw-bold mb-3">
-                <i class="fas fa-truck text-secondary me-2"></i>
-                {% if form.instance.pk %}Edit Supplier: {{ form.instance.name }}{% else %}Register New Supplier{% endif %}
+                <i class="fas fa-tractor text-secondary me-2"></i>
+                {% if form.instance.pk %}Edit Grower: {{ form.instance.name }}{% else %}Register New Grower{% endif %}
             </h4>
             
             <form method="POST">
                 {% csrf_token %}
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Supplier Name *</label>
+                        <label class="form-label fw-semibold">Grower Name *</label>
                         {{ form.name }}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Company Name</label>
+                        <label class="form-label fw-semibold">Farm / Company Name</label>
                         {{ form.company_name }}
                     </div>
                     <div class="col-md-6">
@@ -31,7 +31,7 @@
                         {{ form.ntn }}
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Phone *</label>
+                        <label class="form-label fw-semibold">Contact Phone *</label>
                         {{ form.phone }}
                     </div>
                     <div class="col-md-4">
@@ -43,11 +43,11 @@
                         {{ form.email }}
                     </div>
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold">Address</label>
+                        <label class="form-label fw-semibold">Farm / Village Address</label>
                         {{ form.address }}
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">City</label>
+                        <label class="form-label fw-semibold">City / Tehsil</label>
                         {{ form.city }}
                     </div>
                     <div class="col-md-6">
@@ -55,7 +55,7 @@
                         {{ form.opening_balance }}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Bank Details / Account Info</label>
+                        <label class="form-label fw-semibold">Bank Account &amp; Payment Details</label>
                         {{ form.bank_details }}
                     </div>
                 </div>
@@ -63,7 +63,7 @@
                 <div class="d-flex justify-content-end gap-2 mt-4">
                     <a href="{% url 'suppliers:supplier_list' %}" class="btn btn-light border">Cancel</a>
                     <button type="submit" class="btn btn-primary fw-bold px-4">
-                        Save Supplier
+                        Save Grower Profile
                     </button>
                 </div>
             </form>

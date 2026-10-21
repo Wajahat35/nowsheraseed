@@ -31,8 +31,8 @@ class SupplierCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        log_activity(self.request.user, 'CREATE', 'Suppliers', f"Created supplier {self.object.name} ({self.object.code})", self.request)
-        messages.success(self.request, f"Supplier {self.object.name} added successfully!")
+        log_activity(self.request.user, 'CREATE', 'Suppliers', f"Created grower {self.object.name} ({self.object.code})", self.request)
+        messages.success(self.request, f"Grower {self.object.name} added successfully!")
         return response
 
 class SupplierUpdateView(LoginRequiredMixin, UpdateView):
@@ -43,8 +43,8 @@ class SupplierUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        log_activity(self.request.user, 'UPDATE', 'Suppliers', f"Updated supplier {self.object.name} ({self.object.code})", self.request)
-        messages.success(self.request, f"Supplier {self.object.name} updated successfully!")
+        log_activity(self.request.user, 'UPDATE', 'Suppliers', f"Updated grower {self.object.name} ({self.object.code})", self.request)
+        messages.success(self.request, f"Grower {self.object.name} updated successfully!")
         return response
 
 class SupplierDeleteView(LoginRequiredMixin, DeleteView):
@@ -54,8 +54,8 @@ class SupplierDeleteView(LoginRequiredMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         obj = self.get_object()
-        log_activity(request.user, 'DELETE', 'Suppliers', f"Deleted supplier {obj.name} ({obj.code})", request)
-        messages.success(request, f"Supplier {obj.name} deleted.")
+        log_activity(request.user, 'DELETE', 'Suppliers', f"Deleted grower {obj.name} ({obj.code})", request)
+        messages.success(request, f"Grower {obj.name} deleted.")
         return super().delete(request, *args, **kwargs)
 
 class SupplierLedgerView(LoginRequiredMixin, DetailView):

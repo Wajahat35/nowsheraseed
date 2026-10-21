@@ -162,8 +162,11 @@ class SalesItem(models.Model):
     sales_invoice = models.ForeignKey(SalesInvoice, on_delete=models.CASCADE, related_name='items')
     seed = models.ForeignKey(Seed, on_delete=models.CASCADE)
     batch = models.ForeignKey(SeedBatch, on_delete=models.SET_NULL, null=True, blank=True)
-    quantity = models.PositiveIntegerField()
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.PositiveIntegerField(verbose_name="Bags Quantity")
+    bag_size_kg = models.DecimalField(max_digits=8, decimal_places=2, default=50.00, verbose_name="Bag Size (KG)")
+    total_weight_kg = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Total Net Weight (KG)")
+    rate_per_bag = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Rate per Bag (PKR)")
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Commercial Price per Bag")
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -174,6 +177,13 @@ class SalesItem(models.Model):
         disc = Decimal(str(self.discount or 0))
         qty = Decimal(str(self.quantity or 0))
         price = Decimal(str(self.unit_price or 0))
+
+        if not self.bag_size_kg or Decimal(str(self.bag_size_kg)) <= Decimal('0'):
+            self.bag_size_kg = Decimal(str(self.seed.weight_kg or 50.0))
+
+        self.rate_per_bag = price
+        self.total_weight_kg = qty * Decimal(str(self.bag_size_kg))
+
         line_price = (price - disc) * qty
         self.subtotal = line_price * (Decimal('1.00') + (tax / Decimal('100.00')))
         is_new = self.pk is None
@@ -184,7 +194,7 @@ class SalesItem(models.Model):
         super().save(*args, **kwargs)
         
         if is_new:
-            # Auto-deduct inventory stock
+            # Auto-deduct inventory stock in KG
             if not self.batch:
                 self.batch = SeedBatch.objects.filter(seed=self.seed, current_qty__gt=0).order_by('-id').first()
                 if not self.batch:
@@ -192,8 +202,9 @@ class SalesItem(models.Model):
                 if self.batch:
                     SalesItem.objects.filter(pk=self.pk).update(batch=self.batch)
 
+            deduct_kg = self.total_weight_kg
             if self.batch:
-                self.batch.current_qty = max(0, self.batch.current_qty - self.quantity)
+                self.batch.current_qty = max(Decimal('0'), Decimal(str(self.batch.current_qty)) - deduct_kg)
                 self.batch.save()
             
             from apps.inventory.models import StockMovement
@@ -201,14 +212,22 @@ class SalesItem(models.Model):
                 movement_type='STOCK_OUT',
                 seed=self.seed,
                 batch=self.batch,
-                quantity=-self.quantity,
+                quantity=-deduct_kg,
                 reference_no=self.sales_invoice.invoice_number,
-                notes=f"Sold to {self.sales_invoice.customer.name}",
+                notes=f"Sold to {self.sales_invoice.customer.name} ({self.quantity} Bags of {self.bag_size_kg} KG = {deduct_kg:,.1f} KG)",
                 user=self.sales_invoice.created_by
             )
 
+    @property
+    def get_bag_size_kg(self):
+        return self.bag_size_kg or self.seed.weight_kg or 50.0
+
+    @property
+    def get_total_weight_kg(self):
+        return self.total_weight_kg or (Decimal(str(self.quantity)) * Decimal(str(self.get_bag_size_kg)))
+
     def __str__(self):
-        return f"{self.seed.name} x {self.quantity} @ {self.unit_price}"
+        return f"{self.seed.name} - {self.quantity} Bags ({self.total_weight_kg} KG) @ PKR {self.unit_price}/Bag"
 
 class Quotation(models.Model):
     quotation_number = models.CharField(max_length=50, unique=True, editable=False)

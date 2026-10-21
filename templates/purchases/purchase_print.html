@@ -69,10 +69,10 @@
         </div>
     </div>
 
-    <!-- Supplier Info -->
+    <!-- Grower Info -->
     <div class="info-grid">
         <div class="info-box">
-            <h6>Purchased From (Supplier)</h6>
+            <h6>Purchased / Intake From (Grower)</h6>
             <p><strong>{{ invoice.supplier.name }}</strong></p>
             <p>{{ invoice.supplier.company_name|default:"" }}</p>
             <p>{{ invoice.supplier.phone|default:"" }}</p>
@@ -81,7 +81,7 @@
         <div class="info-box" style="text-align:right;">
             <h6>Bill Details</h6>
             <p>System Bill #: <strong>{{ invoice.invoice_number }}</strong></p>
-            <p>Supplier Bill Ref: <strong>{{ invoice.supplier_bill_no|default:"N/A" }}</strong></p>
+            <p>Grower Bill / Challan Ref: <strong>{{ invoice.supplier_bill_no|default:"N/A" }}</strong></p>
             <p>Payment Method: {{ invoice.payment_method }}</p>
             {% if invoice.reference_no %}<p>Ref #: {{ invoice.reference_no }}</p>{% endif %}
         </div>

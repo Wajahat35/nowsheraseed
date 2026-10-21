@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Wastage Inventory & Pricing Control{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-recycle text-secondary me-2"></i> Wastage Inventory &amp; Pricing Control</h4>
+        <p class="text-muted small mb-0">Track byproduct weights in kilograms, configure tiered pricing per grade, and view rate audit logs.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'wastage:invoice_create' %}" class="btn btn-primary fw-semibold">
+            <i class="fas fa-shopping-cart me-1"></i> Sell Wastage (New Invoice)
+        </a>
+        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newGradeModal">
+            <i class="fas fa-plus me-1"></i> Add Wastage Grade
+        </button>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-danger h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted fw-bold">TOTAL WASTAGE STOCK (KG)</small>
+                    <h3 class="fw-bold text-danger mb-0 font-monospace">{{ total_stock_kg|intcomma }} KG</h3>
+                    <small class="text-muted">Strict Base UOM: Kilograms</small>
+                </div>
+                <div class="p-3 bg-danger bg-opacity-10 text-danger rounded-circle">
+                    <i class="fas fa-weight-hanging fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-primary h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted fw-bold">EQUIVALENT BULK BAGS (50 KG)</small>
+                    <h3 class="fw-bold text-primary mb-0 font-monospace">{{ total_bags_50kg:, }} Bags</h3>
+                    <small class="text-muted">+ {{ total_loose_kg|intcomma }} KG Loose Weight</small>
+                </div>
+                <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-circle">
+                    <i class="fas fa-boxes fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card-custom p-3 border-start border-4 border-success h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted fw-bold">ACTIVE BY-PRODUCT GRADES</small>
+                    <h3 class="fw-bold text-success mb-0 font-monospace">{{ wastage_types|length }} Grades</h3>
+                    <small class="text-muted">With Independent Price-per-KG</small>
+                </div>
+                <div class="p-3 bg-success bg-opacity-10 text-success rounded-circle">
+                    <i class="fas fa-tags fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Table with Display Toggle -->
+<div class="card-custom p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <h5 class="fw-bold mb-0"><i class="fas fa-warehouse text-secondary me-2"></i>Wastage Stock by Grade</h5>
+        <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="uom_toggle" id="toggle_kg" autocomplete="off" checked onclick="toggleUOM('kg')">
+            <label class="btn btn-outline-secondary" for="toggle_kg"><i class="fas fa-weight me-1"></i> KG Mode</label>
+
+            <input type="radio" class="btn-check" name="uom_toggle" id="toggle_bags" autocomplete="off" onclick="toggleUOM('bags')">
+            <label class="btn btn-outline-secondary" for="toggle_bags"><i class="fas fa-boxes me-1"></i> 50KG Bag Mode</label>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-custom table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Wastage Grade / Type</th>
+                    <th>Description</th>
+                    <th class="text-end">Current Price / KG</th>
+                    <th class="text-end">Available Stock</th>
+                    <th class="text-end">Est. Stock Value (PKR)</th>
+                    <th class="text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in wastage_types %}
+                    <tr>
+                        <td class="fw-bold text-dark fs-6">{{ t.name }}</td>
+                        <td class="text-muted small">{{ t.description|default:"Standard screening by-product" }}</td>
+                        <td class="text-end fw-bold font-monospace text-primary fs-6">
+                            PKR {{ t.price_per_kg|intcomma }} / KG
+                        </td>
+                        <td class="text-end font-monospace fw-bold fs-6">
+                            <span class="uom-kg text-danger">{{ t.stock.current_stock_kg|intcomma }} KG</span>
+                            <span class="uom-bags text-primary d-none">{{ t.stock.display_dual }}</span>
+                        </td>
+                        <td class="text-end font-monospace text-dark fw-bold">
+                            {% widthratio t.stock.current_stock_kg 1 t.price_per_kg as est_val %}
+                            PKR {{ est_val|intcomma }}
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openRateModal('{{ t.id }}', '{{ t.name|escapejs }}', '{{ t.price_per_kg }}')">
+                                <i class="fas fa-tag me-1"></i> Update Rate
+                            </button>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">No wastage grades defined yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Historical Rate Audit Logs -->
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card-custom p-4 h-100">
+            <h6 class="fw-bold mb-3"><i class="fas fa-history text-secondary me-2"></i>Price Revision Audit Trail</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date &amp; Time</th>
+                            <th>Grade</th>
+                            <th>Old Rate</th>
+                            <th>New Rate</th>
+                            <th>Changed By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in rate_logs %}
+                            <tr>
+                                <td class="small">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                                <td class="fw-semibold">{{ log.wastage_type.name }}</td>
+                                <td class="font-monospace text-muted">PKR {{ log.old_rate }}</td>
+                                <td class="font-monospace text-success fw-bold">PKR {{ log.new_rate }}</td>
+                                <td class="small">{{ log.changed_by.username|default:"System" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No rate revisions logged yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card-custom p-4 h-100">
+            <h6 class="fw-bold mb-3"><i class="fas fa-truck-loading text-secondary me-2"></i>Recent Wastage Stock Movements</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Grade</th>
+                            <th class="text-end">Weight (KG)</th>
+                            <th>Ref #</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in recent_movements %}
+                            <tr>
+                                <td>
+                                    <span class="badge {% if m.quantity_kg > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ m.get_movement_type_display }}
+                                    </span>
+                                </td>
+                                <td class="fw-semibold">{{ m.wastage_type.name }}</td>
+                                <td class="text-end font-monospace fw-bold {% if m.quantity_kg > 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {% if m.quantity_kg > 0 %}+{% endif %}{{ m.quantity_kg|intcomma }} KG
+                                </td>
+                                <td class="small font-monospace">{{ m.reference_no|default:"-" }}</td>
+                                <td class="small">{{ m.created_at|date:"Y-m-d" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="text-center text-muted py-3">No stock movements recorded yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Update Rate -->
+<div class="modal fade" id="rateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-tag me-2"></i>Update Wastage Price per KG</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'wastage:rate_update' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="wastage_type_id" id="modal_type_id">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Wastage Grade</label>
+                        <input type="text" id="modal_grade_name" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">New Price per KG (PKR) *</label>
+                        <input type="number" step="0.01" name="new_rate" id="modal_new_rate" class="form-control font-monospace fs-4 fw-bold text-primary" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reason for Rate Revision</label>
+                        <input type="text" name="reason" class="form-control" placeholder="e.g. Market price adjustment, bulk buyer contract">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">
+                        <i class="fas fa-save me-1"></i> Save New Rate &amp; Audit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Add New Wastage Grade -->
+<div class="modal fade" id="newGradeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-plus me-2"></i>Register New Wastage Grade</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'wastage:type_create' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Wastage Grade Name *</label>
+                        {{ type_form.name }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Initial Rate per KG (PKR) *</label>
+                        {{ type_form.price_per_kg }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description / Particle Size</label>
+                        {{ type_form.description }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark fw-bold px-4">Create Grade</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleUOM(mode) {
+        const kgEls = document.querySelectorAll('.uom-kg');
+        const bagEls = document.querySelectorAll('.uom-bags');
+        if (mode === 'bags') {
+            kgEls.forEach(el => el.classList.add('d-none'));
+            bagEls.forEach(el => el.classList.remove('d-none'));
+        } else {
+            bagEls.forEach(el => el.classList.add('d-none'));
+            kgEls.forEach(el => el.classList.remove('d-none'));
+        }
+    }
+
+    function openRateModal(typeId, gradeName, currentRate) {
+        document.getElementById('modal_type_id').value = typeId;
+        document.getElementById('modal_grade_name').value = gradeName;
+        document.getElementById('modal_new_rate').value = currentRate;
+        const modal = new bootstrap.Modal(document.getElementById('rateModal'));
+        modal.show();
+    }
+</script>
+{% endblock %}

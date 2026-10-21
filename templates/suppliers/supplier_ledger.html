@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Supplier Ledger - {{ supplier.name }}{% endblock %}
+{% block title %}Grower Ledger - {{ supplier.name }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4 btn-print-hide">
     <div>
-        <h4 class="fw-bold mb-1"><i class="fas fa-book text-secondary me-2"></i> Supplier Ledger Statement</h4>
+        <h4 class="fw-bold mb-1"><i class="fas fa-book text-secondary me-2"></i> Grower Ledger Statement</h4>
         <p class="text-muted small mb-0">{{ supplier.code }} - {{ supplier.name }} {% if supplier.company_name %}({{ supplier.company_name }}){% endif %}</p>
     </div>
     <div>
@@ -16,7 +16,7 @@
 </div>
 
 <div class="card-custom p-4">
-    <!-- Supplier Header Profile -->
+    <!-- Grower Header Profile -->
     <div class="row border-bottom pb-3 mb-4">
         <div class="col-md-6">
             <h5 class="fw-bold">{{ supplier.name }}</h5>
@@ -52,7 +52,7 @@
                         <td class="text-end fw-bold font-monospace">PKR {{ entry.balance|intcomma }}</td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted py-4">No ledger transactions found for this supplier.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4">No ledger transactions found for this grower.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

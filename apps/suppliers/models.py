@@ -2,32 +2,49 @@ from django.db import models
 
 class Supplier(models.Model):
     code = models.CharField(max_length=50, unique=True, editable=False)
-    name = models.CharField(max_length=200)
-    company_name = models.CharField(max_length=200, blank=True, null=True)
+    name = models.CharField(max_length=200, verbose_name="Grower Name")
+    company_name = models.CharField(max_length=200, blank=True, null=True, verbose_name="Farm / Company Name")
     cnic = models.CharField(max_length=20, blank=True, null=True, verbose_name="CNIC")
     ntn = models.CharField(max_length=50, blank=True, null=True, verbose_name="NTN")
-    phone = models.CharField(max_length=30)
+    phone = models.CharField(max_length=30, verbose_name="Contact Number")
     whatsapp = models.CharField(max_length=30, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
-    address = models.TextField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True, verbose_name="Farm / Delivery Address")
     city = models.CharField(max_length=100, default="Lahore")
-    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Grower Opening Balance")
     bank_details = models.TextField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = "Grower"
+        verbose_name_plural = "Growers"
+        ordering = ['-id']
+
     def save(self, *args, **kwargs):
         if not self.code:
             last_supp = Supplier.objects.order_by('-id').first()
             last_id = last_supp.id if last_supp else 0
-            self.code = f"SUPP-{(last_id + 1):04d}"
+            self.code = f"GROW-{(last_id + 1):04d}"
         super().save(*args, **kwargs)
 
     def __str__(self):
         comp = f" ({self.company_name})" if self.company_name else ""
         return f"{self.code} - {self.name}{comp}"
+
+    @property
+    def grower_code(self):
+        return self.code
+
+    @property
+    def grower_name(self):
+        return self.name
+
+    @property
+    def farm_name(self):
+        return self.company_name
 
     def get_current_balance(self):
         from apps.purchases.models import PurchaseInvoice
@@ -39,3 +56,6 @@ class Supplier(models.Model):
         paid = bills_total['paid'] or 0
         balance = self.opening_balance + (grand - paid)
         return balance
+
+# Module-level alias for transparent grower imports
+Grower = Supplier

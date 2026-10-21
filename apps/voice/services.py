@@ -223,6 +223,8 @@ def match_supplier(query):
     clean_p_name = extract_clean_party_name(query) if q_distinct else None
     return {'status': 'not_found', 'match': None, 'unrecognized': clean_p_name, 'choices': []}
 
+match_grower = match_supplier
+
 
 def match_customer(query):
     if not query:
@@ -280,6 +282,8 @@ def match_customer(query):
     
     clean_p_name = extract_clean_party_name(query) if q_distinct else None
     return {'status': 'not_found', 'match': None, 'unrecognized': clean_p_name, 'choices': []}
+
+match_grower = match_supplier
 
 
 def match_seed(query):
@@ -592,7 +596,7 @@ def detect_intent(text):
         return 'CREATE_GATEPASS'
     elif matches_any(['haan', 'han', 'theek hai', 'approve', 'yes', 'save kar do', 'bilkul sahi', 'ok', 'confirm', 'sahi hai', 'save']):
         return 'APPROVE'
-    elif matches_any(['quantity', 'rate', 'price', 'supplier', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'nahi']):
+    elif matches_any(['quantity', 'rate', 'price', 'supplier', 'grower', 'kisan', 'zamindar', 'customer', 'driver', 'vehicle', 'gaari', 'change', 'update', 'nahi']):
         return 'EDIT_DRAFT'
     elif matches_any(['invoice', 'document', 'banao', 'bana do', 'bana', 'bag', 'bags', 'wheat', 'rice', 'seed']):
         return 'UNCLEAR_DOC_TYPE'

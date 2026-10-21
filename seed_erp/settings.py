@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.trading',
     'apps.voice',
+    'apps.wastage',
 ]
 
 MIDDLEWARE = [

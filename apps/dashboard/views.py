@@ -15,6 +15,7 @@ from apps.suppliers.models import Supplier
 from apps.seeds.models import Seed, SeedBatch
 from apps.gatepass.models import GatePass
 from apps.expenses.models import Expense
+from apps.wastage.models import WastageStock, WastageInvoice
 
 
 def get_dashboard_metrics():
@@ -57,18 +58,42 @@ def get_dashboard_metrics():
     total_customers = Customer.objects.filter(is_active=True).count()
     total_suppliers = Supplier.objects.filter(is_active=True).count()
 
-    # ── Seed Stock & Alerts ──
+    # ── Seed Clean Stock (Dual UOM: KG & Bags) ──
     all_seeds = list(Seed.objects.prefetch_related('batches').all())
-    total_seed_stock = sum(s.get_total_stock() for s in all_seeds)
-    low_stock_count = sum(1 for s in all_seeds if s.get_total_stock() <= s.min_stock_alert)
+    clean_stock_kg = float(sum((s.get_total_stock_kg() for s in all_seeds), Decimal('0.00')))
+    total_clean_bags = sum((s.get_total_available_bags() for s in all_seeds), 0)
+    total_seed_stock = clean_stock_kg
+    low_stock_count = sum(1 for s in all_seeds if s.get_total_available_bags() <= s.min_stock_alert)
 
     all_batches = list(SeedBatch.objects.all())
     expired_stock_count = sum(1 for b in all_batches if b.is_expired() and b.current_qty > 0)
+
+    # ── Wastage Stock & Revenue Metrics ──
+    try:
+        total_wastage_stock_kg = float(WastageStock.objects.aggregate(t=Sum('current_stock_kg'))['t'] or 0)
+        month_wastage_revenue = float(WastageInvoice.objects.filter(
+            date__year=current_year, date__month=current_month
+        ).aggregate(t=Sum('grand_total'))['t'] or 0)
+        year_wastage_revenue = float(WastageInvoice.objects.filter(
+            date__year=current_year
+        ).aggregate(t=Sum('grand_total'))['t'] or 0)
+        total_wastage_revenue = float(WastageInvoice.objects.aggregate(t=Sum('grand_total'))['t'] or 0)
+    except Exception:
+        total_wastage_stock_kg = 0.0
+        month_wastage_revenue = 0.0
+        year_wastage_revenue = 0.0
+        total_wastage_revenue = 0.0
 
     # ── Financial Totals ──
     total_sales_revenue = float(SalesInvoice.objects.aggregate(t=Sum('grand_total'))['t'] or 0)
     total_purchase_cost = float(PurchaseInvoice.objects.aggregate(t=Sum('grand_total'))['t'] or 0)
     total_expenses = float(Expense.objects.aggregate(t=Sum('amount'))['t'] or 0)
+
+    # ── Combined Operations & Consolidated Financials ──
+    aggregate_handled_weight = clean_stock_kg + total_wastage_stock_kg
+    consolidated_gross_sales = total_sales_revenue + total_wastage_revenue
+    consolidated_gross_profit = consolidated_gross_sales - total_purchase_cost - total_expenses
+    consolidated_month_sales = month_sales + month_wastage_revenue
 
     # ── Receivables & Payables ──
     pending_receivables = float(SalesInvoice.objects.filter(
@@ -166,6 +191,16 @@ def get_dashboard_metrics():
         'total_customers': total_customers,
         'total_suppliers': total_suppliers,
         'total_seed_stock': total_seed_stock,
+        'clean_stock_kg': clean_stock_kg,
+        'total_clean_bags': total_clean_bags,
+        'total_wastage_stock_kg': total_wastage_stock_kg,
+        'month_wastage_revenue': month_wastage_revenue,
+        'year_wastage_revenue': year_wastage_revenue,
+        'total_wastage_revenue': total_wastage_revenue,
+        'aggregate_handled_weight': aggregate_handled_weight,
+        'consolidated_gross_sales': consolidated_gross_sales,
+        'consolidated_gross_profit': consolidated_gross_profit,
+        'consolidated_month_sales': consolidated_month_sales,
         'low_stock_count': low_stock_count,
         'expired_stock_count': expired_stock_count,
         'total_sales_revenue': total_sales_revenue,

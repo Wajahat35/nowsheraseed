@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Processing & Recovery Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-1"><i class="fas fa-cogs text-emerald me-2"></i> Seed Processing &amp; Recovery Audit Report</h4>
+        <p class="text-muted small mb-0">Analysis of intake runs, clean seed recovery ratio, wastage generation, and dust loss.</p>
+    </div>
+    <div class="btn-group">
+        <a href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}export=excel" class="btn btn-outline-success">
+            <i class="fas fa-file-excel me-1"></i> Export Excel
+        </a>
+        <a href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}export=pdf" class="btn btn-outline-danger" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Export PDF
+        </a>
+    </div>
+</div>
+
+<!-- KPI Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-primary h-100">
+            <small class="text-muted fw-bold">TOTAL RAW INPUT PROCESSED</small>
+            <h4 class="fw-bold text-primary mb-0 font-monospace">{{ tot_raw|intcomma }} KG</h4>
+            <small class="text-muted">Gross intake from growers</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-success h-100">
+            <small class="text-muted fw-bold">CLEAN USABLE SEED RECOVERED</small>
+            <h4 class="fw-bold text-success mb-0 font-monospace">{{ tot_clean|intcomma }} KG</h4>
+            <small class="text-muted">Added to active stock</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-danger h-100">
+            <small class="text-muted fw-bold">TOTAL WASTAGE GENERATED</small>
+            <h4 class="fw-bold text-danger mb-0 font-monospace">{{ tot_wst|intcomma }} KG</h4>
+            <small class="text-muted">Screenings &amp; by-products</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-custom p-3 border-start border-4 border-emerald h-100">
+            <small class="text-muted fw-bold">AVERAGE RECOVERY RATE</small>
+            <h4 class="fw-bold text-emerald mb-0 font-monospace">{{ avg_recovery|floatformat:2 }}%</h4>
+            <small class="text-muted">Mean clean seed efficiency</small>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom p-4 mb-4">
+    <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-sm btn-emerald text-white fw-semibold px-3" style="background-color: #10b981;">
+                <i class="fas fa-filter me-1"></i> Filter Runs
+            </button>
+            <a href="{% url 'reports:processing_report' %}" class="btn btn-sm btn-light border px-3">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card-custom p-4">
+    <div class="table-responsive">
+        <table class="table table-custom table-hover align-middle" id="procRepTable">
+            <thead>
+                <tr>
+                    <th>Batch #</th>
+                    <th>Date</th>
+                    <th>Grower</th>
+                    <th>Seed Variety</th>
+                    <th class="text-end">Raw Input (KG)</th>
+                    <th class="text-end">Clean Output (KG)</th>
+                    <th class="text-end">Wastage (KG)</th>
+                    <th class="text-end">Loss (KG)</th>
+                    <th class="text-center">Recovery %</th>
+                    <th class="text-center">Wastage %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in runs %}
+                    <tr>
+                        <td class="fw-bold font-monospace text-primary">{{ r.batch_number }}</td>
+                        <td>{{ r.date }}</td>
+                        <td class="fw-semibold">{{ r.grower.name }}</td>
+                        <td>{{ r.seed.name }}</td>
+                        <td class="text-end font-monospace fw-bold">{{ r.raw_input_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace text-success fw-bold">{{ r.clean_seed_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace text-danger fw-bold">{{ r.wastage_kg|intcomma }} KG</td>
+                        <td class="text-end font-monospace text-muted">{{ r.moisture_dust_loss_kg|intcomma }} KG</td>
+                        <td class="text-center">
+                            <span class="badge {% if r.recovery_rate >= 90 %}bg-success{% elif r.recovery_rate >= 80 %}bg-primary{% else %}bg-warning text-dark{% endif %}">
+                                {{ r.recovery_rate }}%
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-danger">{{ r.wastage_rate }}%</span>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">No processing runs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        initSafeDataTable('#procRepTable');
+    });
+</script>
+{% endblock %}

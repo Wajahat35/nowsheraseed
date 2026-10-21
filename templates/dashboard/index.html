@@ -126,13 +126,17 @@
     </div>
 </div>
 
-<!-- ── ROW 3: Secondary Inventory & Profit Bar ── -->
+<!-- ── ROW 3: Clean Stock, Wastage Stream & Operational Metrics ── -->
 <div class="row g-3 mb-3">
+    <!-- Clean Seed Stock Card (Dual UOM: KG & Bags) -->
     <div class="col-6 col-md-3">
-        <div class="card-custom p-3 d-flex align-items-center justify-content-between">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between border-start border-4 border-success">
             <div>
-                <small class="text-muted">Total Seed Stock</small>
-                <h5 class="fw-bold mb-0" id="kpi_total_seed_stock">{{ total_seed_stock|intcomma }} Bags</h5>
+                <small class="text-muted fw-bold">CLEAN SEED STOCK</small>
+                <h5 class="fw-bold mb-0 text-success font-monospace" id="kpi_clean_stock_kg">{{ clean_stock_kg|intcomma }} KG</h5>
+                <small class="text-primary fw-semibold d-block" id="kpi_total_clean_bags">
+                    <i class="fas fa-boxes me-1"></i>&approx; {{ total_clean_bags|intcomma }} Bags
+                </small>
                 <div id="kpi_stock_status_lbl">
                     {% if low_stock_count > 0 %}
                         <small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>{{ low_stock_count }} Low Stock</small>
@@ -141,37 +145,80 @@
                     {% endif %}
                 </div>
             </div>
-            <i class="fas fa-boxes fs-3 text-primary"></i>
+            <i class="fas fa-seedling fs-3 text-success"></i>
         </div>
     </div>
+
+    <!-- Wastage Stock KPI Card -->
     <div class="col-6 col-md-3">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between border-start border-4 border-danger">
+            <div>
+                <small class="text-muted fw-bold">WASTAGE STOCK</small>
+                <h5 class="fw-bold mb-0 text-danger font-monospace" id="kpi_wastage_stock">{{ total_wastage_stock_kg|intcomma }} KG</h5>
+                <small class="text-muted d-block"><i class="fas fa-recycle me-1"></i>Available By-Product</small>
+                <a href="{% url 'wastage:wastage_inventory' %}" class="small text-decoration-none text-danger fw-semibold">View Inventory &rarr;</a>
+            </div>
+            <i class="fas fa-recycle fs-3 text-danger"></i>
+        </div>
+    </div>
+
+    <!-- Wastage Revenue Card (Monthly & YTD) -->
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between border-start border-4 border-info">
+            <div>
+                <small class="text-muted fw-bold">WASTAGE REVENUE</small>
+                <h5 class="fw-bold mb-0 text-info font-monospace" id="kpi_wastage_revenue">PKR {{ month_wastage_revenue|intcomma }}</h5>
+                <small class="text-muted d-block">This Month</small>
+                <small class="text-dark fw-semibold">YTD: PKR {{ year_wastage_revenue|intcomma }}</small>
+            </div>
+            <i class="fas fa-file-invoice-dollar fs-3 text-info"></i>
+        </div>
+    </div>
+
+    <!-- Combined Operational Metrics & Financial Consolidation -->
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 d-flex align-items-center justify-content-between border-start border-4 border-emerald">
+            <div>
+                <small class="text-muted fw-bold">HANDLED WEIGHT (KG)</small>
+                <h5 class="fw-bold mb-0 text-dark font-monospace" id="kpi_aggregate_weight">{{ aggregate_handled_weight|intcomma }} KG</h5>
+                <small class="text-muted d-block">Clean Seed + Wastage</small>
+                <small class="text-emerald fw-bold">Gross Sales: PKR {{ consolidated_gross_sales|intcomma }}</small>
+            </div>
+            <i class="fas fa-chart-pie fs-3 text-emerald"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ── ROW 3B: Profit Estimate, Customers & Expenses ── -->
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-4">
         <div class="card-custom p-3 d-flex align-items-center justify-content-between">
             <div>
-                <small class="text-muted">Gross Profit Estimate</small>
-                <h5 class="fw-bold mb-0 {% if gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}" id="kpi_gross_profit">
-                    PKR {{ gross_profit|floatformat:0|intcomma }}
+                <small class="text-muted">Consolidated Gross Profit</small>
+                <h5 class="fw-bold mb-0 {% if consolidated_gross_profit >= 0 %}text-success{% else %}text-danger{% endif %}" id="kpi_gross_profit">
+                    PKR {{ consolidated_gross_profit|floatformat:0|intcomma }}
                 </h5>
-                <small class="text-muted">Sales - Purchases - Expenses</small>
+                <small class="text-muted">Seed + Wastage Sales - Intake - Expenses</small>
             </div>
             <i class="fas fa-chart-line fs-3 text-emerald"></i>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
         <div class="card-custom p-3 d-flex align-items-center justify-content-between">
             <div>
-                <small class="text-muted">Total Customers</small>
-                <h5 class="fw-bold mb-0" id="kpi_total_customers">{{ total_customers }}</h5>
-                <small class="text-muted"><i class="fas fa-users me-1"></i>Active Accounts</small>
+                <small class="text-muted">Total Customers &amp; Growers</small>
+                <h5 class="fw-bold mb-0" id="kpi_total_customers">{{ total_customers }} Customers &bull; {{ total_suppliers }} Growers</h5>
+                <small class="text-muted"><i class="fas fa-users me-1"></i>Active Commercial Network</small>
             </div>
             <i class="fas fa-user-tie fs-3 text-emerald"></i>
         </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
         <div class="card-custom p-3 d-flex align-items-center justify-content-between">
             <div>
                 <small class="text-muted">Operational Expenses</small>
                 <h5 class="fw-bold mb-0 text-warning" id="kpi_total_expenses">PKR {{ total_expenses|intcomma }}</h5>
-                <small class="text-muted">{{ total_suppliers }} Active Suppliers</small>
+                <small class="text-muted">Overheads &amp; Utility Costs</small>
             </div>
             <i class="fas fa-receipt fs-3 text-warning"></i>
         </div>
@@ -266,7 +313,7 @@
                     <thead>
                         <tr>
                             <th>Bill #</th>
-                            <th>Supplier</th>
+                            <th>Grower</th>
                             <th>Amount</th>
                             <th>Status</th>
                         </tr>
