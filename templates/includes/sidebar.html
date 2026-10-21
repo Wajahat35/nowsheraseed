@@ -84,12 +84,12 @@
         {% if user.is_admin or perms_map.inventory %}
         <div class="sidebar-section-label">Wastage Management</div>
         <a href="{% url 'wastage:wastage_inventory' %}" title="Wastage Inventory &amp; Pricing"
-           class="sidebar-item {% if request.resolver_match.app_name == 'wastage' and request.resolver_match.url_name != 'invoice_list' and request.resolver_match.url_name != 'invoice_create' %}active{% endif %}">
+           class="sidebar-item {% if request.resolver_match.app_name == 'wastage' and request.resolver_match.url_name == 'wastage_inventory' %}active{% endif %}">
             <i class="fas fa-recycle sidebar-item-icon"></i>
             <span class="sidebar-item-label">Wastage Inventory</span>
         </a>
         <a href="{% url 'wastage:invoice_list' %}" title="Wastage Invoices &amp; Sales"
-           class="sidebar-item {% if request.resolver_match.app_name == 'wastage' and (request.resolver_match.url_name == 'invoice_list' or request.resolver_match.url_name == 'invoice_create' or request.resolver_match.url_name == 'invoice_detail') %}active{% endif %}">
+           class="sidebar-item {% if request.resolver_match.app_name == 'wastage' and request.resolver_match.url_name != 'wastage_inventory' %}active{% endif %}">
             <i class="fas fa-file-invoice sidebar-item-icon"></i>
             <span class="sidebar-item-label">Wastage Invoices / Sell</span>
         </a>
